@@ -78,7 +78,7 @@ const CFG = {
   packBase: 1.0, packMul: 0.75,
   transferEvery: 0.08,
   inputCap: 24, outputCap: 27, moneyCap: 60,
-  queueMax: 6, spawnEvery: 5.5, queueX: 10, queueZ0: -1.5, queueGap: 1.5,
+  queueMax: 6, spawnEvery: 2.75, spawnShortEvery: 1.0, walkSpeed: 5.0, leaveSpeed: 5.7, queueX: 10, queueZ0: -1.5, queueGap: 1.5,
   helperCap: 6,
   bounds: { x0: -19, x1: 17.8, z0: -10.4, z1: 16 },
   start: { x: 2, z: 4 }
@@ -1212,7 +1212,7 @@ function spawnBill(c) {
 }
 function updateCustomers(dt, t) {
   for (let i = customers.length - 1; i >= 0; i--) {
-    const c = customers[i], gp = c.group.position; let mv = 0, dx = 0, dz = 0, tx = null, tz = null, spd = 3.3;
+    const c = customers[i], gp = c.group.position; let mv = 0, dx = 0, dz = 0, tx = null, tz = null, spd = CFG.walkSpeed;
     if (c.state === 'queue') {
       const qi = queue.indexOf(c); queueSlot(qi, _v); tx = _v.x; tz = _v.z;
       const d = Math.hypot(tx - gp.x, tz - gp.z); c.atSlot = d < 0.25;
@@ -1221,7 +1221,7 @@ function updateCustomers(dt, t) {
       if (c.atSlot) { faceChar(c, 0, -1, dt); tx = null; }
     } else if (c.state === 'leaving') {
       if (c.hideBubble > 0) { c.hideBubble -= dt; if (c.hideBubble <= 0 && c.bubble) c.bubble.visible = false; }
-      const wp = c.path[0]; tx = wp[0]; tz = wp[1]; spd = 3.8;
+      const wp = c.path[0]; tx = wp[0]; tz = wp[1]; spd = CFG.leaveSpeed;
       if (Math.hypot(tx - gp.x, tz - gp.z) < 0.4) { c.path.shift(); if (!c.path.length) { removeCustomer(i); continue; } }
     }
     if (tx !== null) {
@@ -1434,7 +1434,7 @@ function updateHUD(dt) {
    14. MAIN UPDATE / LOOP
    ===================================================================== */
 const camFocus = new THREE.Vector3(CFG.start.x, 0, CFG.start.z); const inV = { x: 0, z: 0 };
-let T = 0, spawnT = 3, camInit = false;
+let T = 0, spawnT = 2, camInit = false;
 
 function movePlayer(dt) {
   inputVec(inV); const spd = speedOf(), mag = Math.min(1, Math.hypot(inV.x, inV.z));
@@ -1505,7 +1505,8 @@ function update(dt) {
   updateHelper(dt, T);
   // customers spawning
   spawnT -= dt;
-  if (spawnT <= 0 && queue.length < CFG.queueMax) { spawnCustomer(26); spawnT = CFG.spawnEvery; }
+  if (queue.length < 3 && spawnT > CFG.spawnShortEvery) spawnT = CFG.spawnShortEvery;
+  if (spawnT <= 0 && queue.length < CFG.queueMax) { spawnCustomer(26); spawnT = queue.length < 3 ? CFG.spawnShortEvery : CFG.spawnEvery; }
   updateCustomers(dt, T);
   P.stack.update(dt, T); inputPile.update(dt, T); outputPile.update(dt, T); moneyPile.update(dt, T);
   updateFlights(dt); updateLater(dt); updateParticles(dt); updatePopTexts(dt);
@@ -1542,7 +1543,7 @@ buildStations(); buildDecor(); buildZones(); buildPlayer();
 if (S.lv.bed > 0) { unlockBed(beds[2], true); upPads.bed.done = true; upPads.bed.group.visible = false; }
 if (S.lv.helper > 0) { spawnHelper(true); upPads.helper.done = true; upPads.helper.group.visible = false; }
 for (const k in upPads) { const u = upPads[k]; if (S.lv[k] >= u.max()) { u.done = true; u.group.visible = false; } else u.redraw(); }
-spawnCustomer(15); spawnCustomer(21);
+for (let i = 0; i < 3; i++) { spawnCustomer(CFG.queueZ0 + i * CFG.queueGap); const c = customers[customers.length - 1]; c.group.position.x = CFG.queueX; c.yaw = 0; c.group.rotation.y = Math.PI; c.yaw = Math.PI; c.atSlot = true; }
 onResize();
 
 window.__game = {
