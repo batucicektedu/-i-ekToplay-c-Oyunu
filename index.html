@@ -154,7 +154,7 @@ function sfx(name) {
     case 'pack': blip(240, 0.12, 'square', 0.04, 1.8); break;
     case 'cash': blip(880, 0.09, 'square', 0.04); blip(1320, 0.14, 'square', 0.04, 1, 0.07); break;
     case 'coin': blip(1000 + Math.random() * 200, 0.08, 'triangle', 0.08, 1.4); break;
-    case 'up': [523, 659, 784, 1047].forEach((f, i) => blip(f, 0.16, 'triangle', 0.1, 1, i * 0.08)); break;
+    case 'up': [523, 659, 784, 1047, 1319, 1568].forEach((f, i) => blip(f, 0.2, 'triangle', 0.1, 1, i * 0.07)); break;
     case 'happy': blip(660, 0.1, 'sine', 0.1, 1.5); blip(990, 0.15, 'sine', 0.1, 1, 0.09); break;
   }
 }
@@ -187,6 +187,7 @@ function onResize() {
   camera.aspect = w / h; camera.updateProjectionMatrix();
   const t = Math.tan(CFG.fov * Math.PI / 360);
   camDist = clamp(16 / (2 * t * camera.aspect), 23, 36);
+  if (typeof pMat !== 'undefined') pMat.uniforms.scale.value = renderer.domElement.height / (2 * t);
 }
 window.addEventListener('resize', onResize);
 window.addEventListener('orientationchange', () => setTimeout(onResize, 120));
@@ -414,7 +415,8 @@ class Stack {
   count(type) { let n = 0; for (const it of this.items) if (it.type === type) n++; return n; }
   add(mesh, type) {
     const i = this.items.length; this.items.push({ mesh, type }); this.parent.add(mesh);
-    this.slotFn(i, _v); mesh.position.copy(_v); mesh.rotation.set(0, 0, 0); mesh.scale.set(1, 1, 1);
+    this.slotFn(i, _v); mesh.position.copy(_v); mesh.rotation.set(0, 0, 0); mesh.scale.set(1, 1, 1); mesh.userData.sq = 0.22;
+    if (this.parent === scene) dust(_v.x, _v.y + 0.1, _v.z, 2, 0.25);
   }
   takeLast(type) {
     for (let i = this.items.length - 1; i >= 0; i--) if (!type || this.items[i].type === type) return this.items.splice(i, 1)[0];
@@ -424,7 +426,8 @@ class Stack {
     const k = 1 - Math.exp(-dt * 16);
     for (let i = 0; i < this.items.length; i++) {
       this.slotFn(i, _v); if (this.swayFn) this.swayFn(i, _v, t);
-      this.items[i].mesh.position.lerp(_v, k);
+      const mm = this.items[i].mesh; mm.position.lerp(_v, k);
+      if (mm.userData.sq > 0) { mm.userData.sq -= dt; const q = Math.sin(Math.PI * clamp(mm.userData.sq / 0.22, 0, 1)); mm.scale.set(1 + 0.25 * q, 1 - 0.3 * q, 1 + 0.25 * q); if (mm.userData.sq <= 0) mm.scale.set(1, 1, 1); }
     }
   }
 }
@@ -447,21 +450,67 @@ function later(sec, fn) { later_q.push({ t: sec, fn }); }
 function updateLater(dt) {
   for (let i = later_q.length - 1; i >= 0; i--) { const q = later_q[i]; q.t -= dt; if (q.t <= 0) { later_q.splice(i, 1); q.fn(); } }
 }
-const particles = [];
-function burst(x, y, z, color, n, spd) {
-  for (let i = 0; i < n && particles.length < 70; i++) {
-    const m = mk(G.sph, mat(color), 0.09, 0.09, 0.09, x, y, z); scene.add(m);
-    const a = rand(0, TAU), s = rand(0.4, 1) * (spd || 3);
-    particles.push({ m, vx: Math.cos(a) * s, vy: rand(2, 4.5), vz: Math.sin(a) * s, life: rand(0.45, 0.75), max: 0.75 });
-  }
+/* ---- pooled GPU point-sprite particles (circle / star / heart / confetti) ---- */
+const PMAX = 460;
+const PS = []; for (let i = 0; i < PMAX; i++) PS.push({ on: false });
+let pHead = 0;
+const pGeo = new THREE.BufferGeometry();
+const pPos = new Float32Array(PMAX * 3), pCol = new Float32Array(PMAX * 3), pSize = new Float32Array(PMAX), pAlpha = new Float32Array(PMAX), pType = new Float32Array(PMAX);
+pGeo.setAttribute('position', new THREE.BufferAttribute(pPos, 3)); pGeo.setAttribute('color', new THREE.BufferAttribute(pCol, 3));
+pGeo.setAttribute('size', new THREE.BufferAttribute(pSize, 1)); pGeo.setAttribute('alpha', new THREE.BufferAttribute(pAlpha, 1)); pGeo.setAttribute('type', new THREE.BufferAttribute(pType, 1));
+const pMat = new THREE.ShaderMaterial({
+  transparent: true, depthWrite: false, uniforms: { scale: { value: 700 } },
+  vertexShader: 'attribute float size;attribute float alpha;attribute float type;varying vec3 vC;varying float vA;varying float vT;uniform float scale;void main(){vC=color;vA=alpha;vT=type;vec4 mv=modelViewMatrix*vec4(position,1.);gl_PointSize=size*scale/-mv.z;gl_Position=projectionMatrix*mv;}',
+  fragmentShader: 'varying vec3 vC;varying float vA;varying float vT;void main(){vec2 p=gl_PointCoord*2.-1.;float a=0.;'
+    + 'if(vT<.5){a=smoothstep(1.,.55,length(p));}'
+    + 'else if(vT<1.5){float d=pow(abs(p.x),.6667)+pow(abs(p.y),.6667);a=smoothstep(1.,.8,d);}'
+    + 'else if(vT<2.5){float x=p.x*1.15,y=-p.y*1.15+.25;float h=pow(x*x+y*y-1.,3.)-x*x*y*y*y;a=smoothstep(.15,-.05,h);}'
+    + 'else{a=step(max(abs(p.x),abs(p.y)),.75);}'
+    + 'gl_FragColor=vec4(vC,a*vA);if(gl_FragColor.a<.02)discard;}',
+  vertexColors: true
+});
+const pPoints = new THREE.Points(pGeo, pMat); pPoints.frustumCulled = false; pPoints.renderOrder = 15; scene.add(pPoints);
+const _pc = new THREE.Color();
+function emit(o) {
+  const p = PS[pHead]; pHead = (pHead + 1) % PMAX;
+  _pc.setHex(o.c === undefined ? 0xffffff : o.c).convertSRGBToLinear();
+  p.on = true; p.x = o.x; p.y = o.y; p.z = o.z; p.vx = o.vx || 0; p.vy = o.vy || 0; p.vz = o.vz || 0; p.life = p.max = o.life || 0.6; p.size = o.size || 0.25;
+  p.grav = o.grav === undefined ? 10 : o.grav; p.drag = o.drag || 0; p.type = o.type || 0; p.r = _pc.r; p.g = _pc.g; p.b = _pc.b; p.a = o.a === undefined ? 1 : o.a; p.shrink = o.shrink !== false; p.grow = o.grow || 0;
 }
+const CONF = [0xff2f8f, 0xffd400, 0x22c55e, 0x2f7bff, 0xff7a00, 0x8f2be8, 0xe0001c];
+function burst(x, y, z, color, n, spd) {
+  for (let i = 0; i < n; i++) { const a = rand(0, TAU), s = rand(0.4, 1) * (spd || 3); emit({ x, y, z, vx: Math.cos(a) * s, vy: rand(2, 4.5), vz: Math.sin(a) * s, life: rand(0.45, 0.75), size: 0.2, c: color }); }
+}
+function petals(x, y, z, color) {
+  for (let i = 0; i < 6; i++) { const a = rand(0, TAU), s = rand(0.8, 2); emit({ x, y, z, vx: Math.cos(a) * s, vy: rand(1.5, 3.2), vz: Math.sin(a) * s, life: rand(0.5, 0.8), size: 0.2, c: i < 4 ? color : 0x1fae62, grav: 7, drag: 1 }); }
+}
+function confetti(x, y, z, n) { for (let i = 0; i < n; i++) { const a = rand(0, TAU), s = rand(1.5, 5); emit({ x, y, z, vx: Math.cos(a) * s, vy: rand(4, 9), vz: Math.sin(a) * s, life: rand(1.0, 1.7), size: rand(0.2, 0.32), c: CONF[i % CONF.length], type: 3, grav: 11, drag: 0.8, shrink: false }); } }
+function sparkles(x, y, z, n, c, spread) { for (let i = 0; i < n; i++) { const a = rand(0, TAU), s = rand(0.5, 2.2); emit({ x: x + rand(-1, 1) * (spread || 0.2), y: y + rand(0, 0.5), z: z + rand(-1, 1) * (spread || 0.2), vx: Math.cos(a) * s, vy: rand(0.5, 2.6), vz: Math.sin(a) * s, life: rand(0.5, 0.9), size: rand(0.35, 0.6), c: c || 0xfff2a0, type: 1, grav: 0, drag: 2.2 }); } }
+function hearts(x, y, z, n) { for (let i = 0; i < n; i++) emit({ x: x + rand(-0.4, 0.4), y, z: z + rand(-0.3, 0.3), vx: rand(-0.6, 0.6), vy: rand(1.6, 2.6), vz: rand(-0.3, 0.3), life: rand(0.9, 1.3), size: rand(0.45, 0.65), c: i % 2 ? 0xff3d7f : 0xff7ab0, type: 2, grav: -0.5, drag: 0.8 }); }
+function coins(x, y, z, n) { for (let i = 0; i < n; i++) { const a = rand(0, TAU), s = rand(1, 3); emit({ x, y, z, vx: Math.cos(a) * s, vy: rand(3, 6), vz: Math.sin(a) * s, life: rand(0.6, 0.9), size: 0.28, c: 0xffc21a, grav: 12 }); } }
+function dust(x, y, z, n, size) { for (let i = 0; i < (n || 1); i++) emit({ x: x + rand(-0.15, 0.15), y, z: z + rand(-0.15, 0.15), vx: rand(-0.5, 0.5), vy: rand(0.3, 0.9), vz: rand(-0.5, 0.5), life: rand(0.35, 0.55), size: size || 0.35, c: 0xf0e6d0, a: 0.55, grav: -0.5, drag: 2, shrink: false, grow: 1.2 }); }
+/* ground shock rings */
+const rings = [];
+const ringGeo = new THREE.RingGeometry(0.82, 1, 40);
+function ring(x, z, color, size) {
+  let r = rings.find(q => !q.on);
+  if (!r) { const m = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, depthWrite: false })); m.rotation.x = -Math.PI / 2; m.renderOrder = 4; scene.add(m); r = { m, on: false }; rings.push(r); }
+  r.on = true; r.t = 0; r.size = size || 4; r.m.material.color.copy(lc(color)); r.m.position.set(x, 0.08, z); r.m.visible = true;
+}
+function vib(ms) { try { if (navigator.vibrate) navigator.vibrate(ms); } catch (e) {} }
 function updateParticles(dt) {
-  for (let i = particles.length - 1; i >= 0; i--) {
-    const p = particles[i]; p.life -= dt; p.vy -= 12 * dt;
-    p.m.position.x += p.vx * dt; p.m.position.y += p.vy * dt; p.m.position.z += p.vz * dt;
-    p.m.scale.setScalar(Math.max(0.001, 0.09 * Math.min(1, p.life / 0.3)));
-    if (p.life <= 0) { rm(p.m); particles.splice(i, 1); }
+  for (let i = 0; i < PMAX; i++) {
+    const p = PS[i];
+    if (!p.on) { pAlpha[i] = 0; pSize[i] = 0; continue; }
+    p.life -= dt; if (p.life <= 0) { p.on = false; pAlpha[i] = 0; pSize[i] = 0; continue; }
+    const dr = Math.max(0, 1 - p.drag * dt); p.vx *= dr; p.vz *= dr; p.vy = p.vy * dr - p.grav * dt;
+    p.x += p.vx * dt; p.y += p.vy * dt; p.z += p.vz * dt; if (p.y < 0.05 && p.grav > 0) { p.y = 0.05; p.vy *= -0.3; }
+    const k = p.life / p.max;
+    pPos[i * 3] = p.x; pPos[i * 3 + 1] = p.y; pPos[i * 3 + 2] = p.z; pCol[i * 3] = p.r; pCol[i * 3 + 1] = p.g; pCol[i * 3 + 2] = p.b;
+    pSize[i] = p.size * (p.shrink ? Math.min(1, k * 2.5) : 1) * (1 + p.grow * (1 - k)); pAlpha[i] = p.a * Math.min(1, k * 3); pType[i] = p.type;
   }
+  pGeo.attributes.position.needsUpdate = pGeo.attributes.color.needsUpdate = pGeo.attributes.size.needsUpdate = pGeo.attributes.alpha.needsUpdate = pGeo.attributes.type.needsUpdate = true;
+  for (const r of rings) if (r.on) { r.t += dt / 0.7; const k = Math.min(1, r.t); r.m.scale.setScalar(0.4 + r.size * (1 - Math.pow(1 - k, 3))); r.m.material.opacity = 0.9 * (1 - k); if (k >= 1) { r.on = false; r.m.visible = false; } }
 }
 const popTexts = [];
 function popText(x, y, z, text, col) {
@@ -694,7 +743,7 @@ function sendToBack(c, mesh, type, h) {
   fly(mesh, out => {
     const idx = Math.min(base, c.stack.length + c.incoming - 1);
     c.slotFn(idx, _w); charToWorld(c, _w, out); return c.yaw;
-  }, 0.34, h || 1.4, () => { c.incoming--; c.stack.add(mesh, type); });
+  }, 0.34, h || 1.4, () => { c.incoming--; c.stack.add(mesh, type); if (c === P) { charToWorld(c, _w.set(0, 1.2, -0.7), _e); dust(_e.x, _e.y, _e.z, 2, 0.22); } });
 }
 function takeFromBack(c, type) {
   const it = c.stack.takeLast(type); if (!it) return null;
@@ -848,8 +897,8 @@ function buildBed(idx) {
   return bed;
 }
 function unlockBed(bed, instant) {
-  bed.locked = false; bed.group.visible = false; bed.flowers.forEach(f => { f.g.visible = true; f.t = instant ? rand(0, CFG.growTime) : 0; });
-  if (!instant) { burst(bed.x, 0.8, bed.z, 0xffd23f, 18, 5); burst(bed.x, 0.8, bed.z, 0xff5aa0, 14, 5); }
+  bed.locked = false; bed.group.visible = !!instant ? false : true; bed.flowers.forEach(f => { f.g.visible = true; f.t = instant ? rand(0, CFG.growTime) : 0; });
+  if (!instant) { bed.group.visible = true; bed.dropping = 0; confetti(bed.x, 1.5, bed.z, 50); for (let i = 0; i < 14; i++) dust(bed.x + rand(-3.2, 3.2), 0.3, bed.z + rand(-2.6, 2.6), 2, 0.8); ring(bed.x, bed.z, 0x7dff7a, 7); nudge.t = 0; nudge.x = bed.x; nudge.z = bed.z; }
 }
 
 /* ---- furniture: tables, machine, counter ---- */
@@ -1199,7 +1248,8 @@ function finishCustomer(c) {
   const qi = queue.indexOf(c); if (qi >= 0) queue.splice(qi, 1);
   c.state = 'leaving'; setBubble(c, 'happy'); c.hideBubble = 1.2; stats.sold++; sfx('happy');
   c.path = [[12.4, -0.3], [12.4, 12.5], [10, 18], [10, 40]];
-  const n = c.want;
+  const n = c.want, gp = c.group.position;
+  hearts(gp.x, 3.4, gp.z, 5); coins(gp.x, 2.2, gp.z, 8); popText(gp.x, 4.2, gp.z, '+' + n * CFG.billValue, '#6dff6a'); vib(8);
   for (let k = 0; k < n; k++) later(0.15 + k * 0.16, () => spawnBill(c));
 }
 function spawnBill(c) {
@@ -1244,7 +1294,7 @@ function removeCustomer(i) {
 function harvest(f, who) {
   const item = makeFlowerItem(f.ci, f.type); item.position.set(f.x, 0.6, f.z); scene.add(item);
   f.t = 0; f.pop = 0.18; f.claimed = false; f.full = false; f.g.userData.stem.scale.y = 0.001; f.g.userData.bloom.scale.setScalar(0.001);
-  burst(f.x, 0.7, f.z, FLOWER_COLS[f.ci % FLOWER_COLS.length], 5, 2.2);
+  petals(f.x, 0.8, f.z, FLOWER_COLS[f.ci % FLOWER_COLS.length]);
   sendToBack(who, item, 'flower', 1.6);
   if (who === P) { stats.harvested++; sfx('pick'); }
 }
@@ -1269,15 +1319,17 @@ function pickFromOutput() {
   const it = outputPile.takeLast('bouquet'); if (!it) return;
   sendToBack(P, it.mesh, 'bouquet', 1.5); stats.picked++; sfx('pick');
 }
+let collAcc = 0, collT = 0;
 function collectMoney() {
   const it = moneyPile.takeLast('bill');
   if (!it) {
     if (moneyPile.extra > 0) { const v = moneyPile.extra * CFG.billValue; moneyPile.extra = 0; addMoney(v); sfx('coin'); stats.collected++; }
     return false;
   }
-  fly(it.mesh, out => { out.set(P.group.position.x, 1.3, P.group.position.z); return 0; }, 0.32, 1.2, () => { rm(it.mesh); addMoney(CFG.billValue); sfx('coin'); stats.collected++; });
+  fly(it.mesh, out => { out.set(P.group.position.x, 1.3, P.group.position.z); return 0; }, 0.32, 1.2, () => { rm(it.mesh); addMoney(CFG.billValue); sfx('coin'); stats.collected++; collAcc += CFG.billValue; });
   return true;
 }
+function updateCollectText(dt) { collT -= dt; if (collAcc > 0 && collT <= 0) { popText(P.group.position.x, 3.6, P.group.position.z, '+' + collAcc, '#6dff6a'); collAcc = 0; collT = 0.4; } }
 function addMoney(v) { S.money += v; stats.earned += v; saveDirty = true; moneyEl.classList.remove('bump'); void moneyEl.offsetWidth; moneyEl.classList.add('bump'); }
 
 function updatePacking(dt, t) {
@@ -1294,8 +1346,8 @@ function updatePacking(dt, t) {
     if (m.timer >= interval) {
       m.working = false; m.pendingOut++; stats.packed++;
       const b = makeBouquetItem(); b.position.set(m.x, TABLE_Y + 0.6, m.z + 0.9); scene.add(b);
-      const idx = outputPile.length + m.pendingOut - 1; burst(m.x, TABLE_Y + 0.8, m.z + 0.9, 0xffffff, 5, 2);
-      fly(b, out => { outputPile.slotFn(Math.min(idx, CFG.outputCap - 1), out); return 0; }, 0.5, 1.6, () => { m.pendingOut--; outputPile.add(b, 'bouquet'); sfx('drop'); });
+      const idx = outputPile.length + m.pendingOut - 1; sparkles(m.x, TABLE_Y + 0.8, m.z + 0.9, 4, 0xffffff, 0.3);
+      fly(b, out => { outputPile.slotFn(Math.min(idx, CFG.outputCap - 1), out); return 0; }, 0.5, 1.6, () => { m.pendingOut--; outputPile.add(b, 'bouquet'); sfx('drop'); outputPile.slotFn(outputPile.length - 1, _w); sparkles(_w.x, _w.y + 0.3, _w.z, 7, 0xfff2a0, 0.5); });
     }
   } else { machine.bar.visible = machine.barBg.visible = false; m.group.scale.y = damp(m.group.scale.y, 1, 10, dt); m.group.position.y = TABLE_Y; }
   const w = m.worker; animChar(w, dt, 0, t);
@@ -1330,8 +1382,9 @@ function applyUpgrade(key, instant) {
 }
 function purchase(u) {
   const key = u.key; S.lv[key]++; u.paid = 0; stats.upgrades++; saveDirty = true; u.locked = true; u.pause = 1.0; u.off = false; u.hold = 0; u.pop = 0.6;
-  sfx('up'); burst(u.x, 0.8, u.z, 0xffd23f, 16, 4.5); burst(u.x, 0.8, u.z, 0xffffff, 10, 3.5);
-  popText(u.x, 2.4, u.z, UPG[key].name + '!', '#7dff7a');
+  sfx('up'); confetti(u.x, 1.2, u.z, 44); sparkles(u.x, 0.8, u.z, 14, 0xfff2a0, 1.0); ring(u.x, u.z, 0xffc21a, 4.5);
+  ring(P.group.position.x, P.group.position.z, 0x7dff7a, 3); sparkles(P.group.position.x, 0.6, P.group.position.z, 12, 0x9dffb0, 0.5); vib(18);
+  popText(u.x, 2.6, u.z, '+ ' + UPG[key].name + '!', '#7dff7a');
   applyUpgrade(key, false);
   if (S.lv[key] >= u.max()) { u.done = true; u.group.visible = false; } else u.redraw();
   writeSave();
@@ -1443,7 +1496,9 @@ function updateHUD(dt) {
    ===================================================================== */
 const camFocus = new THREE.Vector3(CFG.start.x, 0, CFG.start.z); const inV = { x: 0, z: 0 };
 let T = 0, spawnT = 2, camInit = false;
+const nudge = { t: 99, x: 0, z: 0 };
 
+let stepT = 0;
 function movePlayer(dt) {
   inputVec(inV); const spd = speedOf(), mag = Math.min(1, Math.hypot(inV.x, inV.z));
   const tvx = inV.x * spd, tvz = inV.z * spd;
@@ -1461,12 +1516,14 @@ function movePlayer(dt) {
     }
   }
   const sp = Math.hypot(P.vel.x, P.vel.z);
+  stepT -= dt; if (sp > 2.5 && stepT <= 0) { stepT = 0.2; dust(gp.x - P.vel.x * 0.05, 0.12, gp.z - P.vel.z * 0.05, 1, 0.3); }
   if (sp > 0.3) faceChar(P, P.vel.x, P.vel.z, dt);
   updateSway(P, dt); animChar(P, dt, clamp(sp / CFG.baseSpeed, 0, 1.2) * (sp > 0.3 ? 1 : 0), T);
 }
 
 function updateBeds(dt) {
   for (const b of beds) {
+    if (b.dropping !== undefined) { b.dropping += dt; const k = Math.min(1, b.dropping / 0.9); b.group.position.y = -3.2 * k * k; if (k >= 1) { b.group.visible = false; b.group.position.y = 0; b.dropping = undefined; for (let i = 0; i < 10; i++) dust(b.x + rand(-3.4, 3.4), 0.3, b.z + rand(-2.8, 2.8), 1, 0.7); } }
     if (b.locked) continue;
     for (const f of b.flowers) {
       if (f.pop > 0) { f.pop -= dt; f.g.scale.setScalar(Math.max(0.001, f.pop / 0.18) * 1.15); continue; }
@@ -1517,14 +1574,15 @@ function update(dt) {
   if (spawnT <= 0 && queue.length < CFG.queueMax) { spawnCustomer(26); spawnT = queue.length < 3 ? CFG.spawnShortEvery : CFG.spawnEvery; }
   updateCustomers(dt, T);
   P.stack.update(dt, T); inputPile.update(dt, T); outputPile.update(dt, T); moneyPile.update(dt, T);
-  updateFlights(dt); updateLater(dt); updateParticles(dt); updatePopTexts(dt);
+  updateFlights(dt); updateLater(dt); updateParticles(dt); updatePopTexts(dt); updateCollectText(dt);
   // camera
   const gp = P.group.position;
   const fw = _v.set(-Math.sin(CFG.yaw), 0, -Math.cos(CFG.yaw));
   const tx = gp.x + P.vel.x * 0.25 + fw.x * 1.8, tz = gp.z + P.vel.z * 0.25 + fw.z * 1.8;
   if (!camInit) { camFocus.set(tx, 0, tz); camInit = true; }
-  camFocus.x = damp(camFocus.x, tx, 4.5, dt); camFocus.z = damp(camFocus.z, tz, 4.5, dt);
-  const cd = camDist * camMul, H = cd * Math.cos(CFG.tilt), Y = cd * Math.sin(CFG.tilt);
+  nudge.t += dt; const nw = nudge.t < 2.2 ? Math.sin(Math.PI * nudge.t / 2.2) : 0;
+  camFocus.x = damp(camFocus.x, lerp(tx, nudge.x, nw * 0.6), 4.5, dt); camFocus.z = damp(camFocus.z, lerp(tz, nudge.z, nw * 0.6), 4.5, dt);
+  const cd = camDist * camMul * (1 - 0.1 * nw), H = cd * Math.cos(CFG.tilt), Y = cd * Math.sin(CFG.tilt);
   camera.position.set(camFocus.x + Math.sin(CFG.yaw) * H, Y, camFocus.z + Math.cos(CFG.yaw) * H);
   camera.lookAt(camFocus.x, 0, camFocus.z);
   sun.position.set(gp.x - 9, 24, gp.z + 7); sun.target.position.set(gp.x, 0, gp.z); sun.target.updateMatrixWorld();
