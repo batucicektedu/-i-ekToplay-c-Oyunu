@@ -78,22 +78,22 @@ const CFG = {
   packBase: 1.0, packMul: 0.75,
   transferEvery: 0.08,
   inputCap: 24, outputCap: 16, moneyCap: 60,
-  queueMax: 6, spawnEvery: 2.75, spawnShortEvery: 1.0, walkSpeed: 5.0, leaveSpeed: 5.7, queueX: 10, queueZ0: -1.5, queueGap: 1.5,
+  queueMax: 6, spawnEvery: 2.0, spawnShortEvery: 0.8, walkSpeed: 5.0, leaveSpeed: 5.7, queueX: 10, queueZ0: -1.5, queueGap: 1.5,
   helperCap: 6,
   bounds: { x0: -19, x1: 17.8, z0: -10.4, z1: 16 },
   start: { x: 2, z: 4 }
 };
-const geo = (base, n) => Array.from({ length: n }, (_, i) => Math.round(base * Math.pow(1.25, i) / 5) * 5);
+const geo = (base, n) => Array.from({ length: n }, (_, i) => Math.round(base * Math.pow(1.5, i) / 5) * 5);
 const PRICE = { bouquet: 10, pot: 25 };
 const UPG = {
-  sera: { name: 'Sera', costs: [500] }, van: { name: 'Minibüs', costs: [1500] }, cashier: { name: 'Kasiyer', costs: [120] }, carrier: { name: 'Taşıyıcı', costs: [250] },
-  cashSpd: { name: 'Kasiyer Hızı', costs: geo(150, 5) }, carSpd: { name: 'Taşıyıcı Hızı', costs: geo(160, 5) },
-  carCap: { name: 'Taşıyıcı Kapasite', costs: geo(180, 5) }, helpSpd: { name: 'Bahçıvan Hızı', costs: geo(200, 5) },
-  cap:    { name: 'Kapasite',       costs: geo(40, 6) },
-  speed:  { name: 'Hız',            costs: geo(60, 6) },
-  pack:   { name: 'Paketleme Hızı', costs: geo(70, 6) },
-  bed:    { name: 'Yeni Bahçe',     costs: [150] },
-  helper: { name: 'Yardımcı',       costs: [300] }
+  sera: { name: 'Sera', costs: [1800] }, van: { name: 'Minibüs', costs: [6000] }, cashier: { name: 'Kasiyer', costs: [150] }, carrier: { name: 'Taşıyıcı', costs: [450] },
+  cashSpd: { name: 'Kasiyer Hızı', costs: geo(300, 7) }, carSpd: { name: 'Taşıyıcı Hızı', costs: geo(300, 7) },
+  carCap: { name: 'Taşıyıcı Kapasite', costs: geo(350, 7) }, helpSpd: { name: 'Bahçıvan Hızı', costs: geo(400, 7) },
+  cap:    { name: 'Kapasite',       costs: geo(70, 7) },
+  speed:  { name: 'Hız',            costs: geo(100, 7) },
+  pack:   { name: 'Paketleme Hızı', costs: geo(130, 7) },
+  bed:    { name: 'Yeni Bahçe',     costs: [300] },
+  helper: { name: 'Yardımcı',       costs: [450] }
 };
 const POS = {
   packTable: { x: -2.2, z: -2.2 }, packPad: { x: -6.2, z: 0.7 },
@@ -1251,7 +1251,7 @@ function updateSera(dt) {
 }
 function updatePotting(dt, t) {
   if (!zone2 || zone2.locked || zone2.popT !== undefined && zone2.popT < 1.5) return;
-  const m = potM, interval = packInterval() * 1.4;
+  const m = potM, interval = CFG.packBase * 1.4;
   if (!m.working && potInput.length > 0 && potOutput.length + m.pendingOut < 8) {
     const it = potInput.takeLast('orchid'); fly(it.mesh, out => { out.set(m.x, TABLE_Y + 1.5, m.z); return 0; }, 0.25, 0.6, () => { rm(it.mesh); sfx('pack'); });
     m.working = true; m.timer = 0;
@@ -1401,7 +1401,7 @@ function updateVan(dt, t) {
     VAN.trip += dt;
     if (vanDrive(dt, 8, 15, true)) {
       VAN.state = 'parked'; VAN.yaw = -Math.PI / 2; VAN.group.rotation.y = VAN.yaw; VAN.x = 16.2; VAN.z = 24; VAN.group.position.set(16.2, 0, 24);
-      const total = VAN.sum * 3, n = Math.round(total / CFG.billValue); VAN.sum = 0; stats.vanRuns = (stats.vanRuns || 0) + 1;
+      const total = VAN.sum * 2, n = Math.round(total / CFG.billValue); VAN.sum = 0; stats.vanRuns = (stats.vanRuns || 0) + 1;
       confetti(16.2, 2.5, 24, 40); popText(16.2, 4.6, 24, '+' + total, '#6dff6a'); ring(16.2, 24, 0xffc21a, 6); sfx('up'); vib(20);
       for (let k = 0; k < n; k++) later(0.1 + k * Math.min(0.12, 1.2 / n), () => {
         const b = makeBill(); b.position.set(16.2, 2.2, 24); scene.add(b); const idx = vanPile.length + (vanPile.pend || 0); vanPile.pend = (vanPile.pend || 0) + 1;
@@ -1846,7 +1846,8 @@ function updateUpgrades(dt) {
       u.pause -= dt; if (!u.inside) u.off = true;
       if (u.off && u.pause <= 0 && u.inside) { u.locked = false; u.hold = 0; u.redraw(); } else continue;
     }
-    if (!u.inside || S.money <= 0) { u.hold = 0; continue; }
+    if (!u.inside || S.money <= 0) { u.hold = 0; u.dwell = 0; continue; }
+    u.dwell = (u.dwell || 0) + dt; if (u.dwell < 0.5) continue;
     u.hold += dt;
     u.tick -= dt; if (u.tick > 0) continue; u.tick = 0.05;
     const cost = u.cost(), rem = cost - u.paid, perSec = cost / 2.5 * (1 + u.hold * 1.1), amt = Math.min(S.money, rem, Math.max(1, Math.ceil(perSec * 0.05)));
@@ -2075,7 +2076,7 @@ function update(dt) {
   // customers spawning
   spawnT -= dt;
   if (queue.length < 3 && spawnT > CFG.spawnShortEvery) spawnT = CFG.spawnShortEvery;
-  if (spawnT <= 0 && queue.length < CFG.queueMax) { spawnCustomer(26); spawnT = queue.length < 3 ? CFG.spawnShortEvery : CFG.spawnEvery; }
+  if (spawnT <= 0 && queue.length < CFG.queueMax) { spawnCustomer(26); spawnT = (queue.length < 3 ? CFG.spawnShortEvery : CFG.spawnEvery) * Math.pow(0.88, S.lv.cashSpd); }
   updateCustomers(dt, T);
   P.stack.update(dt, T); inputPile.update(dt, T); outputPile.update(dt, T); moneyPile.update(dt, T); shelfB.update(dt, T); shelfP.update(dt, T); potInput.update(dt, T); potOutput.update(dt, T); vanLoad.update(dt, T); vanPile.update(dt, T);
   updateFlights(dt); updateLater(dt); updateParticles(dt); updatePopTexts(dt); updateCollectText(dt);
