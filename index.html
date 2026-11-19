@@ -101,7 +101,7 @@ const POS = {
   counter: { x: 10, z: -3.4 }, counterPad: { x: 7.4, z: -1.3 },
   moneyPile: { x: 13.7, z: -3.2 },
   beds: [{ x: -14, z: -8 }, { x: -14, z: 0 }, { x: -14, z: 8 }],
-  upgradeZ: 9.4, upgradeZ2: 6.0
+  potOut: { x: 42.6, z: -0.4 }, upgradeZ: 9.4, upgradeZ2: 6.0
 };
 const TABLE_Y = 1.0;
 const FLOWER_COLS = [0xe0001c, 0xff1f8e, 0xffd400, 0x8f2be8, 0xfff0cc];
@@ -119,6 +119,7 @@ function angDiff(a, b) { let d = (b - a) % TAU; if (d > Math.PI) d -= TAU; if (d
 const easeOutBack = t => { const c = 1.70158; t = clamp(t, 0, 1); return 1 + (c + 1) * Math.pow(t - 1, 3) + c * Math.pow(t - 1, 2); };
 function rm(o) { if (o && o.parent) o.parent.remove(o); }
 
+let LOADED_X = null;
 const S = { money: 0, lv: { cap: 0, speed: 0, pack: 0, bed: 0, helper: 0, cashier: 0, carrier: 0, cashSpd: 0, carSpd: 0, carCap: 0, helpSpd: 0, sera: 0, van: 0 }, tut: 0 };
 let saveDirty = false, saveTimer = 0;
 (function loadSave() {
@@ -127,11 +128,14 @@ let saveDirty = false, saveTimer = 0;
     if (s && typeof s === 'object') {
       S.money = Math.max(0, Math.floor(+s.money || 0));
       for (const k in S.lv) S.lv[k] = clamp(Math.floor((s.lv && s.lv[k]) || 0), 0, UPG[k].costs.length);
-      S.tut = clamp(Math.floor(+s.tut || 0), 0, 6);
+      S.tut = clamp(Math.floor(+s.tut || 0), 0, 12); LOADED_X = s.x && typeof s.x === 'object' ? s.x : null;
     }
   } catch (e) {}
 })();
-function writeSave() { saveDirty = false; try { localStorage.setItem(SAVE_KEY, JSON.stringify(S)); } catch (e) {} }
+function writeSave() {
+  saveDirty = false; if (window.__resetting) return;
+  try { const o = JSON.parse(JSON.stringify(S)); try { o.x = snapshot(); } catch (e) {} localStorage.setItem(SAVE_KEY, JSON.stringify(o)); } catch (e) {}
+}
 
 let AC = null; const sfxLast = {};
 function initAudio() {
@@ -380,6 +384,7 @@ function bubbleDraw(kind, n, prod) {
     ctx.beginPath(); ctx.moveTo(w / 2 - 22, 146); ctx.lineTo(w / 2, 186); ctx.lineTo(w / 2 + 22, 146); ctx.closePath(); ctx.fill(); ctx.stroke();
     ctx.fillStyle = '#fff'; ctx.fillRect(w / 2 - 20, 140, 40, 12);
     if (kind === 'want') { (prod === 'pot' ? iconPot : iconBouquet)(ctx, 80, 74, 96); otext(ctx, 'x' + n, 178, 78, 66, '#fff', '#16324a'); }
+    else if (kind === 'sad') { iconSmile(ctx, w / 2, 78, 104); ctx.fillStyle = '#ffd23f'; ctx.fillRect(w / 2 - 28, 78, 56, 32); ctx.strokeStyle = '#5a3a10'; ctx.lineWidth = 6; ctx.lineCap = 'round'; ctx.beginPath(); ctx.arc(w / 2, 108, 18, Math.PI + 0.3, TAU - 0.3); ctx.stroke(); ctx.fillStyle = '#6ec6ff'; ctx.beginPath(); ctx.ellipse(w / 2 + 30, 82, 5, 9, 0, 0, TAU); ctx.fill(); }
     else { iconSmile(ctx, w / 2, 78, 104); }
   };
 }
@@ -709,6 +714,7 @@ function makeBill() {
    7. CHARACTERS
    ===================================================================== */
 const CHAR_S = 1.2;
+const dressGeo = new THREE.CylinderGeometry(0.28, 0.4, 0.3, 14);
 let _faceTex = null;
 function faceTexture() {
   if (_faceTex) return _faceTex;
@@ -742,7 +748,7 @@ function makeChar(o) {
   body.add(mk(G.sph, skirt || pants, 0.27, 0.2, 0.23, 0, 0.62, 0));
   body.add(mk(G.cyl, shirt, 0.25, 0.34, 0.21, 0, 0.84, 0));
   body.add(mk(G.sph, shirt, 0.27, 0.2, 0.22, 0, 1.0, 0));
-  if (skirt) { const sk = mk(G.cyl, skirt, 0.3, 0.3, 0.3, 0, 0.58, 0); sk.scale.set(0.3, 0.3, 0.27); body.add(sk); const fl = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.4, 0.3, 14), skirt); fl.position.y = 0.52; fl.scale.z = 0.9; body.add(fl); }
+  if (skirt) { const sk = mk(G.cyl, skirt, 0.3, 0.3, 0.3, 0, 0.58, 0); sk.scale.set(0.3, 0.3, 0.27); body.add(sk); const fl = new THREE.Mesh(dressGeo, skirt); fl.position.y = 0.52; fl.scale.z = 0.9; body.add(fl); }
   body.add(mk(G.cyl, skin, 0.08, 0.14, 0.08, 0, 1.2, 0));
   if (o.outfit === 'overalls') {
     body.add(mk(G.box, pants, 0.36, 0.36, 0.06, 0, 0.86, 0.2)); body.add(mk(G.box, pants, 0.36, 0.18, 0.05, 0, 0.7, 0.2));
@@ -1038,7 +1044,8 @@ function pot(x, z, ty, ci) {
 }
 
 const machine = { x: -2.7, z: -2.2, working: false, timer: 0, pendingOut: 0, group: null, bar: null, barBg: null, worker: null };
-let inputPile, outputPile, moneyPile, shelf, potOutput = null;
+let inputPile, outputPile, moneyPile, shelfB, shelfP, potOutput = null;
+const lane = t => t === 'pot' ? shelfP : shelfB;
 function buildStations() {
   const WM = woodM(), dark = mat(0x5a2f12), light = mat(0xe8a850);
   const pt = POS.packTable, BX0 = -7.9, BX1 = 3.5, bw = BX1 - BX0, bcx = (BX0 + BX1) / 2;
@@ -1129,7 +1136,9 @@ function buildStations() {
   }, CFG.moneyCap);
   moneyPile.extra = 0;
   // counter shelf (tezgah rafı): upright products on the counter top
-  shelf = new Stack(scene, (i, out) => { const r = i % 8; out.set(ct.x - 1.0 + (r % 4) * 0.62, 1.55, ct.z + (Math.floor(r / 4) - 0.5) * 0.6); }, 8); shelf.pend = 0;
+  shelfB = new Stack(scene, (i, out) => { const r = i % 6; out.set(ct.x - 1.35 + (r % 3) * 0.62, 1.55, ct.z + (Math.floor(r / 3) - 0.5) * 0.62); }, 6); shelfB.pend = 0;
+  shelfP = new Stack(scene, (i, out) => { const r = i % 6; out.set(ct.x + 0.55 + (r % 3) * 0.62, 1.55, ct.z + (Math.floor(r / 3) - 0.5) * 0.62); }, 6); shelfP.pend = 0;
+  for (const [px, col] of [[ct.x - 0.75, 0xff6fa5], [ct.x + 1.15, 0xa64dff]]) { const pl = rbox(1.95, 0.05, 1.45, 0.02, mat(col)); pl.position.set(px, 1.24, ct.z); world.add(pl); }
 }
 
 /* =====================================================================
@@ -1548,26 +1557,39 @@ function spawnHelper(instant) {
   scene.add(c.group); helper = c; c.state = 'seek'; c.target = null; c.cd = 0; c.idle = 0;
   if (!instant) { burst(-9.2, 1, 3.2, 0xffd23f, 14, 4); c.group.scale.setScalar(0.01); c.spawnT = 0; }
 }
+function helperKind() {
+  if (!(zone2 && !zone2.locked)) return 'flower';
+  const pots = potInput.length + potOutput.length + shelfP.length + (potM.working ? 1 : 0), bq = inputPile.length + outputPile.length + shelfB.length + (machine.working ? 1 : 0);
+  return pots < 6 && pots * 2 <= bq ? 'orchid' : 'flower';
+}
+function dropToPot(who) {
+  const it = takeFromBack(who, 'orchid'); if (!it) return false;
+  const idx = potInput.length + (potInput.pend || 0); potInput.pend = (potInput.pend || 0) + 1;
+  fly(it.mesh, out => { potInput.slotFn(Math.min(idx, CFG.inputCap - 1), out); return 0; }, 0.32, 1.3, () => { potInput.pend--; potInput.add(it.mesh, 'orchid'); }); sfx('drop'); return true;
+}
 function updateHelper(dt, t) {
   const h = helper; if (!h) return;
   if (h.spawnT !== undefined) { h.spawnT += dt * 2.5; h.group.scale.setScalar(easeOutBack(h.spawnT) * CHAR_S); if (h.spawnT >= 1) { h.group.scale.setScalar(CHAR_S); h.spawnT = undefined; } }
   let tx = null, tz = null, spd = 4.4 * Math.pow(1.15, S.lv.helpSpd);
   const full = h.stack.length + h.incoming >= CFG.helperCap;
+  if (!h.kind) h.kind = 'flower';
   if (h.state === 'seek') {
+    if (h.stack.length === 0 && h.incoming === 0 && !h.target) h.kind = helperKind();
     if (full) h.state = 'deliver';
     else {
       if (h.target && (h.target.t < h.target.gt || h.target.bed.locked)) h.target = null;
       if (!h.target) {
         let best = 1e9;
-        for (const b of beds) { if (b.locked || b.nohelp) continue; for (const f of b.flowers) if (f.t >= f.gt && !f.claimed) { const d = (f.x - h.group.position.x) ** 2 + (f.z - h.group.position.z) ** 2; if (d < best) { best = d; h.target = f; } } }
+        for (const b of beds) { if (b.locked) continue; for (const f of b.flowers) if (f.t >= f.gt && !f.claimed && (f.type === 'orchid') === (h.kind === 'orchid')) { const d = (f.x - h.group.position.x) ** 2 + (f.z - h.group.position.z) ** 2; if (d < best) { best = d; h.target = f; } } }
         if (h.target) h.target.claimed = true;
       }
       if (h.target) { tx = h.target.x; tz = h.target.z; h.idle = 0; }
-      else { h.idle += dt; if (h.idle > 1.2 && h.stack.length > 0) h.state = 'deliver'; }
+      else { h.idle += dt; if (h.idle > 1.2 && h.stack.length > 0) h.state = 'deliver'; else if (h.idle > 3 && h.stack.length === 0) { h.kind = h.kind === 'orchid' ? 'flower' : 'orchid'; h.idle = 0; if (h.kind === 'orchid' && !(zone2 && !zone2.locked)) h.kind = 'flower'; } }
     }
   } else if (h.state === 'deliver') {
-    tx = POS.packPad.x + Math.sin(1.3) * 0.2; tz = POS.packPad.z;
-    if (h.stack.count('flower') === 0 && h.incoming === 0) h.state = 'seek';
+    const ot = h.stack.items.length && h.stack.items[0].type === 'orchid';
+    if (ot) { tx = potZone.x; tz = potZone.z; } else { tx = POS.packPad.x + Math.sin(1.3) * 0.2; tz = POS.packPad.z; }
+    if (h.stack.items.length === 0 && h.incoming === 0) h.state = 'seek';
   }
   let mv = 0, dx = 0, dz = 0;
   if (tx !== null) {
@@ -1580,12 +1602,13 @@ function updateHelper(dt, t) {
   if (h.state === 'seek' && h.target && h.cd <= 0 && Math.hypot(h.target.x - h.group.position.x, h.target.z - h.group.position.z) < 0.9 && h.free() > 0) {
     harvest(h.target, h); h.target = null; h.cd = 0.12;
   }
-  if (h.state === 'deliver' && h.cd <= 0 && packZone.contains(h.group.position.x, h.group.position.z)) {
-    if (h.stack.count('flower') > 0 && inputPile.length + (inputPile.pend || 0) < CFG.inputCap) { transferToInput(h); h.cd = 0.1; }
+  if (h.state === 'deliver' && h.cd <= 0) {
+    const gx = h.group.position.x, gz = h.group.position.z;
+    if (h.stack.count('flower') > 0 && packZone.contains(gx, gz) && inputPile.length + (inputPile.pend || 0) < CFG.inputCap) { transferToInput(h); h.cd = 0.1; }
+    else if (h.stack.count('orchid') > 0 && potZone.contains(gx, gz) && potInput.length + (potInput.pend || 0) < CFG.inputCap) { dropToPot(h); h.cd = 0.1; }
   }
   updateSway(h, dt); animChar(h, dt, mv, t); h.stack.update(dt, t);
 }
-
 /* ---- cashier & carrier ---- */
 let cashier = null, carrier = null;
 function workerPop(h, dt) { if (h.spawnT !== undefined) { h.spawnT += dt * 2.5; h.group.scale.setScalar(easeOutBack(h.spawnT) * CHAR_S); if (h.spawnT >= 1) { h.group.scale.setScalar(CHAR_S); h.spawnT = undefined; } } }
@@ -1599,7 +1622,7 @@ function updateCashier(dt, t) {
   const h = cashier; if (!h) return; workerPop(h, dt);
   h.cd -= dt; h.busy = Math.max(0, h.busy - dt);
   const c = queue[0];
-  if (h.cd <= 0 && c && c.state === 'queue' && c.atSlot && c.want - c.got - c.pending > 0 && shelf.count(c.prod) > 0) { serveFromShelf(c); h.cd = 1.2 * Math.pow(0.8, S.lv.cashSpd); h.busy = 0.5; }
+  if (h.cd <= 0 && c && c.state === 'queue' && c.atSlot && c.want - c.got - c.pending > 0 && lane(c.prod).count(c.prod) > 0) { serveFromShelf(c); h.cd = 1.2 * Math.pow(0.8, S.lv.cashSpd); h.busy = 0.5; }
   animChar(h, dt, 0, t); const w = h.busy > 0 ? 1 : 0; h.armR.rotation.x = -1.3 * w * (0.7 + 0.3 * Math.sin(t * 14));
 }
 function spawnCarrier(instant) {
@@ -1608,25 +1631,43 @@ function spawnCarrier(instant) {
   c.group.position.set(5.0, 0, 3.4); scene.add(c.group); carrier = c; c.state = 'idle'; c.cd = 0;
   attachBackStack(c, () => 4 + 2 * S.lv.carCap); popInWorker(c, instant);
 }
-const outSources = () => [outputPile].concat(typeof potOutput !== 'undefined' && potOutput ? [potOutput] : []);
+const outSources = () => [outputPile].concat(potOutput ? [potOutput] : []);
+const srcOf = t => t === 'pot' ? potOutput : outputPile;
+function carrierPick(load) {
+  let nb = 0, np = 0;
+  for (let i = 0; i < Math.min(3, queue.length); i++) { const c = queue[i], nd = c.want - c.got; if (c.prod === 'pot') np += nd; else nb += nd; }
+  const opts = [];
+  for (const t of ['bouquet', 'pot']) { const src = srcOf(t); if (src && src.length > 0 && shelfFree(t) - load > 0) { const l = lane(t); opts.push({ t, def: (t === 'pot' ? np : nb) - (l.length + l.pend) + (t === 'pot' ? 0.1 : 0) }); } }
+  if (!opts.length) return null; opts.sort((a, b) => b.def - a.def); return opts[0].t;
+}
 function updateCarrier(dt, t) {
   const h = carrier; if (!h) return; workerPop(h, dt);
   const spd = 4.4 * Math.pow(1.15, S.lv.carSpd), gp = h.group.position; let tx = null, tz = null;
-  const avail = () => outSources().some(q => q.length > 0);
   const load = h.stack.length + h.incoming;
   h.cd -= dt;
-  if (h.state === 'idle') { tx = 6.0; tz = 3.0; if (avail() && (shelfFree() - load > 0 || vanFree() - load > 0)) { h.dest = shelfFree() - load > 0 ? 'shelf' : 'van'; h.state = 'toOut'; } }
-  else if (h.state === 'toOut') { tx = POS.outPad.x; tz = POS.outPad.z + 0.3; if (Math.hypot(tx - gp.x, tz - gp.z) < 0.4) { h.state = 'load'; h.cd = 0.1; } }
+  const outSpot = ty => ty === 'pot' ? [POS.potOut.x, POS.potOut.z + 0.3] : [POS.outPad.x, POS.outPad.z + 0.3];
+  if (h.state === 'idle') {
+    tx = 6.0; tz = 3.0;
+    const pt = carrierPick(load);
+    if (pt) { h.dest = 'shelf'; h.ptype = pt; h.state = 'toOut'; }
+    else if (outSources().some(q => q.length > 0) && vanFree() - load > 0) { h.dest = 'van'; h.ptype = outputPile.length > 0 ? 'bouquet' : 'pot'; h.state = 'toOut'; }
+  } else if (h.state === 'toOut') { const o = outSpot(h.ptype); tx = o[0]; tz = o[1]; if (Math.hypot(tx - gp.x, tz - gp.z) < 0.4) { h.state = 'load'; h.cd = 0.1; } }
   else if (h.state === 'load') {
     tx = null;
     if (h.cd <= 0) {
-      const src = outSources().find(q => q.length > 0);
-      if (src && load < h.capFn() && (h.dest === 'van' ? vanFree() : shelfFree()) - load > 0) { const it = src.takeLast(); it.mesh.getWorldPosition(_w); scene.add(it.mesh); it.mesh.position.copy(_w); if (posable(it.mesh)) bouquetPose(it.mesh, false); sendToBack(h, it.mesh, it.type, 1.4); h.cd = 0.14; }
+      const src = h.dest === 'van' ? (outSources().find(q => q.length > 0)) : srcOf(h.ptype);
+      const room = (h.dest === 'van' ? vanFree() : shelfFree(h.ptype)) - load;
+      if (src && src.length > 0 && load < h.capFn() && room > 0) { const it = src.takeLast(); it.mesh.getWorldPosition(_w); scene.add(it.mesh); it.mesh.position.copy(_w); if (posable(it.mesh)) bouquetPose(it.mesh, false); sendToBack(h, it.mesh, it.type, 1.4); h.cd = 0.14; }
       else if (h.incoming === 0) h.state = h.stack.length > 0 ? 'toShelf' : 'idle';
     }
   } else if (h.state === 'toShelf') { if (h.dest === 'van') { tx = 21.6; tz = 24; } else { tx = 8.9; tz = -1.1; } if (Math.hypot(tx - gp.x, tz - gp.z) < 0.4) { h.state = 'unload'; h.cd = 0.1; } }
   else if (h.state === 'unload') {
-    if (h.cd <= 0 && h.stack.length > 0) { if (h.dest === 'van') { if (vanFree() > 0) { toVan(takeFromBack(h, null), h); h.cd = 0.14; } else if (vanFree() === 0 && VAN.state !== 'parked') { h.dest = 'shelf'; h.state = 'toShelf'; } } else if (shelfFree() > 0) { const it = takeFromBack(h, null); toShelf(it, h); h.cd = 0.14; } }
+    if (h.cd <= 0 && h.stack.length > 0) {
+      const top = h.stack.items[h.stack.items.length - 1].type;
+      if (h.dest === 'van') { if (vanFree() > 0) { toVan(takeFromBack(h, null), h); h.cd = 0.14; } else if (VAN.state !== 'parked') { h.dest = 'shelf'; h.ptype = top; h.state = 'toShelf'; } }
+      else if (shelfFree(top) > 0) { toShelf(takeFromBack(h, null), h); h.cd = 0.14; }
+      else { h.stuck = (h.stuck || 0) + dt; if (h.stuck > 4) { h.stuck = 0; h.ptype = top === 'pot' ? 'bouquet' : 'pot'; if (!h.stack.items.some(i => i.type !== top)) { /* keep waiting */ } } }
+    }
     if (h.stack.length === 0) h.state = 'idle';
   }
   let mv = 0, dx = 0, dz = 0;
@@ -1640,13 +1681,20 @@ const HAIRS = [0x2a1a10, 0x6b3e1d, 0xe0b040, 0x1a1a1a, 0xb04a2a, 0x888888];
 const SKINS = [0xffcfa0, 0xf0b98a, 0xc68863, 0x8d5a3c, 0xffdcb8];
 const queueSlot = (i, out) => out.set(CFG.queueX, 0, CFG.queueZ0 + i * CFG.queueGap);
 let custCount = 0;
+function potStock() { return (potOutput ? potOutput.length : 0) + shelfP.length + potInput.length + P.stack.count('pot') + (potM.working ? 1 : 0) + (carrier ? carrier.stack.count('pot') : 0); }
+function potsPossible() { return zone2 && !zone2.locked && (potStock() > 0 || S.lv.helper > 0); }
+function stockOf(t) { return lane(t).length + (t === 'pot' ? potStock() : outputPile.length + P.stack.count('bouquet') + (carrier ? carrier.stack.count('bouquet') : 0)); }
+function leaveSad(c) {
+  const qi = queue.indexOf(c); if (qi >= 0) queue.splice(qi, 1);
+  c.state = 'leaving'; setBubble(c, 'sad'); c.hideBubble = 1.4; c.path = [[12.4, -0.3], [12.4, 12.5], [10, 18], [10, 40]]; sfx('drop');
+}
 function spawnCustomer(z) {
   const fem = Math.random() < 0.5, sh = pick(SHIRTS); custCount++; const vip = custCount % 6 === 0;
   const c = makeChar(vip ? { shirt: 0xff1fa0, pants: 0x6a2be8, hair: pick(HAIRS), skin: pick(SKINS), hairStyle: fem ? 'long' : 'short', crown: true, shoe: 0xffc21a } : { shirt: sh, pants: pick([0x3b4a6b, 0x5b4636, 0x2f6f5f, 0x444444]), hair: pick(HAIRS), skin: pick(SKINS), dress: fem && Math.random() < 0.6 ? pick(SHIRTS) : 0,
     hairStyle: fem ? pick(['bob', 'long', 'ponytail', 'bun']) : pick(['short', 'spiky', 'short']), hat: !fem && Math.random() < 0.3 ? 'cap' : null, hatColor: pick([0xff5a6e, 0x4d96ff, 0xffd23f]), shoe: pick([0x3a2a22, 0xffffff, 0xd8412f]) });
   c.group.position.set(CFG.queueX + rand(-0.4, 0.4), 0, z); c.yaw = Math.PI; c.group.rotation.y = Math.PI;
   const r = Math.random(); c.want = r < 0.32 ? 1 : r < 0.62 ? 2 : r < 0.85 ? 3 : 4;
-  c.vip = vip; c.prod = S.lv.sera > 0 && Math.random() < 0.4 ? 'pot' : 'bouquet'; if (c.prod === 'pot') c.want = Math.min(c.want, 2); c.got = 0; c.pending = 0; c.state = 'queue'; c.atSlot = false; c.bubble = null; c.held = null; c.path = null;
+  c.vip = vip; c.prod = S.lv.sera > 0 && potsPossible() && Math.random() < 0.4 ? 'pot' : 'bouquet'; c.wait = 0; c.lastGot = 0; if (c.prod === 'pot') c.want = Math.min(c.want, 2); c.got = 0; c.pending = 0; c.state = 'queue'; c.atSlot = false; c.bubble = null; c.held = null; c.path = null;
   scene.add(c.group); customers.push(c); queue.push(c);
 }
 function pick(a) { return a[Math.floor(Math.random() * a.length)]; }
@@ -1683,6 +1731,11 @@ function updateCustomers(dt, t) {
       const d = Math.hypot(tx - gp.x, tz - gp.z); c.atSlot = d < 0.25;
       if (c.atSlot && qi === 0 && !c.bubble) setBubble(c, 'want');
       if (c.atSlot && qi === 0 && c.bubble && c.bubKind === 'want' && c._shown !== c.want - c.got) { c._shown = c.want - c.got; setBubble(c, 'want'); }
+      if (c.atSlot && qi === 0) {
+        if (c.lastGot !== c.got) { c.lastGot = c.got; c.wait = 0; } c.wait += dt;
+        if (c.wait > 20 && c.got === 0 && c.pending === 0 && !c.switched) { const o = c.prod === 'pot' ? 'bouquet' : 'pot'; if (stockOf(o) > 0 && (o === 'bouquet' || (zone2 && !zone2.locked))) { c.prod = o; c.switched = true; c.want = Math.min(c.want, o === 'pot' ? 2 : 4); c._shown = -1; c.wait = 0; setBubble(c, 'want'); sparkles(gp.x, 3.3, gp.z, 6, 0xfff2a0, 0.4); } }
+        if (c.wait > 45 && c.pending === 0) { if (c.got > 0) { c.want = c.got; finishCustomer(c); } else leaveSad(c); }
+      }
       if (c.atSlot) { faceChar(c, 0, -1, dt); tx = null; }
     } else if (c.state === 'leaving') {
       if (c.hideBubble > 0) { c.hideBubble -= dt; if (c.hideBubble <= 0 && c.bubble) c.bubble.visible = false; }
@@ -1733,15 +1786,15 @@ function transferToCounter(c) {
   const it = takeFromBack(P, c.prod); if (!it) return;
   flyToCustomer(c, it.mesh); stats.delivered = (stats.delivered || 0) + 1;
 }
-const shelfFree = () => shelf.cap - shelf.length - shelf.pend;
+const shelfFree = t => { const l = lane(t); return l.cap - l.length - l.pend; };
 function toShelf(it, who) {
   if (posable(it.mesh)) bouquetPose(it.mesh, true);
-  const idx = shelf.length + shelf.pend; shelf.pend++;
-  fly(it.mesh, out => { shelf.slotFn(Math.min(idx, 7), out); return 0; }, 0.36, 1.4, () => { shelf.pend--; shelf.add(it.mesh, it.type); sfx('drop'); });
+  const l = lane(it.type), idx = l.length + l.pend; l.pend++;
+  fly(it.mesh, out => { l.slotFn(Math.min(idx, 5), out); return 0; }, 0.36, 1.4, () => { l.pend--; l.add(it.mesh, it.type); sfx('drop'); });
   if (who === P) stats.delivered = (stats.delivered || 0) + 1;
 }
 function serveFromShelf(c) {
-  const it = shelf.takeLast(c.prod); if (!it) return false;
+  const it = lane(c.prod).takeLast(c.prod); if (!it) return false;
   flyToCustomer(c, it.mesh); return true;
 }
 function pickFromOutput() {
@@ -1831,7 +1884,7 @@ const keys = {}; let joy = { id: null, ox: 0, oy: 0, x: 0, y: 0 };
 const joyBase = document.getElementById('joyBase'), joyKnob = document.getElementById('joyKnob');
 window.addEventListener('keydown', e => { initAudio(); keys[e.code] = true; if (/^(Arrow|Space)/.test(e.code)) e.preventDefault(); });
 window.addEventListener('keyup', e => { keys[e.code] = false; });
-window.addEventListener('blur', () => { for (const k in keys) keys[k] = false; });
+window.addEventListener('blur', () => { for (const k in keys) keys[k] = false; joy.id = null; joy.x = joy.y = 0; joyBase.style.display = 'none'; });
 function joyStart(e) {
   if (e.target && e.target.closest && e.target.closest('button')) return;
   initAudio();
@@ -1869,9 +1922,11 @@ function inputVec(out) {
 const moneyEl = document.getElementById('money'), moneyV = document.getElementById('moneyV'), capP = document.getElementById('capP'), capV = document.getElementById('capV');
 const hintEl = document.getElementById('hint'), hintT = document.getElementById('hintT'), hintArrow = document.getElementById('hintArrow');
 document.getElementById('reset').addEventListener('click', () => {
-  if (window.confirm('Tüm ilerleme silinsin mi?')) { try { localStorage.removeItem(SAVE_KEY); } catch (e) {} window.__resetting = true; location.reload(); }
+  if (window.confirm('Tüm ilerleme silinsin mi?')) { try { localStorage.removeItem(SAVE_KEY); } catch (e) {} window.__resetting = true; try { localStorage.removeItem(SAVE_KEY); } catch (e) {} location.reload(); }
 });
-window.addEventListener('beforeunload', () => { if (!window.__resetting) writeSave(); });
+window.addEventListener('beforeunload', () => writeSave());
+window.addEventListener('pagehide', () => writeSave());
+document.addEventListener('visibilitychange', () => { if (document.hidden) writeSave(); });
 let dispMoney = S.money;
 
 const TUT = [
@@ -1990,15 +2045,15 @@ function updateZoneActions(dt) {
   if (counterZone.inside && ctrTick <= 0) {
     const c = queue[0];
     if (cashier) {
-      if (shelfFree() > 0) { const t = P.stack.count('bouquet') > 0 ? 'bouquet' : P.stack.count('pot') > 0 ? 'pot' : null; if (t) { const it = takeFromBack(P, t); toShelf(it, P); ctrTick = 0.1; } }
+      const t = P.stack.count('bouquet') > 0 && shelfFree('bouquet') > 0 ? 'bouquet' : P.stack.count('pot') > 0 && shelfFree('pot') > 0 ? 'pot' : null; if (t) { const it = takeFromBack(P, t); toShelf(it, P); ctrTick = 0.1; }
     } else if (c && c.state === 'queue' && c.atSlot && c.want - c.got - c.pending > 0) {
       if (P.stack.count(c.prod) > 0) { transferToCounter(c); ctrTick = 0.12; }
-      else if (shelf.count(c.prod) > 0) { serveFromShelf(c); ctrTick = 0.2; }
+      else if (lane(c.prod).count(c.prod) > 0) { serveFromShelf(c); ctrTick = 0.2; }
     }
   }
   if (zone2 && !zone2.locked) {
     potTick -= dt; potOutTick -= dt;
-    if (potZone.inside && potTick <= 0 && P.stack.count('orchid') > 0 && potInput.length + (potInput.pend || 0) < CFG.inputCap) { const it = takeFromBack(P, 'orchid'); const idx = potInput.length + (potInput.pend || 0); potInput.pend = (potInput.pend || 0) + 1; fly(it.mesh, out => { potInput.slotFn(Math.min(idx, CFG.inputCap - 1), out); return 0; }, 0.32, 1.3, () => { potInput.pend--; potInput.add(it.mesh, 'orchid'); }); sfx('drop'); potTick = CFG.transferEvery; }
+    if (potZone.inside && potTick <= 0 && P.stack.count('orchid') > 0 && potInput.length + (potInput.pend || 0) < CFG.inputCap) { dropToPot(P); potTick = CFG.transferEvery; }
     if (potOutZone.inside && potOutTick <= 0 && potOutput.length > 0 && P.free() > 0) { const it = potOutput.takeLast('pot'); if (it) { bouquetPose(it.mesh, false); sendToBack(P, it.mesh, 'pot', 1.5); sfx('pick'); } potOutTick = CFG.transferEvery; }
   }
   if (moneyZone.inside && monTick <= 0 && (moneyPile.length > 0 || moneyPile.extra > 0)) { collectMoney(moneyPile); monTick = 0.035; }
@@ -2022,7 +2077,7 @@ function update(dt) {
   if (queue.length < 3 && spawnT > CFG.spawnShortEvery) spawnT = CFG.spawnShortEvery;
   if (spawnT <= 0 && queue.length < CFG.queueMax) { spawnCustomer(26); spawnT = queue.length < 3 ? CFG.spawnShortEvery : CFG.spawnEvery; }
   updateCustomers(dt, T);
-  P.stack.update(dt, T); inputPile.update(dt, T); outputPile.update(dt, T); moneyPile.update(dt, T); shelf.update(dt, T); potInput.update(dt, T); potOutput.update(dt, T); vanLoad.update(dt, T); vanPile.update(dt, T);
+  P.stack.update(dt, T); inputPile.update(dt, T); outputPile.update(dt, T); moneyPile.update(dt, T); shelfB.update(dt, T); shelfP.update(dt, T); potInput.update(dt, T); potOutput.update(dt, T); vanLoad.update(dt, T); vanPile.update(dt, T);
   updateFlights(dt); updateLater(dt); updateParticles(dt); updatePopTexts(dt); updateCollectText(dt);
   // camera
   const gp = P.group.position;
@@ -2037,9 +2092,33 @@ function update(dt) {
   camera.lookAt(camFocus.x, 0, camFocus.z);
   sun.position.set(gp.x - 9, 24, gp.z + 7); sun.target.position.set(gp.x, 0, gp.z); sun.target.updateMatrixWorld();
   updateTutorial(dt, T); updateHUD(dt);
-  saveTimer += dt; if (saveDirty && saveTimer > 2) { saveTimer = 0; writeSave(); }
+  saveTimer += dt; if (saveTimer > 5) { saveTimer = 0; writeSave(); }
 }
 
+function snapshot() {
+  const paid = {}, shown = {}; for (const k in upPads) { if (upPads[k].paid > 0) paid[k] = upPads[k].paid; if (upPads[k].shown) shown[k] = 1; }
+  const x = { paid, shown, mp: moneyPile.length + (moneyPile.extra || 0), vp: vanPile.length + (vanPile.extra || 0), sb: shelfB.length, sp: shelfP.length, pi: potInput.length, po: potOutput.length, ii: inputPile.length, oo: outputPile.length };
+  const away = VAN.state === 'away' || VAN.state === 'depart' || VAN.state === 'return';
+  x.van = { away, load: vanLoad.length + (VAN.state === 'loading' ? 8 - vanLoad.length : 0), sum: VAN.sum, until: away ? Date.now() + Math.max(0, 20 - VAN.trip) * 1000 : 0 };
+  return x;
+}
+function fillStack(st, n, maker, type) { for (let i = 0; i < n && st.length < st.cap; i++) st.add(maker(), type); }
+function restoreExtras(x) {
+  if (!x) return;
+  const num = v => Math.max(0, Math.floor(+v || 0));
+  for (const k in (x.paid || {})) if (upPads[k]) upPads[k].paid = Math.min(num(x.paid[k]), Math.max(0, (upPads[k].cost() || 1) - 1));
+  for (const k in (x.shown || {})) if (upPads[k]) upPads[k].shown = true;
+  const bills = (st, n) => { n = num(n); fillStack(st, Math.min(n, st.cap), makeBill, 'bill'); st.extra = Math.max(0, n - st.cap); };
+  bills(moneyPile, x.mp); fillStack(shelfB, num(x.sb), () => makeBouquetItem(undefined, true), 'bouquet'); fillStack(shelfP, num(x.sp), () => makePotItem(true), 'pot');
+  fillStack(inputPile, num(x.ii), () => makeFlowerItem(Math.floor(Math.random() * 4), 'tulip'), 'flower'); fillStack(outputPile, num(x.oo), () => makeBouquetItem(undefined, true), 'bouquet');
+  if (zone2 && !zone2.locked) { fillStack(potInput, num(x.pi), () => makeFlowerItem(Math.floor(Math.random() * 4), 'orchid'), 'orchid'); fillStack(potOutput, num(x.po), () => makePotItem(true), 'pot'); }
+  if (zone3 && !zone3.locked && x.van) {
+    bills(vanPile, x.vp); VAN.sum = num(x.van.sum);
+    if (x.van.away) { VAN.state = 'away'; VAN.group.visible = false; const rem = Math.max(0, (+x.van.until - Date.now()) / 1000); VAN.trip = rem <= 0 ? 14.5 : clamp(20 - rem, 0, 14.5); }
+    else fillStack(vanLoad, Math.min(8, num(x.van.load)), () => makeBouquetItem(undefined, true), 'bouquet');
+    vanHud();
+  }
+}
 /* =====================================================================
    15. INIT
    ===================================================================== */
@@ -2063,11 +2142,12 @@ if (S.lv.helper > 0) spawnHelper(true);
 if (S.lv.cashier > 0) spawnCashier(true);
 if (S.lv.carrier > 0) spawnCarrier(true);
 for (const k in upPads) { const u = upPads[k]; if (S.lv[k] >= u.max()) { u.done = true; u.group.visible = false; } else { if (u.vis) u.group.visible = u.vis(); u.redraw(); } }
+restoreExtras(LOADED_X); for (const k in upPads) if (!upPads[k].done) upPads[k].redraw();
 for (let i = 0; i < 3; i++) { spawnCustomer(CFG.queueZ0 + i * CFG.queueGap); const c = customers[customers.length - 1]; c.group.position.x = CFG.queueX; c.yaw = 0; c.group.rotation.y = Math.PI; c.yaw = Math.PI; c.atSlot = true; }
 onResize();
 
 window.__game = {
-  S, stats, P: () => P, queue, beds, machine, inputPile, outputPile, moneyPile, get shelf() { return shelf; }, get potInput() { return potInput; }, get potOutput() { return potOutput; }, get zone2() { return zone2; }, get zone3() { return zone3; }, VAN, get vanLoad() { return vanLoad; }, get vanPile() { return vanPile; }, get cashier() { return cashier; }, get carrier() { return carrier; }, upPads, zones, customers, CFG, POS,
+  S, stats, P: () => P, queue, beds, machine, inputPile, outputPile, moneyPile, get shelf() { return shelfB; }, get shelfP() { return shelfP; }, get potInput() { return potInput; }, get potOutput() { return potOutput; }, get zone2() { return zone2; }, get zone3() { return zone3; }, VAN, get vanLoad() { return vanLoad; }, get vanPile() { return vanPile; }, get cashier() { return cashier; }, get carrier() { return carrier; }, upPads, zones, customers, CFG, POS,
   helper: () => helper,
   tp(x, z) { P.group.position.set(x, 0, z); P.vel.set(0, 0, 0); camInit = false; },
   sim(sec) { const n = Math.round(sec * 30); for (let i = 0; i < n; i++) update(1 / 30); },
