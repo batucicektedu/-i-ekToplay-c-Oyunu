@@ -74,7 +74,7 @@ const CFG = {
   yaw: 0.45, tilt: 52 * Math.PI / 180, fov: 45,
   baseSpeed: 5.6, speedStep: 0.15,
   capBase: 10, capStep: 5,
-  growTime: 4, billValue: 10,
+  growTime: 4, billValue: 5,
   packBase: 1.0, packMul: 0.75,
   transferEvery: 0.08,
   inputCap: 24, outputCap: 16, moneyCap: 60,
@@ -83,10 +83,15 @@ const CFG = {
   bounds: { x0: -19, x1: 17.8, z0: -10.4, z1: 16 },
   start: { x: 2, z: 4 }
 };
+const geo = (base, n) => Array.from({ length: n }, (_, i) => Math.round(base * Math.pow(1.25, i) / 5) * 5);
+const PRICE = { bouquet: 10, pot: 25 };
 const UPG = {
-  cap:    { name: 'Kapasite',       costs: [50, 100, 200, 350, 600] },
-  speed:  { name: 'Hız',            costs: [60, 120, 240, 480] },
-  pack:   { name: 'Paketleme Hızı', costs: [80, 160, 320, 640] },
+  cashier: { name: 'Kasiyer', costs: [120] }, carrier: { name: 'Taşıyıcı', costs: [250] },
+  cashSpd: { name: 'Kasiyer Hızı', costs: geo(150, 5) }, carSpd: { name: 'Taşıyıcı Hızı', costs: geo(160, 5) },
+  carCap: { name: 'Taşıyıcı Kapasite', costs: geo(180, 5) }, helpSpd: { name: 'Bahçıvan Hızı', costs: geo(200, 5) },
+  cap:    { name: 'Kapasite',       costs: geo(40, 6) },
+  speed:  { name: 'Hız',            costs: geo(60, 6) },
+  pack:   { name: 'Paketleme Hızı', costs: geo(70, 6) },
   bed:    { name: 'Yeni Bahçe',     costs: [150] },
   helper: { name: 'Yardımcı',       costs: [300] }
 };
@@ -96,7 +101,7 @@ const POS = {
   counter: { x: 10, z: -3.4 }, counterPad: { x: 7.4, z: -1.3 },
   moneyPile: { x: 13.7, z: -3.2 },
   beds: [{ x: -14, z: -8 }, { x: -14, z: 0 }, { x: -14, z: 8 }],
-  upgradeZ: 9.4
+  upgradeZ: 9.4, upgradeZ2: 6.0
 };
 const TABLE_Y = 1.0;
 const FLOWER_COLS = [0xe0001c, 0xff1f8e, 0xffd400, 0x8f2be8, 0xfff0cc];
@@ -114,7 +119,7 @@ function angDiff(a, b) { let d = (b - a) % TAU; if (d > Math.PI) d -= TAU; if (d
 const easeOutBack = t => { const c = 1.70158; t = clamp(t, 0, 1); return 1 + (c + 1) * Math.pow(t - 1, 3) + c * Math.pow(t - 1, 2); };
 function rm(o) { if (o && o.parent) o.parent.remove(o); }
 
-const S = { money: 0, lv: { cap: 0, speed: 0, pack: 0, bed: 0, helper: 0 }, tut: 0 };
+const S = { money: 0, lv: { cap: 0, speed: 0, pack: 0, bed: 0, helper: 0, cashier: 0, carrier: 0, cashSpd: 0, carSpd: 0, carCap: 0, helpSpd: 0 }, tut: 0 };
 let saveDirty = false, saveTimer = 0;
 (function loadSave() {
   try {
@@ -327,6 +332,15 @@ function iconBed(ctx, cx, cy, s) {
   ctx.fillStyle = '#3fbf4a'; ctx.strokeStyle = '#1e7a2c'; ctx.lineWidth = s * 0.04; ctx.beginPath(); ctx.arc(cx + s * 0.36, cy - s * 0.36, s * 0.17, 0, TAU); ctx.fill(); ctx.stroke();
   ctx.strokeStyle = '#fff'; ctx.lineWidth = s * 0.06; ctx.beginPath(); ctx.moveTo(cx + s * 0.36, cy - s * 0.45); ctx.lineTo(cx + s * 0.36, cy - s * 0.27); ctx.moveTo(cx + s * 0.27, cy - s * 0.36); ctx.lineTo(cx + s * 0.45, cy - s * 0.36); ctx.stroke();
 }
+function iconPerson(ctx, cx, cy, s, shirt, hat) {
+  ctx.lineJoin = 'round'; ctx.lineWidth = s * 0.05; ctx.strokeStyle = '#1d3557';
+  ctx.fillStyle = shirt; rrect(ctx, cx - s * 0.3, cy + s * 0.08, s * 0.6, s * 0.4, s * 0.16); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#ffcfa0'; ctx.beginPath(); ctx.arc(cx, cy - s * 0.1, s * 0.26, 0, TAU); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = hat; ctx.beginPath(); ctx.arc(cx, cy - s * 0.15, s * 0.28, Math.PI, TAU); ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#222'; ctx.beginPath(); ctx.arc(cx - s * 0.09, cy - s * 0.06, s * 0.03, 0, TAU); ctx.arc(cx + s * 0.09, cy - s * 0.06, s * 0.03, 0, TAU); ctx.fill();
+}
+const iconCashier = (c, x, y, s) => { iconPerson(c, x, y, s, '#e8142e', '#222'); iconBill(c, x + s * 0.32, y + s * 0.3, s * 0.45); };
+const iconCarrier = (c, x, y, s) => { iconPerson(c, x, y, s, '#ff7a00', '#ff7a00'); iconBouquet(c, x + s * 0.3, y + s * 0.28, s * 0.5); };
 function iconHelper(ctx, cx, cy, s) {
   ctx.lineJoin = 'round'; ctx.lineWidth = s * 0.05; ctx.strokeStyle = '#1d3557';
   ctx.fillStyle = '#ff9f1c'; rrect(ctx, cx - s * 0.3, cy + s * 0.08, s * 0.6, s * 0.4, s * 0.16); ctx.fill(); ctx.stroke();
@@ -981,7 +995,7 @@ function pot(x, z, ty, ci) {
 }
 
 const machine = { x: -2.7, z: -2.2, working: false, timer: 0, pendingOut: 0, group: null, bar: null, barBg: null, worker: null };
-let inputPile, outputPile, moneyPile;
+let inputPile, outputPile, moneyPile, shelf, potOutput = null;
 function buildStations() {
   const WM = woodM(), dark = mat(0x5a2f12), light = mat(0xe8a850);
   const pt = POS.packTable, BX0 = -7.9, BX1 = 3.5, bw = BX1 - BX0, bcx = (BX0 + BX1) / 2;
@@ -1049,9 +1063,8 @@ function buildStations() {
   for (const sx of [-1, 1]) { const e = mk(G.cyl, blue, 0.78, 1.1, 0.78, ct.x + sx * 2.2, 0.55, ct.z); e.castShadow = true; world.add(e); world.add(mk(G.cyl, cw, 0.86, 0.14, 0.86, ct.x + sx * 2.2, 1.14, ct.z)); }
   const ctop = rbox(4.5, 0.14, 1.7, 0.06, cw); ctop.position.set(ct.x, 1.14, ct.z); ctop.castShadow = true; world.add(ctop);
   for (let i = 0; i < 5; i++) { const st = mk(G.box, mat(i % 2 ? 0x3d7dff : 0x0d2fa0), 0.3, 0.9, 0.03, ct.x - 1.6 + i * 0.8, 0.58, ct.z + 0.72); world.add(st); }
-  const reg = new THREE.Group(); reg.position.set(ct.x - 1.4, 1.21, ct.z);
+  const reg = new THREE.Group(); reg.position.set(ct.x - 1.75, 1.21, ct.z);
   reg.add(mk(G.box, mat(0x444c55), 0.7, 0.3, 0.55, 0, 0.15, 0)); const scr = mk(G.box, mat(0x66f07a), 0.4, 0.22, 0.05, 0, 0.45, 0.1); scr.rotation.x = -0.4; reg.add(scr); reg.add(mk(G.box, mat(0xd0d6dc), 0.5, 0.06, 0.3, 0, 0.32, 0.25)); world.add(reg);
-  bucket(ct.x + 1.4, ct.z, ['tulip', 'rose']); bucket(ct.x + 0.7, ct.z - 0.1, ['rose', 'tulip']);
   bucket(ct.x - 3.1, ct.z + 0.4, ['tulip']); bucket(ct.x - 3.1, ct.z - 0.6, ['rose']); bucket(ct.x + 3.2, ct.z + 0.9, ['tulip', 'rose']);
   const aw = new THREE.Mesh(new THREE.BoxGeometry(5.4, 0.12, 2.3), new THREE.MeshLambertMaterial({ map: awningTex('#e8142e', '#ffffff') }));
   aw.position.set(ct.x, 3.15, ct.z - 0.3); aw.rotation.x = -0.12; aw.castShadow = true; world.add(aw);
@@ -1072,6 +1085,8 @@ function buildStations() {
     out.set(mp.x + ((r % cx) - 1) * 0.9, 0.9 + l * 0.12, mp.z + (Math.floor(r / cx) - 1.5) * 0.52);
   }, CFG.moneyCap);
   moneyPile.extra = 0;
+  // counter shelf (tezgah rafı): upright products on the counter top
+  shelf = new Stack(scene, (i, out) => { const r = i % 8; out.set(ct.x - 1.0 + (r % 4) * 0.62, 1.55, ct.z + (Math.floor(r / 4) - 0.5) * 0.6); }, 8); shelf.pend = 0;
 }
 
 function buildDecor() {
@@ -1102,6 +1117,7 @@ function buildDecor() {
   addCollider(14.4, 15.6, 5.1, 7.3);
   // flower pots along edges
   [[-8.6, -5.0, 'tulip', 0], [-6.8, -5.0, 'rose', 1], [4.6, -5.0, 'rose', 2], [6.4, -5.0, 'tulip', 3], [15.4, -5.0, 'rose', 0], [-8.7, 6.0, 'tulip', 1], [-8.7, 10.4, 'rose', 3], [15.7, 10.5, 'tulip', 2], [15.7, 8.8, 'rose', 1]].forEach(a => pot(a[0], a[1], a[2], a[3]));
+  const cp2 = new THREE.Mesh(G.plane, new THREE.MeshLambertMaterial({ color: lc(0x2b3470) })); cp2.rotation.x = -Math.PI / 2; cp2.scale.set(10.6, 3.5, 1); cp2.position.set(0.4, 0.03, POS.upgradeZ2); cp2.receiveShadow = true; world.add(cp2);
   // upgrade area carpet
   const cp = new THREE.Mesh(G.plane, new THREE.MeshLambertMaterial({ color: lc(0x2b3470), transparent: true, opacity: 1 })); cp.rotation.x = -Math.PI / 2; cp.scale.set(16.2, 3.7, 1); cp.position.set(1.2, 0.03, POS.upgradeZ); cp.receiveShadow = true; world.add(cp);
 }
@@ -1159,7 +1175,7 @@ class UpgradePad extends Zone {
     ctx.fillStyle = 'rgba(22,28,64,.96)'; ctx.strokeStyle = '#ffc21a'; ctx.lineWidth = 18; rrect(ctx, 14, 14, w - 28, w - 28, 54); ctx.fill(); ctx.stroke();
     if (mx > 1) { ctx.fillStyle = '#ffc21a'; rrect(ctx, 30, 30, 104, 50, 25); ctx.fill(); otext(ctx, lv + '/' + mx, 82, 56, 34, '#1b1b40', '#ffc21a', 0); }
     ctx.fillStyle = 'rgba(255,255,255,.14)'; ctx.beginPath(); ctx.arc(w / 2, 148, 88, 0, TAU); ctx.fill(); this.icon(ctx, w / 2, 148, 150);
-    otext(ctx, u.name, w / 2, 250, u.name.length > 9 ? 40 : 48, '#fff', '#05071a');
+    otext(ctx, u.name, w / 2, 250, u.name.length > 15 ? 31 : u.name.length > 9 ? 40 : 48, '#fff', '#05071a');
     iconBill(ctx, 112, 321, 56);
     const rem = Math.max(0, this.cost() - this.paid);
     otext(ctx, String(rem), 232, 321, 58, '#6dff6a', '#0c1a0c');
@@ -1176,12 +1192,17 @@ function buildZones() {
   counterZone = new Zone({ x: POS.counterPad.x, z: POS.counterPad.z, w: 2.6, d: 2.6, color: '#2f7bff', draw: drawZoneIcon(iconSmile, 0.55) });
   moneyZone = new Zone({ x: POS.moneyPile.x, z: POS.moneyPile.z + 0.9, w: 3.4, d: 3.4, color: '#1ed760', draw: null, labelSize: 0.01 });
   moneyZone.label.visible = false;
-  const z = POS.upgradeZ;
-  upPads.bed = new UpgradePad('bed', -8.2, POS.beds[2].z, iconBed);
-  upPads.helper = new UpgradePad('helper', -4.2, z, iconHelper);
-  upPads.cap = new UpgradePad('cap', -0.6, z, iconBackpack);
-  upPads.speed = new UpgradePad('speed', 3.0, z, iconBolt);
-  upPads.pack = new UpgradePad('pack', 6.6, z, iconPack);
+  const z = POS.upgradeZ, z2 = POS.upgradeZ2, L = S.lv;
+  const mk_ = (key, x, zz, icon, vis) => { const u = new UpgradePad(key, x, zz, icon); u.vis = vis || null; upPads[key] = u; return u; };
+  mk_('bed', -8.2, POS.beds[2].z, iconBed);
+  mk_('helper', -4.2, z, iconHelper, () => L.helper === 0);
+  mk_('helpSpd', -4.2, z, iconBolt, () => L.helper > 0);
+  mk_('cap', -0.6, z, iconBackpack); mk_('speed', 3.0, z, iconBolt); mk_('pack', 6.6, z, iconPack);
+  mk_('cashier', -3.2, z2, iconCashier, () => L.cashier === 0);
+  mk_('cashSpd', -3.2, z2, iconBolt, () => L.cashier > 0);
+  mk_('carrier', 0.4, z2, iconCarrier, () => L.carrier === 0);
+  mk_('carSpd', 0.4, z2, iconBolt, () => L.carrier > 0);
+  mk_('carCap', 4.0, z2, iconBackpack, () => L.carrier > 0);
 }
 
 /* =====================================================================
@@ -1212,7 +1233,7 @@ function spawnHelper(instant) {
 function updateHelper(dt, t) {
   const h = helper; if (!h) return;
   if (h.spawnT !== undefined) { h.spawnT += dt * 2.5; h.group.scale.setScalar(easeOutBack(h.spawnT) * CHAR_S); if (h.spawnT >= 1) { h.group.scale.setScalar(CHAR_S); h.spawnT = undefined; } }
-  let tx = null, tz = null, spd = 4.4;
+  let tx = null, tz = null, spd = 4.4 * Math.pow(1.15, S.lv.helpSpd);
   const full = h.stack.length + h.incoming >= CFG.helperCap;
   if (h.state === 'seek') {
     if (full) h.state = 'deliver';
@@ -1247,6 +1268,54 @@ function updateHelper(dt, t) {
   updateSway(h, dt); animChar(h, dt, mv, t); h.stack.update(dt, t);
 }
 
+/* ---- cashier & carrier ---- */
+let cashier = null, carrier = null;
+function workerPop(h, dt) { if (h.spawnT !== undefined) { h.spawnT += dt * 2.5; h.group.scale.setScalar(easeOutBack(h.spawnT) * CHAR_S); if (h.spawnT >= 1) { h.group.scale.setScalar(CHAR_S); h.spawnT = undefined; } } }
+function popInWorker(c, instant) { if (!instant) { burst(c.group.position.x, 1, c.group.position.z, 0xffd23f, 14, 4); sparkles(c.group.position.x, 1, c.group.position.z, 8, 0xfff2a0, 0.5); c.group.scale.setScalar(0.01); c.spawnT = 0; } }
+function spawnCashier(instant) {
+  if (cashier) return; const ct = POS.counter;
+  const c = makeChar({ shirt: 0xffffff, pants: 0x222833, hair: 0x2a1a10, hairStyle: 'short', outfit: 'apron', apron: 0xe8142e, skin: 0xf0b98a });
+  c.group.position.set(ct.x + 1.0, 0, ct.z - 1.0); c.yaw = 0; c.group.rotation.y = 0; scene.add(c.group); cashier = c; c.cd = 0; c.busy = 0; popInWorker(c, instant);
+}
+function updateCashier(dt, t) {
+  const h = cashier; if (!h) return; workerPop(h, dt);
+  h.cd -= dt; h.busy = Math.max(0, h.busy - dt);
+  const c = queue[0];
+  if (h.cd <= 0 && c && c.state === 'queue' && c.atSlot && c.want - c.got - c.pending > 0 && shelf.count(c.prod) > 0) { serveFromShelf(c); h.cd = 1.2 * Math.pow(0.8, S.lv.cashSpd); h.busy = 0.5; }
+  animChar(h, dt, 0, t); const w = h.busy > 0 ? 1 : 0; h.armR.rotation.x = -1.3 * w * (0.7 + 0.3 * Math.sin(t * 14));
+}
+function spawnCarrier(instant) {
+  if (carrier) return;
+  const c = makeChar({ shirt: 0xff7a00, pants: 0x2f3542, hair: 0x2a1a10, hairStyle: 'short', hat: 'cap', hatColor: 0xff7a00, skin: 0xc68863, shoe: 0xffffff });
+  c.group.position.set(5.0, 0, 3.4); scene.add(c.group); carrier = c; c.state = 'idle'; c.cd = 0;
+  attachBackStack(c, () => 4 + 2 * S.lv.carCap); popInWorker(c, instant);
+}
+const outSources = () => [outputPile].concat(typeof potOutput !== 'undefined' && potOutput ? [potOutput] : []);
+function updateCarrier(dt, t) {
+  const h = carrier; if (!h) return; workerPop(h, dt);
+  const spd = 4.4 * Math.pow(1.15, S.lv.carSpd), gp = h.group.position; let tx = null, tz = null;
+  const avail = () => outSources().some(q => q.length > 0);
+  const load = h.stack.length + h.incoming;
+  h.cd -= dt;
+  if (h.state === 'idle') { tx = 6.0; tz = 3.0; if (avail() && shelfFree() - load > 0) h.state = 'toOut'; }
+  else if (h.state === 'toOut') { tx = POS.outPad.x; tz = POS.outPad.z + 0.3; if (Math.hypot(tx - gp.x, tz - gp.z) < 0.4) { h.state = 'load'; h.cd = 0.1; } }
+  else if (h.state === 'load') {
+    tx = null;
+    if (h.cd <= 0) {
+      const src = outSources().find(q => q.length > 0);
+      if (src && load < h.capFn() && shelfFree() - load > 0) { const it = src.takeLast(); it.mesh.getWorldPosition(_w); scene.add(it.mesh); it.mesh.position.copy(_w); if (it.mesh.userData.v !== undefined) bouquetPose(it.mesh, false); sendToBack(h, it.mesh, it.type, 1.4); h.cd = 0.14; }
+      else if (h.incoming === 0) h.state = h.stack.length > 0 ? 'toShelf' : 'idle';
+    }
+  } else if (h.state === 'toShelf') { tx = 8.9; tz = -1.1; if (Math.hypot(tx - gp.x, tz - gp.z) < 0.4) { h.state = 'unload'; h.cd = 0.1; } }
+  else if (h.state === 'unload') {
+    if (h.cd <= 0 && h.stack.length > 0) { if (shelfFree() > 0) { const it = takeFromBack(h, null); toShelf(it, h); h.cd = 0.14; } }
+    if (h.stack.length === 0) h.state = 'idle';
+  }
+  let mv = 0, dx = 0, dz = 0;
+  if (tx !== null) { dx = tx - gp.x; dz = tz - gp.z; const d = Math.hypot(dx, dz); if (d > 0.3) { const st = Math.min(d, spd * dt); gp.x += dx / d * st; gp.z += dz / d * st; h.vel.set(dx / d * spd, 0, dz / d * spd); mv = 1; faceChar(h, dx, dz, dt); } else h.vel.set(0, 0, 0); }
+  else { h.vel.set(0, 0, 0); if (h.state === 'unload') faceChar(h, 1, -0.4, dt); }
+  updateSway(h, dt); animChar(h, dt, mv, t); h.stack.update(dt, t);
+}
 /* ---- customers ---- */
 const SHIRTS = [0xff3b30, 0xffd60a, 0x30d158, 0x0a84ff, 0xbf5af2, 0xff9f0a, 0x00c7be];
 const HAIRS = [0x2a1a10, 0x6b3e1d, 0xe0b040, 0x1a1a1a, 0xb04a2a, 0x888888];
@@ -1258,7 +1327,7 @@ function spawnCustomer(z) {
     hairStyle: fem ? pick(['bob', 'long', 'ponytail', 'bun']) : pick(['short', 'spiky', 'short']), hat: !fem && Math.random() < 0.3 ? 'cap' : null, hatColor: pick([0xff5a6e, 0x4d96ff, 0xffd23f]), shoe: pick([0x3a2a22, 0xffffff, 0xd8412f]) });
   c.group.position.set(CFG.queueX + rand(-0.4, 0.4), 0, z); c.yaw = Math.PI; c.group.rotation.y = Math.PI;
   const r = Math.random(); c.want = r < 0.32 ? 1 : r < 0.62 ? 2 : r < 0.85 ? 3 : 4;
-  c.got = 0; c.pending = 0; c.state = 'queue'; c.atSlot = false; c.bubble = null; c.held = null; c.path = null;
+  c.prod = 'bouquet'; c.got = 0; c.pending = 0; c.state = 'queue'; c.atSlot = false; c.bubble = null; c.held = null; c.path = null;
   scene.add(c.group); customers.push(c); queue.push(c);
 }
 function pick(a) { return a[Math.floor(Math.random() * a.length)]; }
@@ -1272,9 +1341,9 @@ function finishCustomer(c) {
   const qi = queue.indexOf(c); if (qi >= 0) queue.splice(qi, 1);
   c.state = 'leaving'; setBubble(c, 'happy'); c.hideBubble = 1.2; stats.sold++; sfx('happy');
   c.path = [[12.4, -0.3], [12.4, 12.5], [10, 18], [10, 40]];
-  const n = c.want, gp = c.group.position;
-  hearts(gp.x, 3.4, gp.z, 5); coins(gp.x, 2.2, gp.z, 8); popText(gp.x, 4.2, gp.z, '+' + n * CFG.billValue, '#6dff6a'); vib(8);
-  for (let k = 0; k < n; k++) later(0.15 + k * 0.16, () => spawnBill(c));
+  const gp = c.group.position, total = c.want * PRICE[c.prod] * (c.vip ? 3 : 1), n = Math.round(total / CFG.billValue);
+  hearts(gp.x, 3.4, gp.z, 5); coins(gp.x, 2.2, gp.z, 8); popText(gp.x, 4.2, gp.z, '+' + total, '#6dff6a'); vib(8);
+  for (let k = 0; k < n; k++) later(0.15 + k * Math.min(0.16, 0.8 / n), () => spawnBill(c));
 }
 function spawnBill(c) {
   const b = makeBill(); b.position.set(c.group.position.x, 1.8, c.group.position.z); scene.add(b);
@@ -1328,16 +1397,30 @@ function transferToInput(who) {
   fly(it.mesh, out => { inputPile.slotFn(Math.min(idx, CFG.inputCap - 1), out); return 0; }, 0.32, 1.3, () => { inputPile.pend--; inputPile.add(it.mesh, 'flower'); });
   if (who === P) { stats.dropped++; } sfx('drop');
 }
-function transferToCounter(c) {
-  const it = takeFromBack(P, 'bouquet'); if (!it) return;
+function landAtCustomer(c, mesh) {
+  c.pending--; c.got++; rm(mesh); sfx('drop');
+  if (!c.held) { c.held = c.prod === 'pot' ? makePotItem() : makeBouquetItem(undefined, true); c.held.scale.setScalar(0.9); c.held.position.set(0.0, 0.85, 0.5); c.group.add(c.held); }
+  c._shown = -1; const gp = c.group.position; dust(gp.x, 1.2, gp.z + 0.4, 2, 0.25);
+  if (c.got >= c.want) finishCustomer(c);
+}
+function flyToCustomer(c, mesh) {
   c.pending++;
-  fly(it.mesh, out => { out.set(c.group.position.x, 1.15, c.group.position.z + 0.5); return Math.PI / 2; }, 0.34, 1.2, () => {
-    c.pending--; c.got++; rm(it.mesh); sfx('drop');
-    if (!c.held) { c.held = makeBouquetItem(undefined, true); c.held.scale.setScalar(0.9); c.held.position.set(0.0, 0.85, 0.5); c.group.add(c.held); }
-    c._shown = -1;
-    if (c.got >= c.want) finishCustomer(c);
-  });
-  stats.delivered = (stats.delivered || 0) + 1;
+  fly(mesh, out => { out.set(c.group.position.x, 1.15, c.group.position.z + 0.5); return Math.PI / 2; }, 0.34, 1.2, () => landAtCustomer(c, mesh));
+}
+function transferToCounter(c) {
+  const it = takeFromBack(P, c.prod); if (!it) return;
+  flyToCustomer(c, it.mesh); stats.delivered = (stats.delivered || 0) + 1;
+}
+const shelfFree = () => shelf.cap - shelf.length - shelf.pend;
+function toShelf(it, who) {
+  if (it.mesh.userData.v !== undefined) bouquetPose(it.mesh, true);
+  const idx = shelf.length + shelf.pend; shelf.pend++;
+  fly(it.mesh, out => { shelf.slotFn(Math.min(idx, 7), out); return 0; }, 0.36, 1.4, () => { shelf.pend--; shelf.add(it.mesh, it.type); sfx('drop'); });
+  if (who === P) stats.delivered = (stats.delivered || 0) + 1;
+}
+function serveFromShelf(c) {
+  const it = shelf.takeLast(c.prod); if (!it) return false;
+  flyToCustomer(c, it.mesh); return true;
 }
 function pickFromOutput() {
   const it = outputPile.takeLast('bouquet'); if (!it) return;
@@ -1382,6 +1465,7 @@ function updatePacking(dt, t) {
 function updateUpgrades(dt) {
   for (const key in upPads) {
     const u = upPads[key]; if (u.done) continue;
+    if (u.vis) { const v = u.vis(); if (v !== u.group.visible) { u.group.visible = v; if (v) { u.redraw(); u.group.scale.set(0.01, 1, 0.01); u.pop = 0.6; } } }
     if (u.pop > 0) { u.pop -= dt; const k = 1 - Math.max(0, u.pop) / 0.6, a = Math.sin(k * Math.PI * 3) * (1 - k) * 0.28; u.group.scale.set(1 + a, 1, 1 - a * 0.8); if (u.pop <= 0) u.group.scale.set(1, 1, 1); }
     if (u.locked) {
       u.pause -= dt; if (!u.inside) u.off = true;
@@ -1403,6 +1487,8 @@ function updateUpgrades(dt) {
 function applyUpgrade(key, instant) {
   if (key === 'bed') unlockBed(beds[2], instant);
   else if (key === 'helper') spawnHelper(instant);
+  else if (key === 'cashier') spawnCashier(instant);
+  else if (key === 'carrier') spawnCarrier(instant);
 }
 function purchase(u) {
   const key = u.key; S.lv[key]++; u.paid = 0; stats.upgrades++; saveDirty = true; u.locked = true; u.pause = 1.0; u.off = false; u.hold = 0; u.pop = 0.6;
@@ -1579,7 +1665,12 @@ function updateZoneActions(dt) {
   if (outZone.inside && outTick <= 0 && outputPile.length > 0 && P.free() > 0) { pickFromOutput(); outTick = CFG.transferEvery; }
   if (counterZone.inside && ctrTick <= 0) {
     const c = queue[0];
-    if (c && c.state === 'queue' && c.atSlot && c.want - c.got - c.pending > 0 && P.stack.count('bouquet') > 0) { transferToCounter(c); ctrTick = 0.12; }
+    if (cashier) {
+      if (shelfFree() > 0) { const t = P.stack.count('bouquet') > 0 ? 'bouquet' : P.stack.count('pot') > 0 ? 'pot' : null; if (t) { const it = takeFromBack(P, t); toShelf(it, P); ctrTick = 0.1; } }
+    } else if (c && c.state === 'queue' && c.atSlot && c.want - c.got - c.pending > 0) {
+      if (P.stack.count(c.prod) > 0) { transferToCounter(c); ctrTick = 0.12; }
+      else if (shelf.count(c.prod) > 0) { serveFromShelf(c); ctrTick = 0.2; }
+    }
   }
   if (moneyZone.inside && monTick <= 0 && (moneyPile.length > 0 || moneyPile.extra > 0)) { collectMoney(); monTick = 0.035; }
 }
@@ -1591,7 +1682,7 @@ function update(dt) {
   updateZoneActions(dt);
   updateUpgrades(dt);
   updatePacking(dt, T);
-  updateHelper(dt, T);
+  updateHelper(dt, T); updateCashier(dt, T); updateCarrier(dt, T);
   // customers spawning
   spawnT -= dt;
   if (queue.length < 3 && spawnT > CFG.spawnShortEvery) spawnT = CFG.spawnShortEvery;
@@ -1631,13 +1722,15 @@ for (let i = 0; i < 3; i++) buildBed(i);
 buildStations(); buildDecor(); buildZones(); buildPlayer();
 // restore progress
 if (S.lv.bed > 0) { unlockBed(beds[2], true); upPads.bed.done = true; upPads.bed.group.visible = false; }
-if (S.lv.helper > 0) { spawnHelper(true); upPads.helper.done = true; upPads.helper.group.visible = false; }
-for (const k in upPads) { const u = upPads[k]; if (S.lv[k] >= u.max()) { u.done = true; u.group.visible = false; } else u.redraw(); }
+if (S.lv.helper > 0) spawnHelper(true);
+if (S.lv.cashier > 0) spawnCashier(true);
+if (S.lv.carrier > 0) spawnCarrier(true);
+for (const k in upPads) { const u = upPads[k]; if (S.lv[k] >= u.max()) { u.done = true; u.group.visible = false; } else { if (u.vis) u.group.visible = u.vis(); u.redraw(); } }
 for (let i = 0; i < 3; i++) { spawnCustomer(CFG.queueZ0 + i * CFG.queueGap); const c = customers[customers.length - 1]; c.group.position.x = CFG.queueX; c.yaw = 0; c.group.rotation.y = Math.PI; c.yaw = Math.PI; c.atSlot = true; }
 onResize();
 
 window.__game = {
-  S, stats, P: () => P, queue, beds, machine, inputPile, outputPile, moneyPile, upPads, zones, customers, CFG, POS,
+  S, stats, P: () => P, queue, beds, machine, inputPile, outputPile, moneyPile, get shelf() { return shelf; }, upPads, zones, customers, CFG, POS,
   helper: () => helper,
   tp(x, z) { P.group.position.set(x, 0, z); P.vel.set(0, 0, 0); camInit = false; },
   sim(sec) { const n = Math.round(sec * 30); for (let i = 0; i < n; i++) update(1 / 30); },
