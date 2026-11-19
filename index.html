@@ -80,7 +80,7 @@ const CFG = {
   inputCap: 24, outputCap: 27, moneyCap: 60,
   queueMax: 6, spawnEvery: 5.5, queueX: 10, queueZ0: -1.5, queueGap: 1.5,
   helperCap: 6,
-  bounds: { x0: -19, x1: 17.8, z0: -11, z1: 16 },
+  bounds: { x0: -19, x1: 17.8, z0: -10.4, z1: 16 },
   start: { x: 2, z: 4 }
 };
 const UPG = {
@@ -91,12 +91,12 @@ const UPG = {
   helper: { name: 'Yardımcı',       costs: [300] }
 };
 const POS = {
-  packTable: { x: -5, z: -2.2 }, packPad: { x: -5, z: 0.7 },
-  outTable: { x: 0.5, z: -2.2 }, outPad: { x: 0.5, z: 0.7 },
+  packTable: { x: -2.2, z: -2.2 }, packPad: { x: -6.2, z: 0.7 },
+  outTable: { x: 1.4, z: -2.2 }, outPad: { x: 1.4, z: 0.7 },
   counter: { x: 10, z: -3.4 }, counterPad: { x: 7.4, z: -1.3 },
   moneyPile: { x: 13.7, z: -3.2 },
-  beds: [{ x: -14, z: -7.4 }, { x: -14, z: 0 }, { x: -14, z: 7.4 }],
-  upgradeZ: 9
+  beds: [{ x: -14, z: -8 }, { x: -14, z: 0 }, { x: -14, z: 8 }],
+  upgradeZ: 9.4
 };
 const TABLE_Y = 1.0;
 const FLOWER_COLS = [0xe8283c, 0xff6fa5, 0xffcf33, 0xfff4f0];
@@ -399,9 +399,9 @@ function billTex() {
   otext(x, '$', 64, 34, 26, '#2c8a35', '#d3f5c8', 0);
   return canvasTex(c);
 }
-function awningTex() {
+function awningTex(c1, c2) {
   const c = cv(128, 32), x = c.getContext('2d');
-  for (let i = 0; i < 8; i++) { x.fillStyle = i % 2 ? '#ffffff' : '#ff5a6e'; x.fillRect(i * 16, 0, 16, 32); }
+  for (let i = 0; i < 8; i++) { x.fillStyle = i % 2 ? (c2 || '#ffffff') : (c1 || '#ff5a6e'); x.fillRect(i * 16, 0, 16, 32); }
   return canvasTex(c);
 }
 
@@ -720,9 +720,9 @@ function buildGround() {
   const strip = (x0, x1, z0, z1, y) => {
     const m = new THREE.Mesh(G.plane, dm); m.rotation.x = -Math.PI / 2; m.scale.set(x1 - x0, z1 - z0, 1); m.position.set((x0 + x1) / 2, y, (z0 + z1) / 2); m.receiveShadow = true; world.add(m);
   };
-  strip(-10.9, -9, -11, 11, 0.01);
-  strip(8.4, 11.6, 10, 44, 0.01);
-  strip(-6, 18, 11.6, 13.4, 0.01);
+  const edgeM = mat(0xb59a68);
+  const edged = (x0, x1, z0, z1) => { const m = new THREE.Mesh(G.plane, edgeM); m.rotation.x = -Math.PI / 2; m.scale.set(x1 - x0 + 0.5, z1 - z0 + 0.5, 1); m.position.set((x0 + x1) / 2, 0.006, (z0 + z1) / 2); m.receiveShadow = true; world.add(m); strip(x0, x1, z0, z1, 0.012); };
+  edged(-10.9, -9, -11, 11); edged(-17.3, -10.7, -5.3, -2.7); edged(-17.3, -10.7, 2.7, 5.3); edged(-17.3, -10.7, -13, -10.7);
   // plaza
   const cm = new THREE.MeshLambertMaterial({ map: cobbleTex() });
   const plaza = new THREE.Mesh(G.plane, cm); plaza.rotation.x = -Math.PI / 2; plaza.scale.set(25.7, 17.7, 1); plaza.position.set(3.65, 0.02, 3.35); plaza.receiveShadow = true; world.add(plaza);
@@ -731,8 +731,11 @@ function buildGround() {
   const curb = (x0, x1, z0, z1) => {
     const w = x1 - x0, d = z1 - z0; const m = rbox(w, 0.2, d, 0.09, curbM); m.position.set((x0 + x1) / 2, 0.08, (z0 + z1) / 2); m.receiveShadow = true; world.add(m);
   };
+  const cobM = new THREE.MeshLambertMaterial({ map: cobbleTex() });
+  { const m = new THREE.Mesh(G.plane, cobM); m.rotation.x = -Math.PI / 2; m.scale.set(3.2, 34, 1); m.position.set(10, 0.02, 29); m.receiveShadow = true; world.add(m); cobM.map.repeat.set(14 * 3.2 / 25.7, 9.5 * 34 / 17.7);
+    for (const sx of [-1, 1]) { const cu = rbox(0.25, 0.2, 34, 0.09, curbM); cu.position.set(10 + sx * 1.7, 0.08, 29); world.add(cu); } }
   curb(-9.35, 16.65, -5.65, -5.4); curb(-9.35, -9.1, -5.65, 12.35); curb(16.4, 16.65, -5.65, 12.35);
-  curb(-9.35, 8.4, 12.1, 12.35); curb(11.6, 16.65, 12.1, 12.35);
+  curb(-9.35, 8.3, 12.1, 12.35); curb(11.7, 16.65, 12.1, 12.35);
 }
 
 function buildFences() {
@@ -833,10 +836,11 @@ function buildBed(idx) {
     const hx = 3.5, hz = 2.9;
     addF(p.x - hx, p.z - hz, p.x + hx, p.z - hz); addF(p.x - hx, p.z + hz, p.x + hx, p.z + hz);
     addF(p.x - hx, p.z - hz, p.x - hx, p.z + hz); addF(p.x + hx, p.z - hz, p.x + hx, p.z + hz);
+    const sg = makeBoard('KİLİTLİ', 2.4, 0.8, 'wood'); sg.position.set(p.x + 3.6, 1.3, p.z + 0.0); sg.rotation.y = Math.PI / 2 * 0.0; sg.scale.setScalar(0.9); bed.group.add(sg);
     const lk = makeSprite(128, 128, (ctx) => {
       ctx.fillStyle = '#ffb703'; ctx.strokeStyle = '#7a4a00'; ctx.lineWidth = 8; rrect(ctx, 24, 56, 80, 62, 14); ctx.fill(); ctx.stroke();
       ctx.beginPath(); ctx.arc(64, 56, 24, Math.PI, 0); ctx.stroke(); ctx.fillStyle = '#7a4a00'; ctx.beginPath(); ctx.arc(64, 84, 8, 0, TAU); ctx.fill();
-    }, 2.2, 2.2, false); lk.position.set(p.x, 2.2, p.z); bed.group.add(lk);
+    }, 1.8, 1.8, false); lk.position.set(p.x, 2.3, p.z); bed.group.add(lk);
     world.add(bed.group);
     bed.collider = addCollider(p.x - 3.7, p.x + 3.7, p.z - 3.1, p.z + 3.1, () => bed.locked);
     bed.flowers.forEach(f => { f.t = 0; f.g.visible = false; });
@@ -850,71 +854,186 @@ function unlockBed(bed, instant) {
 }
 
 /* ---- furniture: tables, machine, counter ---- */
-const machine = { x: -4.2, z: -2.2, working: false, timer: 0, pendingOut: 0, group: null, bar: null, barBg: null, worker: null };
+let _woodTx = null;
+function woodTex() {
+  if (_woodTx) return _woodTx;
+  const c = cv(256, 256), x = c.getContext('2d');
+  x.fillStyle = '#c98a50'; x.fillRect(0, 0, 256, 256);
+  for (let i = 0; i < 4; i++) {
+    x.fillStyle = i % 2 ? 'rgba(255,220,170,.12)' : 'rgba(90,40,10,.1)'; x.fillRect(0, i * 64, 256, 64);
+    x.fillStyle = 'rgba(70,35,10,.55)'; x.fillRect(0, i * 64, 256, 3);
+    x.strokeStyle = 'rgba(90,45,15,.22)'; x.lineWidth = 1.5;
+    for (let k = 0; k < 9; k++) { const yy = i * 64 + rand(8, 58); x.beginPath(); x.moveTo(rand(0, 60), yy); x.bezierCurveTo(90, yy + rand(-3, 3), 160, yy + rand(-3, 3), rand(200, 256), yy); x.stroke(); }
+  }
+  return (_woodTx = canvasTex(c));
+}
+let _woodM = null;
+const woodM = () => _woodM || (_woodM = new THREE.MeshLambertMaterial({ map: woodTex() }));
+/* hanging / standing sign board: style 'wood' (carved letters) or 'chalk' */
+function makeBoard(text, w, h, style, sub) {
+  const g = new THREE.Group();
+  const frame = rbox(w + 0.3, h + 0.3, 0.16, 0.06, woodM()); frame.castShadow = true; g.add(frame);
+  const px = 512, py = Math.round(512 * h / w), c = cv(px, py), x = c.getContext('2d');
+  if (style === 'chalk') {
+    x.fillStyle = '#26382f'; x.fillRect(0, 0, px, py);
+    x.fillStyle = 'rgba(255,255,255,.06)'; for (let i = 0; i < 40; i++) x.fillRect(rand(0, px), rand(0, py), rand(20, 90), 3);
+    x.strokeStyle = '#ffd7e8'; x.lineWidth = 5; x.strokeRect(14, 14, px - 28, py - 28);
+    otext(x, text, px / 2, py / 2 + 2, py * 0.48, '#fff8e6', 'rgba(0,0,0,.25)', 3);
+    iconFlower(x, 62, py / 2 + 4, py * 0.45, '#ff9ec4'); iconFlower(x, px - 62, py / 2 + 4, py * 0.45, '#ffd23f');
+  } else {
+    x.fillStyle = '#8a5a30'; x.fillRect(0, 0, px, py);
+    x.strokeStyle = 'rgba(40,20,5,.35)'; x.lineWidth = 2; for (let i = 0; i < 12; i++) { const yy = rand(0, py); x.beginPath(); x.moveTo(0, yy); x.lineTo(px, yy + rand(-6, 6)); x.stroke(); }
+    otext(x, text, px / 2, py / 2 + 2, py * 0.52, '#fff0cf', '#4a2810', py * 0.1);
+  }
+  const face = new THREE.Mesh(G.plane, new THREE.MeshLambertMaterial({ map: canvasTex(c) })); face.scale.set(w, h, 1); face.position.z = 0.09; g.add(face);
+  return g;
+}
+function bucket(x, z, types) {
+  const g = new THREE.Group(); g.position.set(x, 0, z);
+  const b = new THREE.Mesh(new THREE.CylinderGeometry(0.34, 0.26, 0.55, 14), mat(0x6f8fb0)); b.position.y = 0.28; b.castShadow = true; g.add(b);
+  g.add(mk(G.cyl, mat(0x9db8d2), 0.35, 0.05, 0.35, 0, 0.56, 0));
+  for (let i = 0; i < 7; i++) {
+    const a = i / 7 * TAU, r = 0.12 + (i % 2) * 0.06, ty = types[i % types.length], ci = (i + types.length) % 4, h = 0.85 + (i % 3) * 0.12;
+    const st = mk(G.cyl, mat(0x3c9a3c), 0.018, h, 0.018, Math.cos(a) * r * 0.6, 0.3 + h / 2, Math.sin(a) * r * 0.6); st.rotation.z = -Math.cos(a) * 0.25; st.rotation.x = Math.sin(a) * 0.25; g.add(st);
+    const bl = new THREE.Mesh(bloomGeo(ty, ci), vcMat); bl.position.set(Math.cos(a) * r, 0.3 + h, Math.sin(a) * r); bl.scale.setScalar(1.1); g.add(bl);
+  }
+  world.add(g); return g;
+}
+function pot(x, z, ty, ci) {
+  const g = new THREE.Group(); g.position.set(x, 0, z);
+  g.add(mk(G.cone, mat(0xc8643c), 0.3, 0.1, 0.3, 0, 0.45, 0)).children[0].rotation.x = Math.PI;
+  const pt = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.2, 0.4, 12), mat(0xc8643c)); pt.position.y = 0.22; pt.castShadow = true; g.add(pt);
+  g.add(mk(G.cyl, mat(0x5a3a22), 0.27, 0.04, 0.27, 0, 0.42, 0));
+  const st = new THREE.Mesh(stemGeo(ty), vcMat), bl = new THREE.Mesh(bloomGeo(ty, ci), vcMat); st.position.y = 0.4; bl.position.y = 0.4 + STEM_H; g.add(st, bl);
+  world.add(g); return g;
+}
+
+const machine = { x: -2.7, z: -2.2, working: false, timer: 0, pendingOut: 0, group: null, bar: null, barBg: null, worker: null };
 let inputPile, outputPile, moneyPile;
 function buildStations() {
-  // packing table
-  const woodM = mat(0xc98d52), topM = mat(0xf3d9a8);
-  const pt = POS.packTable;
-  const tb = rbox(4.4, 0.85, 2.0, 0.1, woodM); tb.position.set(pt.x, 0.45, pt.z); tb.castShadow = tb.receiveShadow = true; world.add(tb);
-  const tt = rbox(4.6, 0.16, 2.2, 0.07, topM); tt.position.set(pt.x, TABLE_Y - 0.08, pt.z); tt.castShadow = tt.receiveShadow = true; world.add(tt);
-  addCollider(pt.x - 2.3, pt.x + 2.3, pt.z - 1.15, pt.z + 1.15);
-  // machine
+  const WM = woodM(), dark = mat(0x8a5a30), light = mat(0xe3b27a);
+  const pt = POS.packTable, BX0 = -7.9, BX1 = 3.5, bw = BX1 - BX0, bcx = (BX0 + BX1) / 2;
+  // ---- workshop: bench
+  const bench = rbox(bw - 0.4, 0.8, 1.9, 0.08, WM); bench.position.set(bcx, 0.42, pt.z); bench.castShadow = bench.receiveShadow = true; world.add(bench);
+  const top = rbox(bw, 0.14, 2.2, 0.06, light); top.position.set(bcx, TABLE_Y - 0.07, pt.z); top.castShadow = top.receiveShadow = true; world.add(top);
+  for (const lx of [BX0 + 0.3, BX1 - 0.3]) for (const lz of [-0.85, 0.85]) { const l = mk(G.box, dark, 0.22, 0.1, 0.22, lx, 0.05, pt.z + lz); world.add(l); }
+  addCollider(BX0, BX1, pt.z - 1.15, pt.z + 1.15);
+  // back wall with shelves
+  const wall = rbox(bw, 2.5, 0.18, 0.05, WM); wall.position.set(bcx, 1.25, -4.85); wall.castShadow = wall.receiveShadow = true; world.add(wall);
+  for (const sy of [1.35, 2.05]) { const sh = rbox(bw - 0.6, 0.08, 0.55, 0.03, light); sh.position.set(bcx, sy, -4.55); sh.castShadow = true; world.add(sh); }
+  const roll = [0xff9ec4, 0xe0a868, 0x9fe0c0, 0xfff0d6, 0xff6fa5, 0xb9a0ff, 0xe0a868, 0xffd23f];
+  roll.forEach((c, i) => { const rx = BX0 + 0.9 + i * 1.3, rl = mk(G.cyl, mat(c), 0.17, 0.5, 0.17, rx, 1.65, -4.5); world.add(rl); const rl2 = mk(G.cyl, mat(roll[(i + 3) % 8]), 0.17, 0.5, 0.17, rx + 0.4, 2.35, -4.5); world.add(rl2); });
+  for (let i = 0; i < 4; i++) pot(BX0 + 1.5 + i * 2.8, -4.5, i % 2 ? 'rose' : 'tulip', i);
+  // posts + awning roof (back lean-to so the worker stays visible)
+  for (const px of [BX0 + 0.1, BX1 - 0.1]) { const po = mk(G.cyl, mat(0xffffff), 0.1, 4.2, 0.1, px, 2.1, -4.2); po.castShadow = true; world.add(po); }
+  const roof = new THREE.Mesh(new THREE.BoxGeometry(bw + 0.8, 0.14, 2.4), new THREE.MeshLambertMaterial({ map: awningTex('#58c5b8', '#ffffff') }));
+  roof.material.map.repeat.set(2, 1); roof.material.map.wrapS = THREE.RepeatWrapping;
+  roof.position.set(bcx, 4.15, -3.95); roof.rotation.x = -0.1; roof.castShadow = true; world.add(roof);
+  const sgn = makeBoard('PAKETLEME', 4.6, 1.0, 'wood'); sgn.position.set(bcx, 5.05, -2.95); sgn.rotation.x = -0.25; world.add(sgn);
+  // ---- machine / wrapping area
   const mg = new THREE.Group(); mg.position.set(machine.x, TABLE_Y, machine.z); world.add(mg); machine.group = mg;
-  const body = rbox(1.5, 1.0, 1.4, 0.18, mat(0x2fb5a8)); body.position.y = 0.5; mg.add(body);
-  const hop = mk(G.cyl, mat(0x1f8f85), 0.55, 0.35, 0.55, 0, 1.15, 0); mg.add(hop);
-  mg.add(mk(G.cyl, mat(0x26a095), 0.4, 0.35, 0.4, 0, 1.45, 0));
-  const slot = mk(G.box, mat(0x16324a), 1.0, 0.28, 0.1, 0, 0.55, 0.7); mg.add(slot);
-  const knob = mk(G.sph, mat(0xffd23f), 0.14, 0.14, 0.14, 0.5, 0.82, 0.68); mg.add(knob);
-  const knob2 = mk(G.sph, mat(0xff5a6e), 0.14, 0.14, 0.14, -0.5, 0.82, 0.68); mg.add(knob2);
-  const belt = mk(G.box, mat(0x555e66), 1.2, 0.08, 0.5, 0, 0.1, 0.95); mg.add(belt);
+  mg.add(mk(G.box, mat(0xe0a868), 1.5, 0.03, 1.0, 0, 0.02, 0.15));
+  mg.add(mk(G.box, mat(0xff9ec4), 1.0, 0.03, 0.8, 0, 0.045, 0.2));
+  const rl = mk(G.cyl, mat(0xe0a868), 0.24, 0.9, 0.24, 0, 0.35, -0.45); rl.rotation.z = Math.PI / 2; mg.add(rl);
+  const rl2 = mk(G.cyl, mat(0xff9ec4), 0.18, 0.95, 0.18, 0, 0.35, -0.45); rl2.rotation.z = Math.PI / 2; mg.add(rl2);
+  for (const sx of [-1, 1]) mg.add(mk(G.box, dark, 0.08, 0.55, 0.08, sx * 0.55, 0.28, -0.45));
+  [[0xe8283c, 0.95, 0.4], [0xff6fa5, 1.25, 0.25], [0xffd23f, 0.95, -0.05]].forEach(([c, x, z]) => { mg.add(mk(G.cyl, mat(c), 0.14, 0.2, 0.14, x, 0.1, z)); mg.add(mk(G.cyl, mat(0xfff0d6), 0.05, 0.22, 0.05, x, 0.1, z)); });
+  const sc1 = mk(G.box, mat(0xd0d6dc), 0.5, 0.02, 0.05, -1.0, 0.04, 0.5); sc1.rotation.y = 0.5; mg.add(sc1);
+  const sc2 = mk(G.box, mat(0xd0d6dc), 0.5, 0.02, 0.05, -1.0, 0.045, 0.5); sc2.rotation.y = -0.2; mg.add(sc2);
+  mg.add(mk(G.torus, mat(0xe8283c), 0.07, 0.07, 0.07, -1.28, 0.05, 0.62));
   shadowAll(mg, true, false);
-  // progress bar
   const bg = mk(G.box, mat(0x16324a), 1.3, 0.2, 0.2, 0, 0, 0), fill = mk(G.box, new THREE.MeshBasicMaterial({ color: lc(0x66f07a) }), 1.2, 0.12, 0.22, 0, 0, 0);
-  bg.position.set(machine.x, TABLE_Y + 2.3, machine.z + 0.2); fill.position.copy(bg.position); fill.scale.x = 0.001; bg.visible = fill.visible = false; world.add(bg, fill);
+  bg.position.set(machine.x, TABLE_Y + 2.0, machine.z + 0.5); fill.position.copy(bg.position); fill.scale.x = 0.001; bg.visible = fill.visible = false; world.add(bg, fill);
   machine.bar = fill; machine.barBg = bg;
-  // worker
   const w = makeChar({ shirt: 0xff9ec4, pants: 0x4b5d8a, hair: 0x3a2314, hairStyle: 'bob', outfit: 'apron', apron: 0xffffff, skin: 0xe8b88a });
-  w.group.position.set(-5.6, 0, -3.95); w.yaw = 0; w.group.rotation.y = 0; world.add(w.group); machine.worker = w;
-  const s1 = signSprite('PAKETLEME', '#e8559a', 3.0); s1.position.set(pt.x, 3.9, pt.z - 0.2); world.add(s1);
-  // input pile
-  const ip = { x: pt.x - 1.55, z: pt.z };
+  w.group.position.set(machine.x, 0, -3.95); w.yaw = 0; w.group.rotation.y = 0; world.add(w.group); machine.worker = w;
+  // ---- input crate
+  const ip = { x: -6.2, z: pt.z };
+  const crate = new THREE.Group(); crate.position.set(ip.x, TABLE_Y, ip.z); world.add(crate);
+  crate.add(mk(G.box, dark, 1.9, 0.08, 1.5, 0, 0.04, 0));
+  for (const [sx, sz, wx, wz] of [[0, 0.75, 1.9, 0.07], [0, -0.75, 1.9, 0.07], [0.95, 0, 0.07, 1.5], [-0.95, 0, 0.07, 1.5]]) { crate.add(mk(G.box, WM, wx, 0.5, wz, sx, 0.28, sz)); }
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) crate.add(mk(G.box, dark, 0.12, 0.55, 0.12, sx * 0.95, 0.28, sz * 0.75));
+  shadowAll(crate, true, true);
   inputPile = new Stack(scene, (i, out) => {
     const cx = 2, cz = 3, per = cx * cz, l = Math.floor(i / per), r = i % per;
-    out.set(ip.x + ((r % cx) - 0.5) * 0.7, TABLE_Y + 0.2 + l * 0.22, ip.z + (Math.floor(r / cx) - 1) * 0.5);
+    out.set(ip.x + ((r % cx) - 0.5) * 0.75, TABLE_Y + 0.2 + l * 0.2, ip.z + (Math.floor(r / cx) - 1) * 0.42);
   }, CFG.inputCap);
-  // output table
+  const s1 = makeBoard('ÇİÇEKLER', 1.5, 0.45, 'wood'); s1.position.set(ip.x, TABLE_Y + 1.3, ip.z - 0.9); s1.rotation.x = -0.15; world.add(s1);
+  // ---- output tray
   const ot = POS.outTable;
-  const ob = rbox(3.6, 0.85, 2.0, 0.1, woodM); ob.position.set(ot.x, 0.45, ot.z); ob.castShadow = ob.receiveShadow = true; world.add(ob);
-  const otp = rbox(3.8, 0.16, 2.2, 0.07, topM); otp.position.set(ot.x, TABLE_Y - 0.08, ot.z); otp.castShadow = otp.receiveShadow = true; world.add(otp);
-  addCollider(ot.x - 1.9, ot.x + 1.9, ot.z - 1.15, ot.z + 1.15);
-  const s2 = signSprite('BUKETLER', '#2f9bd8', 2.6); s2.position.set(ot.x, 3.9, ot.z - 0.2); world.add(s2);
+  const tray = rbox(3.5, 0.08, 1.9, 0.03, mat(0xf5d9a8)); tray.position.set(ot.x, TABLE_Y + 0.04, ot.z); tray.receiveShadow = true; world.add(tray);
+  for (const [sx, sz, wx, wz] of [[0, 0.95, 3.5, 0.08], [0, -0.95, 3.5, 0.08], [1.75, 0, 0.08, 1.9], [-1.75, 0, 0.08, 1.9]]) { const rr = mk(G.box, WM, wx, 0.16, wz, ot.x + sx, TABLE_Y + 0.1, ot.z + sz); world.add(rr); }
+  const s2 = makeBoard('BUKETLER', 1.7, 0.45, 'wood'); s2.position.set(ot.x, TABLE_Y + 1.35, ot.z - 0.9); s2.rotation.x = -0.15; world.add(s2);
   outputPile = new Stack(scene, (i, out) => {
     const cx = 3, cz = 3, per = cx * cz, l = Math.floor(i / per), r = i % per;
-    out.set(ot.x + ((r % cx) - 1) * 1.05, TABLE_Y + 0.26 + l * 0.46, ot.z + (Math.floor(r / cx) - 1) * 0.7);
+    out.set(ot.x + ((r % cx) - 1) * 1.05, TABLE_Y + 0.28 + l * 0.46, ot.z + (Math.floor(r / cx) - 1) * 0.62);
   }, CFG.outputCap);
-  // counter
-  const ct = POS.counter;
-  const blue = mat(0x3b82f6), cw = mat(0xf7f2e6);
+  // ---- flower shop kiosk
+  const ct = POS.counter, blue = mat(0x3b82f6), cw = mat(0xf7f2e6);
+  const back = rbox(5.2, 3.0, 0.22, 0.05, mat(0xfff0d6)); back.position.set(ct.x, 1.5, ct.z - 1.15); back.castShadow = back.receiveShadow = true; world.add(back);
+  for (const sy of [1.5, 2.2]) { const sh = rbox(4.4, 0.07, 0.4, 0.02, light); sh.position.set(ct.x, sy, ct.z - 0.9); world.add(sh); }
+  [0, 1, 2, 3].forEach(i => pot(ct.x - 1.65 + i * 1.1, ct.z - 0.9, i % 2 ? 'rose' : 'tulip', i)); 
   const cb = rbox(4.4, 1.1, 1.4, 0.3, blue); cb.position.set(ct.x, 0.55, ct.z); cb.castShadow = cb.receiveShadow = true; world.add(cb);
-  for (const sx of [-1, 1]) { const e = mk(G.cyl, blue, 0.78, 1.1, 0.78, ct.x + sx * 2.2, 0.55, ct.z); e.castShadow = true; world.add(e); const te = mk(G.cyl, cw, 0.86, 0.14, 0.86, ct.x + sx * 2.2, 1.14, ct.z); world.add(te); }
+  for (const sx of [-1, 1]) { const e = mk(G.cyl, blue, 0.78, 1.1, 0.78, ct.x + sx * 2.2, 0.55, ct.z); e.castShadow = true; world.add(e); world.add(mk(G.cyl, cw, 0.86, 0.14, 0.86, ct.x + sx * 2.2, 1.14, ct.z)); }
   const ctop = rbox(4.5, 0.14, 1.7, 0.06, cw); ctop.position.set(ct.x, 1.14, ct.z); ctop.castShadow = true; world.add(ctop);
-  const reg = new THREE.Group(); reg.position.set(ct.x - 1.3, 1.21, ct.z);
-  reg.add(mk(G.box, mat(0x444c55), 0.7, 0.3, 0.5, 0, 0.15, 0)); const scr = mk(G.box, mat(0x66f07a), 0.4, 0.22, 0.05, 0, 0.45, 0.1); scr.rotation.x = -0.4; reg.add(scr); world.add(reg);
-  const aw = new THREE.Mesh(new THREE.BoxGeometry(5.0, 0.12, 2.0), new THREE.MeshLambertMaterial({ map: awningTex() }));
-  aw.position.set(ct.x, 3.1, ct.z - 0.5); aw.rotation.x = 0.18; aw.castShadow = true; world.add(aw);
-  for (const sx of [-1, 1]) { const po = mk(G.cyl, mat(0xffffff), 0.08, 3.0, 0.08, ct.x + sx * 2.3, 1.55, ct.z - 1.1); po.castShadow = true; world.add(po); }
-  const s3 = signSprite('SATIŞ', '#3b82f6', 2.0); s3.position.set(ct.x, 4.1, ct.z - 0.5); world.add(s3);
-  addCollider(ct.x - 2.7, ct.x + 2.7, ct.z - 0.95, ct.z + 0.95);
-  // money pile
+  for (let i = 0; i < 5; i++) { const st = mk(G.box, mat(i % 2 ? 0x5b9cff : 0x2f6fe0), 0.3, 0.9, 0.03, ct.x - 1.6 + i * 0.8, 0.58, ct.z + 0.72); world.add(st); }
+  const reg = new THREE.Group(); reg.position.set(ct.x - 1.4, 1.21, ct.z);
+  reg.add(mk(G.box, mat(0x444c55), 0.7, 0.3, 0.55, 0, 0.15, 0)); const scr = mk(G.box, mat(0x66f07a), 0.4, 0.22, 0.05, 0, 0.45, 0.1); scr.rotation.x = -0.4; reg.add(scr); reg.add(mk(G.box, mat(0xd0d6dc), 0.5, 0.06, 0.3, 0, 0.32, 0.25)); world.add(reg);
+  bucket(ct.x + 1.4, ct.z, ['tulip', 'rose']); bucket(ct.x + 0.7, ct.z - 0.1, ['rose', 'tulip']);
+  bucket(ct.x - 3.1, ct.z + 0.4, ['tulip']); bucket(ct.x - 3.1, ct.z - 0.6, ['rose']); bucket(ct.x + 3.2, ct.z + 0.9, ['tulip', 'rose']);
+  const aw = new THREE.Mesh(new THREE.BoxGeometry(5.4, 0.12, 2.3), new THREE.MeshLambertMaterial({ map: awningTex('#ff5a6e', '#ffffff') }));
+  aw.position.set(ct.x, 3.15, ct.z - 0.3); aw.rotation.x = -0.12; aw.castShadow = true; world.add(aw);
+  for (const sx of [-1, 1]) { const po = mk(G.cyl, mat(0xffffff), 0.08, 3.1, 0.08, ct.x + sx * 2.6, 1.55, ct.z + 0.8); po.castShadow = true; world.add(po); }
+  const cs = makeBoard('ÇİÇEKÇİ', 3.4, 0.9, 'chalk'); cs.position.set(ct.x, 4.2, ct.z - 0.55); cs.rotation.x = -0.25; world.add(cs);
+  addCollider(ct.x - 2.7, ct.x + 2.7, ct.z - 1.2, ct.z + 0.95);
+  // queue stanchions with rope along the street side
+  const stan = (x, z) => { const g = new THREE.Group(); g.position.set(x, 0, z); g.add(mk(G.cyl, mat(0xc9a227), 0.2, 0.05, 0.2, 0, 0.03, 0)); g.add(mk(G.cyl, mat(0xe8c64a), 0.05, 0.95, 0.05, 0, 0.5, 0)); g.add(mk(G.sph, mat(0xe8c64a), 0.1, 0.1, 0.1, 0, 1.0, 0)); g.traverse(m => { if (m.isMesh) m.castShadow = true; }); world.add(g); };
+  for (const sx of [8.75, 11.25]) for (let z = (sx < 10 ? 1.3 : 0.2); z <= 8.2; z += 3.0) { stan(sx, z); if (z + 3.0 <= 8.3) { const rp = mk(G.box, mat(0xc0233a), 0.05, 0.05, 3.0, sx, 0.88, z + 1.5); world.add(rp); } }
+  // ---- money tray table
   const mp = POS.moneyPile;
-  const plate = rbox(3.1, 0.08, 2.5, 0.04, mat(0x9ee59a)); plate.position.set(mp.x, 0.05, mp.z); plate.receiveShadow = true; world.add(plate);
+  const mt = rbox(3.0, 0.75, 2.3, 0.08, WM); mt.position.set(mp.x, 0.38, mp.z); mt.castShadow = mt.receiveShadow = true; world.add(mt);
+  const tr = rbox(3.1, 0.1, 2.4, 0.04, mat(0x2f8f4a)); tr.position.set(mp.x, 0.78, mp.z); world.add(tr);
+  addCollider(mp.x - 1.6, mp.x + 1.6, mp.z - 1.2, mp.z + 1.2);
+  const ms = makeBoard('PARA', 1.1, 0.4, 'wood'); ms.position.set(mp.x, 1.9, mp.z - 1.2); ms.rotation.x = -0.15; ms.scale.setScalar(0.9); world.add(ms);
   moneyPile = new Stack(scene, (i, out) => {
     const cx = 3, cz = 4, per = cx * cz, l = Math.floor(i / per), r = i % per;
-    out.set(mp.x + ((r % cx) - 1) * 0.9, 0.14 + l * 0.12, mp.z + (Math.floor(r / cx) - 1.5) * 0.52);
+    out.set(mp.x + ((r % cx) - 1) * 0.9, 0.9 + l * 0.12, mp.z + (Math.floor(r / cx) - 1.5) * 0.52);
   }, CFG.moneyCap);
   moneyPile.extra = 0;
 }
+
+function buildDecor() {
+  // greenhouse next to the garden
+  const gh = new THREE.Group(); gh.position.set(-5.6, 0, -9.2);
+  const glass = new THREE.MeshLambertMaterial({ color: lc(0xbfe8f5), transparent: true, opacity: 0.32, depthWrite: false });
+  gh.add(mk(G.box, glass, 4.2, 2.2, 2.8, 0, 1.1, 0));
+  const roofG = new THREE.Mesh(new THREE.CylinderGeometry(1.5, 1.5, 4.2, 3, 1), glass); roofG.rotation.z = Math.PI / 2; roofG.rotation.x = 0; roofG.position.y = 2.65; roofG.scale.set(1, 1, 1); gh.add(roofG);
+  const fr = mat(0xffffff);
+  for (const sx of [-1, 0, 1]) for (const sz of [-1, 1]) gh.add(mk(G.box, fr, 0.08, 2.2, 0.08, sx * 2.1, 1.1, sz * 1.4));
+  for (const sz of [-1, 1]) { gh.add(mk(G.box, fr, 4.3, 0.08, 0.08, 0, 2.2, sz * 1.4)); gh.add(mk(G.box, fr, 4.3, 0.08, 0.08, 0, 0.05, sz * 1.4)); }
+  for (const sx of [-1, 1]) { gh.add(mk(G.box, fr, 0.08, 0.08, 2.9, sx * 2.1, 2.2, 0)); gh.add(mk(G.box, fr, 0.08, 0.08, 2.9, sx * 2.1, 0.05, 0)); }
+  gh.add(mk(G.box, dark2(), 3.2, 0.5, 0.7, 0, 0.25, -0.6));
+  for (let i = 0; i < 5; i++) { const ty = i % 2 ? 'rose' : 'tulip'; const st = new THREE.Mesh(stemGeo(ty), vcMat), bl = new THREE.Mesh(bloomGeo(ty, i), vcMat); st.position.set(-1.3 + i * 0.65, 0.5, -0.6); bl.position.set(-1.3 + i * 0.65, 0.5 + STEM_H, -0.6); gh.add(st, bl); }
+  world.add(gh); addCollider(-7.8, -3.4, -10.7, -7.7);
+  // wooden shed
+  const sh = new THREE.Group(); sh.position.set(3.2, 0, -9.4);
+  sh.add(rbox(3.0, 2.0, 2.4, 0.06, woodM())).children[0].position.y = 1.0;
+  const rf = mk(G.box, mat(0xc0392b), 3.5, 0.14, 1.7, 0, 2.35, -0.55); rf.rotation.x = 0.55; sh.add(rf); const rf2 = mk(G.box, mat(0xc0392b), 3.5, 0.14, 1.7, 0, 2.35, 0.55); rf2.rotation.x = -0.55; sh.add(rf2);
+  sh.add(mk(G.box, mat(0x6b3e1d), 0.9, 1.4, 0.06, 0, 0.7, 1.22));
+  sh.traverse(m => { if (m.isMesh) m.castShadow = true; }); world.add(sh); addCollider(1.6, 4.8, -10.7, -8.1);
+  // lamp posts
+  const lamp = (x, z) => { const g = new THREE.Group(); g.position.set(x, 0, z); g.add(mk(G.cyl, mat(0x2d3a45), 0.09, 3.2, 0.09, 0, 1.6, 0)); g.add(mk(G.cyl, mat(0x2d3a45), 0.2, 0.15, 0.2, 0, 0.08, 0)); g.add(mk(G.sph, new THREE.MeshBasicMaterial({ color: lc(0xffe9a8) }), 0.26, 0.3, 0.26, 0, 3.3, 0)); g.traverse(m => { if (m.isMesh) m.castShadow = true; }); world.add(g); };
+  [[-9.3, -5.2], [16.2, -5.2], [-9.3, 12], [7.9, 12.0], [12.1, 12.0], [16.2, 12]].forEach(a => lamp(a[0], a[1]));
+  // benches
+  const bench = (x, z, ry) => { const g = new THREE.Group(); g.position.set(x, 0, z); g.rotation.y = ry; g.add(mk(G.box, woodM(), 2.0, 0.1, 0.6, 0, 0.5, 0)); g.add(mk(G.box, woodM(), 2.0, 0.5, 0.08, 0, 0.85, -0.28)); for (const sx of [-0.85, 0.85]) g.add(mk(G.box, mat(0x2d3a45), 0.08, 0.5, 0.5, sx, 0.25, 0)); g.traverse(m => { if (m.isMesh) m.castShadow = true; }); world.add(g); };
+  bench(15.0, 6.2, -Math.PI / 2); bench(-1.5, 11.6, Math.PI);
+  addCollider(14.4, 15.6, 5.1, 7.3);
+  // flower pots along edges
+  [[-8.6, -5.0, 'tulip', 0], [-6.8, -5.0, 'rose', 1], [4.6, -5.0, 'rose', 2], [6.4, -5.0, 'tulip', 3], [15.4, -5.0, 'rose', 0], [-8.7, 6.0, 'tulip', 1], [-8.7, 10.4, 'rose', 3], [15.7, 10.5, 'tulip', 2], [15.7, 8.8, 'rose', 1]].forEach(a => pot(a[0], a[1], a[2], a[3]));
+  // upgrade area carpet
+  const cp = new THREE.Mesh(G.plane, new THREE.MeshLambertMaterial({ color: lc(0xf3dfae), transparent: true, opacity: 0.9 })); cp.rotation.x = -Math.PI / 2; cp.scale.set(16.2, 3.7, 1); cp.position.set(1.2, 0.03, POS.upgradeZ); cp.receiveShadow = true; world.add(cp);
+}
+function dark2() { return mat(0x8a5a30); }
 
 /* =====================================================================
    9. ZONES / PADS
@@ -982,14 +1101,14 @@ function buildZones() {
   packZone = new Zone({ x: POS.packPad.x, z: POS.packPad.z, w: 2.8, d: 2.6, color: '#ffd84a', draw: drawZoneIcon(iconFlower) });
   outZone = new Zone({ x: POS.outPad.x, z: POS.outPad.z, w: 2.8, d: 2.6, color: '#ff7eb6', draw: drawZoneIcon(iconBouquet) });
   counterZone = new Zone({ x: POS.counterPad.x, z: POS.counterPad.z, w: 2.6, d: 2.6, color: '#4aa8ff', draw: drawZoneIcon(iconSmile, 0.55) });
-  moneyZone = new Zone({ x: POS.moneyPile.x, z: POS.moneyPile.z, w: 3.4, d: 3.0, color: '#4ade80', draw: null, labelSize: 0.01 });
+  moneyZone = new Zone({ x: POS.moneyPile.x, z: POS.moneyPile.z + 0.9, w: 3.4, d: 3.4, color: '#4ade80', draw: null, labelSize: 0.01 });
   moneyZone.label.visible = false;
   const z = POS.upgradeZ;
-  upPads.bed = new UpgradePad('bed', -8, z, iconBed);
-  upPads.helper = new UpgradePad('helper', -4.4, z, iconHelper);
-  upPads.cap = new UpgradePad('cap', -0.8, z, iconBackpack);
-  upPads.speed = new UpgradePad('speed', 2.8, z, iconBolt);
-  upPads.pack = new UpgradePad('pack', 6.4, z, iconPack);
+  upPads.bed = new UpgradePad('bed', -8.2, POS.beds[2].z, iconBed);
+  upPads.helper = new UpgradePad('helper', -4.2, z, iconHelper);
+  upPads.cap = new UpgradePad('cap', -0.6, z, iconBackpack);
+  upPads.speed = new UpgradePad('speed', 3.0, z, iconBolt);
+  upPads.pack = new UpgradePad('pack', 6.6, z, iconPack);
 }
 
 /* =====================================================================
@@ -1079,7 +1198,7 @@ function setBubble(c, kind) {
 function finishCustomer(c) {
   const qi = queue.indexOf(c); if (qi >= 0) queue.splice(qi, 1);
   c.state = 'leaving'; setBubble(c, 'happy'); c.hideBubble = 1.2; stats.sold++; sfx('happy');
-  c.path = [[CFG.queueX + 1.8, -0.6], [18.5, 0.6], [27, 8], [32, 14]];
+  c.path = [[12.4, -0.3], [12.4, 12.5], [10, 18], [10, 40]];
   const n = c.want;
   for (let k = 0; k < n; k++) later(0.15 + k * 0.16, () => spawnBill(c));
 }
@@ -1271,12 +1390,11 @@ const TUT = [
 ];
 const tutArrow = new THREE.Group();
 (function () {
-  const m = new THREE.MeshBasicMaterial({ color: lc(0xffc400) });
-  const om = new THREE.MeshBasicMaterial({ color: lc(0x16324a), side: THREE.BackSide });
-  const cone = mk(G.cone, m, 0.5, 0.8, 0.5, 0, 0.4, 0); cone.rotation.x = Math.PI; tutArrow.add(cone);
-  const co = mk(G.cone, om, 0.62, 0.92, 0.62, 0, 0.4, 0); co.rotation.x = Math.PI; tutArrow.add(co);
-  tutArrow.add(mk(G.cyl, m, 0.17, 0.6, 0.17, 0, 1.1, 0)); tutArrow.add(mk(G.cyl, om, 0.27, 0.66, 0.27, 0, 1.1, 0));
-  tutArrow.children[3].material = om; tutArrow.visible = false; scene.add(tutArrow);
+  const sh = new THREE.Shape(); sh.moveTo(-0.28, 1.3); sh.lineTo(0.28, 1.3); sh.lineTo(0.28, 0.65); sh.lineTo(0.62, 0.65); sh.lineTo(0, 0); sh.lineTo(-0.62, 0.65); sh.lineTo(-0.28, 0.65); sh.closePath();
+  const geo = new THREE.ExtrudeGeometry(sh, { depth: 0.25, bevelEnabled: false }); geo.translate(0, 0, -0.125);
+  const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: lc(0xffc400) }));
+  const o = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: lc(0x16324a) })); o.scale.set(1.2, 1.12, 0.6); o.position.y = -0.03;
+  tutArrow.add(o, m); tutArrow.rotation.y = CFG.yaw; tutArrow.visible = false; scene.add(tutArrow);
 })();
 function tutTarget(step, out) {
   switch (step) {
@@ -1411,18 +1529,16 @@ function update(dt) {
    ===================================================================== */
 buildGround(); buildFences();
 // hedges around beds (east side open to the plaza)
-buildHedge(-17.85, 0, 0.8, 22.4, 0.95);
-buildHedge(-14, -10.7, 7.4, 0.8, 0.95);
-buildHedge(-14, 10.7, 7.4, 0.8, 0.95);
-buildHedge(-14, -3.7, 6.8, 0.7, 0.8);
-buildHedge(-14, 3.7, 6.8, 0.7, 0.8);
+buildHedge(-17.85, 0, 0.8, 23.2, 0.95);
+buildHedge(-14, -11.35, 7.4, 0.8, 0.95);
+buildHedge(-14, 11.35, 7.4, 0.8, 0.95);
 // plaza edge hedges / bushes
 buildHedge(13.6, 12.9, 4.2, 0.9, 0.9); buildHedge(5.2, 12.9, 6.4, 0.9, 0.9);
 for (const [x, z, s] of [[-18, -9, 1], [-6, -9.5, 1.2], [4, -9, 1], [13, -8.5, 1.2], [18, 3, 1], [-19.2, 13, 1], [18.5, 13, 1.1], [6, 13.4, 0.9]]) buildBush(x, z, s);
 for (const [x, z, s] of [[-24, -14, 1.5], [-22, 3, 1.3], [-24, 14, 1.6], [-12, -16, 1.4], [0, -16, 1.6], [12, -16, 1.4], [23, -13, 1.5], [24, 2, 1.3], [24, 16, 1.5], [-15, 19, 1.4], [-4, 20, 1.2], [18, 20, 1.5], [-26, -3, 1.6]]) buildTree(x, z, s);
 buildDecorFlowers();
 for (let i = 0; i < 3; i++) buildBed(i);
-buildStations(); buildZones(); buildPlayer();
+buildStations(); buildDecor(); buildZones(); buildPlayer();
 // restore progress
 if (S.lv.bed > 0) { unlockBed(beds[2], true); upPads.bed.done = true; upPads.bed.group.visible = false; }
 if (S.lv.helper > 0) { spawnHelper(true); upPads.helper.done = true; upPads.helper.group.visible = false; }
