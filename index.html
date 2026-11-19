@@ -24,13 +24,13 @@
   #capP svg{width:26px;height:26px}
   #capP.full #capV{color:#ffb703}
   #topleft{position:absolute;left:max(12px,env(safe-area-inset-left));top:max(12px,env(safe-area-inset-top))}
-  #hint{position:absolute;left:50%;top:max(78px,calc(env(safe-area-inset-top) + 66px));transform:translateX(-50%);display:none;align-items:center;gap:10px;
-    padding:8px 18px 8px 12px;border-radius:18px;background:rgba(255,255,255,.92);color:#16324a;font-weight:900;font-size:20px;
+  #hint{position:absolute;left:50%;top:max(124px,calc(env(safe-area-inset-top) + 112px));transform:translateX(-50%);display:none;align-items:center;gap:10px;
+    padding:8px 18px 8px 12px;border-radius:18px;background:rgba(255,255,255,.92);color:#16324a;font-weight:900;font-size:17px;
     box-shadow:0 4px 0 rgba(0,0,0,.2);white-space:nowrap;animation:hintPulse 1.6s ease-in-out infinite}
   #hint svg{width:34px;height:34px;flex:none;transition:transform .1s linear}
   @keyframes hintPulse{0%,100%{transform:translateX(-50%) scale(1)}50%{transform:translateX(-50%) scale(1.05)}}
-  #reset{position:absolute;left:max(12px,env(safe-area-inset-left));bottom:max(12px,env(safe-area-inset-bottom));pointer-events:auto;
-    font:700 12px/1 inherit;font-family:inherit;color:#fff;background:rgba(18,48,74,.45);border:0;border-radius:10px;padding:7px 10px;opacity:.65}
+  #reset{position:absolute;right:max(12px,env(safe-area-inset-right));top:max(12px,env(safe-area-inset-top));pointer-events:auto;width:40px;height:40px;border:0;border-radius:50%;background:rgba(18,48,74,.55);padding:0;opacity:.8}
+  #reset svg{width:24px;height:24px;display:block;margin:auto}
   #joyBase{position:fixed;width:120px;height:120px;margin:-60px 0 0 -60px;border-radius:50%;background:rgba(255,255,255,.22);
     border:3px solid rgba(255,255,255,.55);display:none;pointer-events:none;z-index:5}
   #joyKnob{position:absolute;left:50%;top:50%;width:52px;height:52px;margin:-26px 0 0 -26px;border-radius:50%;background:rgba(255,255,255,.85);
@@ -56,7 +56,7 @@
       <svg id="hintArrow" viewBox="0 0 48 48"><path d="M6 18h20V8l16 16-16 16V30H6z" fill="#ffb703" stroke="#b36b00" stroke-width="3" stroke-linejoin="round"/></svg>
       <span id="hintT"></span>
     </div>
-    <button id="reset">Sıfırla</button>
+    <button id="reset" aria-label="Sıfırla"><svg viewBox="0 0 24 24"><path fill="#fff" d="M12 8a4 4 0 100 8 4 4 0 000-8zm9 5v-2l-2.2-.5a7 7 0 00-.7-1.7l1.2-1.9-1.4-1.4-1.9 1.2a7 7 0 00-1.7-.7L13 3h-2l-.5 2.2a7 7 0 00-1.7.7L6.9 4.7 5.5 6.1l1.2 1.9a7 7 0 00-.7 1.7L3.8 11v2l2.2.5c.2.6.4 1.2.7 1.7l-1.2 1.9 1.4 1.4 1.9-1.2c.5.3 1.1.5 1.7.7L11 21h2l.5-2.2c.6-.2 1.2-.4 1.7-.7l1.9 1.2 1.4-1.4-1.2-1.9c.3-.5.5-1.1.7-1.7z"/></svg></button>
   </div>
   <div id="joyBase"><div id="joyKnob"></div></div>
 </div>
@@ -81,7 +81,7 @@ const CFG = {
   queueMax: 6, spawnEvery: 2.0, spawnShortEvery: 0.8, walkSpeed: 5.0, leaveSpeed: 5.7, queueX: 10, queueZ0: -1.5, queueGap: 1.5,
   helperCap: 6,
   bounds: { x0: -19, x1: 17.8, z0: -10.4, z1: 16 },
-  start: { x: 2, z: 4 }
+  start: { x: -5.5, z: 2.6 }
 };
 const geo = (base, n) => Array.from({ length: n }, (_, i) => Math.round(base * Math.pow(1.5, i) / 5) * 5);
 const PRICE = { bouquet: 10, pot: 25 };
@@ -119,7 +119,7 @@ function angDiff(a, b) { let d = (b - a) % TAU; if (d > Math.PI) d -= TAU; if (d
 const easeOutBack = t => { const c = 1.70158; t = clamp(t, 0, 1); return 1 + (c + 1) * Math.pow(t - 1, 3) + c * Math.pow(t - 1, 2); };
 function rm(o) { if (o && o.parent) o.parent.remove(o); }
 
-let LOADED_X = null;
+let LOADED_X = null, carpet1 = null, carpet2 = null;
 const S = { money: 0, lv: { cap: 0, speed: 0, pack: 0, bed: 0, helper: 0, cashier: 0, carrier: 0, cashSpd: 0, carSpd: 0, carCap: 0, helpSpd: 0, sera: 0, van: 0 }, tut: 0 };
 let saveDirty = false, saveTimer = 0;
 (function loadSave() {
@@ -195,7 +195,7 @@ function onResize() {
   renderer.setSize(w, h, false);
   camera.aspect = w / h; camera.updateProjectionMatrix();
   const t = Math.tan(CFG.fov * Math.PI / 360);
-  camDist = clamp(16 / (2 * t * camera.aspect), 23, 36);
+  camDist = clamp(16 / (2 * t * camera.aspect), 23, 40);
   if (typeof pMat !== 'undefined') pMat.uniforms.scale.value = renderer.domElement.height / (2 * t);
 }
 window.addEventListener('resize', onResize);
@@ -959,7 +959,7 @@ function buildBed(idx) {
   }
   if (idx === 2) {
     // locked overlay: grey tint, fence ring, lock sign
-    const ov = new THREE.Mesh(G.plane, new THREE.MeshBasicMaterial({ color: lc(0x6d7480), transparent: true, opacity: 0.78, depthWrite: false }));
+    const ov = new THREE.Mesh(G.plane, new THREE.MeshBasicMaterial({ color: lc(0x9c8556), transparent: true, opacity: 0.85, depthWrite: false }));
     ov.rotation.x = -Math.PI / 2; ov.scale.set(6.6, 5.4, 1); ov.position.set(p.x, 0.27, p.z); ov.renderOrder = 3;
     bed.group.add(ov);
     const fm = mat(0xffffff);
@@ -985,7 +985,7 @@ function buildBed(idx) {
 }
 function unlockBed(bed, instant) {
   bed.locked = false; bed.group.visible = !!instant ? false : true; bed.flowers.forEach(f => { f.g.visible = true; f.t = instant ? rand(0, f.gt) : 0; });
-  if (!instant) { bed.group.visible = true; bed.dropping = 0; confetti(bed.x, 1.5, bed.z, 50); for (let i = 0; i < 14; i++) dust(bed.x + rand(-3.2, 3.2), 0.3, bed.z + rand(-2.6, 2.6), 2, 0.8); ring(bed.x, bed.z, 0x7dff7a, 7); nudge.t = 0; nudge.x = bed.x; nudge.z = bed.z; }
+  if (!instant) { bed.group.visible = true; bed.dropping = 0; confetti(bed.x, 1.5, bed.z, 50); for (let i = 0; i < 14; i++) dust(bed.x + rand(-3.2, 3.2), 0.3, bed.z + rand(-2.6, 2.6), 2, 0.8); ring(bed.x, bed.z, 0x7dff7a, 7); nudge.t = 0; nudge.x = bed.x; nudge.z = bed.z; nudge.w = 0.7; }
 }
 
 /* ---- furniture: tables, machine, counter ---- */
@@ -1154,16 +1154,18 @@ function buildSera() {
   const woodMt = woodM(), dark = mat(0x5a2f12), light = mat(0xe8a850);
   // ---- locked state: grey ground, fence ring, sign, collider
   const lg = new THREE.Group(); zone2.lockedGroup = lg; world.add(lg);
-  const gr = new THREE.Mesh(G.plane, new THREE.MeshLambertMaterial({ color: lc(0x6d7480) })); gr.rotation.x = -Math.PI / 2; gr.scale.set(SZ.x1 - SZ.x0, SZ.z1 - SZ.z0, 1); gr.position.set((SZ.x0 + SZ.x1) / 2, 0.03, (SZ.z0 + SZ.z1) / 2); gr.receiveShadow = true; lg.add(gr);
+  const gr = new THREE.Mesh(G.plane, new THREE.MeshLambertMaterial({ color: lc(0x9c8556) })); gr.rotation.x = -Math.PI / 2; gr.scale.set(SZ.x1 - SZ.x0, SZ.z1 - SZ.z0, 1); gr.position.set((SZ.x0 + SZ.x1) / 2, 0.03, (SZ.z0 + SZ.z1) / 2); gr.receiveShadow = true; lg.add(gr);
   const posts = new THREE.InstancedMesh(new THREE.BoxGeometry(0.28, 1.2, 0.28), mat(0xffffff), 90); let n = 0; const m4 = new THREE.Matrix4();
   const line = (x0, z0, x1, z1) => {
     const len = Math.hypot(x1 - x0, z1 - z0), k = Math.max(1, Math.round(len / 1.4));
     for (let i = 0; i <= k; i++) { m4.makeTranslation(lerp(x0, x1, i / k), 0.6, lerp(z0, z1, i / k)); posts.setMatrixAt(n++, m4); }
-    for (const y of [0.45, 0.88]) { const r = mk(G.box, mat(0xffffff), Math.abs(x1 - x0) || 0.12, 0.14, Math.abs(z1 - z0) || 0.12, (x0 + x1) / 2, y, (z0 + z1) / 2); lg.add(r); }
+    for (const y of [0.45, 0.88]) { const r = mk(G.box, mat(y < 0.6 ? 0xff7a00 : 0xffffff), Math.abs(x1 - x0) || 0.12, 0.14, Math.abs(z1 - z0) || 0.12, (x0 + x1) / 2, y, (z0 + z1) / 2); lg.add(r); }
   };
   line(SZ.x0 + 0.3, SZ.z0, SZ.x1, SZ.z0); line(SZ.x1, SZ.z0, SZ.x1, SZ.z1); line(SZ.x1, SZ.z1, SZ.x0 + 0.3, SZ.z1); line(SZ.x0 + 0.3, SZ.z1, SZ.x0 + 0.3, SZ.z0);
   posts.count = n; posts.castShadow = true; lg.add(posts);
   const sg = makeBoard('KİLİTLİ', 2.6, 0.8, 'wood'); sg.position.set(22.2, 1.6, 2.4); sg.rotation.y = CFG.yaw; lg.add(sg);
+  const pr = makeBoard('SERA 1800', 5.0, 1.2, 'chalk'); pr.position.set(26, 2.4, 6); pr.rotation.y = CFG.yaw; lg.add(pr);
+  for (const [cx2, cz2] of [[21.5, -11], [21.5, 11], [44, -11], [44, 11], [21.5, 0]]) { const co = new THREE.Group(); co.add(mk(G.cone, mat(0xff7a00), 0.32, 0.8, 0.32, 0, 0.45, 0)); co.add(mk(G.box, mat(0xffffff), 0.6, 0.1, 0.6, 0, 0.05, 0)); co.position.set(cx2, 0, cz2); lg.add(co); }
   const lk = makeSprite(128, 128, (ctx) => { ctx.fillStyle = '#ffb703'; ctx.strokeStyle = '#7a4a00'; ctx.lineWidth = 8; rrect(ctx, 24, 56, 80, 62, 14); ctx.fill(); ctx.stroke(); ctx.beginPath(); ctx.arc(64, 56, 24, Math.PI, 0); ctx.stroke(); ctx.fillStyle = '#7a4a00'; ctx.beginPath(); ctx.arc(64, 84, 8, 0, TAU); ctx.fill(); }, 2.4, 2.4, false); lk.position.set(33, 2.6, 0); lg.add(lk);
   addCollider(SZ.x0 - 0.2, SZ.x1 + 0.2, SZ.z0 - 0.4, SZ.z1 + 0.4, () => zone2.locked);
   // ---- greenhouse with orchid bed
@@ -1218,7 +1220,6 @@ function buildSera() {
   const dc = pivotGroup(33, 8); dc.visible = false; world.add(dc); zone2.groups.push([dc, 0.7]);
   const tree = (x, z, sc) => { const t = new THREE.Group(); t.add(mk(G.cyl, mat(0x8a5a36), 0.35 * sc, 1.6 * sc, 0.35 * sc, 0, 0.8 * sc, 0)); t.add(mk(G.sph, mat(0x1f8f3a), 1.5 * sc, 1.35 * sc, 1.5 * sc, 0, 2.3 * sc, 0)); t.add(mk(G.sph, mat(0x2fae4a), 1.1 * sc, 1.0 * sc, 1.1 * sc, 0.35 * sc, 3.1 * sc, 0)); shadowAll(t, true, false); ad(dc, t, x, 0, z); };
   tree(43.5, 9.5, 1.2); tree(24, 10, 1.1); tree(43.5, -10, 1.2); tree(36, 10.5, 1.0);
-  for (let i = 0; i < 6; i++) { const pt = new THREE.Group(); pt.add(mk(G.cone, mat(0xc8643c), 0.3, 0.1, 0.3, 0, 0.45, 0)).children[0].rotation.x = Math.PI; const pm = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.2, 0.4, 12), mat(0xc8643c)); pm.position.y = 0.22; pt.add(pm); const st = new THREE.Mesh(stemGeo('orchid'), vcMat), bl = new THREE.Mesh(bloomGeo('orchid', i), vcMat); st.position.y = 0.4; bl.position.y = 0.4 + STEM_H; pt.add(st, bl); ad(dc, pt, 24 + i * 1.6, 0, 8.5); }
   const lamp = (x, z) => { const g = new THREE.Group(); g.add(mk(G.cyl, mat(0x2d3a45), 0.09, 3.2, 0.09, 0, 1.6, 0)); g.add(mk(G.sph, new THREE.MeshBasicMaterial({ color: lc(0xffe9a8) }), 0.26, 0.3, 0.26, 0, 3.3, 0)); ad(dc, g, x, 0, z); };
   lamp(21.8, -1); lamp(21.8, 5.5);
 }
@@ -1233,7 +1234,7 @@ function unlockSera(instant) {
   potZone.group.visible = potOutZone.group.visible = true;
   if (instant) { zone2.lockedGroup.visible = false; zone2.groups.forEach(g => { g[0].visible = true; g[0].scale.setScalar(1); }); return; }
   zone2.popT = 0; zone2.popFlags = []; zone2.lockedGroup.dropping = 0;
-  confetti(33, 2, 0, 70); for (let i = 0; i < 16; i++) dust(rand(22, 44), 0.3, rand(-11, 11), 2, 0.9); ring(33, 0, 0xa64dff, 12); nudge.t = 0; nudge.x = 33; nudge.z = -2; vib(30);
+  confetti(33, 2, 0, 70); for (let i = 0; i < 16; i++) dust(rand(22, 44), 0.3, rand(-11, 11), 2, 0.9); ring(33, 0, 0xa64dff, 12); nudge.t = 0; nudge.x = 33; nudge.z = -2; nudge.w = 0.95; vib(30);
 }
 function updateSera(dt) {
   if (!zone2) return;
@@ -1291,12 +1292,14 @@ function vanLogoTex() {
 function buildVan() {
   zone3 = { locked: true, popT: undefined, groups: [] };
   const lg = new THREE.Group(); zone3.lockedGroup = lg; world.add(lg);
-  const gr = new THREE.Mesh(G.plane, new THREE.MeshLambertMaterial({ color: lc(0x6d7480) })); gr.rotation.x = -Math.PI / 2; gr.scale.set(VZ.x1 - VZ.x0, VZ.z1 - VZ.z0, 1); gr.position.set((VZ.x0 + VZ.x1) / 2, 0.03, (VZ.z0 + VZ.z1) / 2); lg.add(gr);
+  const gr = new THREE.Mesh(G.plane, new THREE.MeshLambertMaterial({ color: lc(0x9c8556) })); gr.rotation.x = -Math.PI / 2; gr.scale.set(VZ.x1 - VZ.x0, VZ.z1 - VZ.z0, 1); gr.position.set((VZ.x0 + VZ.x1) / 2, 0.03, (VZ.z0 + VZ.z1) / 2); lg.add(gr);
   const posts = new THREE.InstancedMesh(new THREE.BoxGeometry(0.28, 1.2, 0.28), mat(0xffffff), 60); let n = 0; const m4 = new THREE.Matrix4();
-  const line = (x0, z0, x1, z1) => { const len = Math.hypot(x1 - x0, z1 - z0), k = Math.max(1, Math.round(len / 1.4)); for (let i = 0; i <= k; i++) { m4.makeTranslation(lerp(x0, x1, i / k), 0.6, lerp(z0, z1, i / k)); posts.setMatrixAt(n++, m4); } for (const y of [0.45, 0.88]) lg.add(mk(G.box, mat(0xffffff), Math.abs(x1 - x0) || 0.12, 0.14, Math.abs(z1 - z0) || 0.12, (x0 + x1) / 2, y, (z0 + z1) / 2)); };
+  const line = (x0, z0, x1, z1) => { const len = Math.hypot(x1 - x0, z1 - z0), k = Math.max(1, Math.round(len / 1.4)); for (let i = 0; i <= k; i++) { m4.makeTranslation(lerp(x0, x1, i / k), 0.6, lerp(z0, z1, i / k)); posts.setMatrixAt(n++, m4); } for (const y of [0.45, 0.88]) lg.add(mk(G.box, mat(y < 0.6 ? 0xff7a00 : 0xffffff), Math.abs(x1 - x0) || 0.12, 0.14, Math.abs(z1 - z0) || 0.12, (x0 + x1) / 2, y, (z0 + z1) / 2)); };
   line(VZ.x0, VZ.z0, VZ.x1, VZ.z0); line(VZ.x1, VZ.z0, VZ.x1, VZ.z1); line(VZ.x1, VZ.z1, VZ.x0, VZ.z1); line(VZ.x0, VZ.z1, VZ.x0, VZ.z0);
   posts.count = n; posts.castShadow = true; lg.add(posts);
   const sg = makeBoard('KİLİTLİ', 2.6, 0.8, 'wood'); sg.position.set(15.5, 1.6, 17.6); sg.rotation.y = CFG.yaw; lg.add(sg);
+  const pr = makeBoard('MİNİBÜS 6000', 6.4, 1.2, 'chalk'); pr.position.set(18.5, 2.4, 21); pr.rotation.y = CFG.yaw; lg.add(pr);
+  for (const [cx2, cz2] of [[12.8, 17], [24, 17], [24, 31.5], [12.8, 31.5]]) { const co = new THREE.Group(); co.add(mk(G.cone, mat(0xff7a00), 0.32, 0.8, 0.32, 0, 0.45, 0)); co.add(mk(G.box, mat(0xffffff), 0.6, 0.1, 0.6, 0, 0.05, 0)); co.position.set(cx2, 0, cz2); lg.add(co); }
   addCollider(VZ.x0 - 0.2, VZ.x1 + 0.2, VZ.z0 - 0.3, VZ.z1 + 0.4, () => zone3.locked);
   // content: road / pallet / van
   const rd = pivotGroup(18, 24); rd.visible = false; world.add(rd); zone3.groups.push([rd, 0]);
@@ -1321,7 +1324,7 @@ function buildVan() {
   VAN.wheels = [];
   for (const wx of [-1.2, 1.2]) for (const wz of [-1.4, 1.7]) { const wh = new THREE.Mesh(new THREE.CylinderGeometry(0.46, 0.46, 0.32, 14), dk); wh.rotation.z = Math.PI / 2; wh.position.set(wx, 0.46, wz); const hub = mk(G.cyl, mat(0xb8bec8), 0.2, 0.34, 0.2, 0, 0, 0); wh.add(hub); vg.add(wh); VAN.wheels.push(wh); }
   shadowAll(vg, true, false);
-  VAN.hud = makeSprite(256, 100, () => {}, 3.4, 1.33, false); VAN.hud.position.set(0, 4.6, 0); vg.add(VAN.hud);
+  VAN.hud = makeSprite(256, 100, () => {}, 4.6, 1.8, false); VAN.hud.position.set(0, 4.6, 0); vg.add(VAN.hud);
   vanLoad = new Stack(scene, (i, out) => { out.set(19.55 + (i % 2) * 0.8, 0.5, 24 + (Math.floor(i / 2) - 1.5) * 0.85); }, 8); vanLoad.pend = 0;
   vanPile = new Stack(scene, (i, out) => { const per = 12, l = Math.floor(i / per), r = i % per; out.set(16.2 + ((r % 3) - 1) * 0.9, 0.12 + l * 0.12, 19.6 + (Math.floor(r / 3) - 1.5) * 0.52); }, 60); vanPile.extra = 0;
   const plate = rbox(3.1, 0.08, 2.5, 0.04, mat(0x9ee59a)); ad(rd, plate, 16.2, 0.06, 19.6);
@@ -1352,7 +1355,7 @@ function toVan(it, who) {
 function unlockVan(instant) {
   zone3.locked = false; vanZone.group.visible = vanMoneyZone.group.visible = true;
   if (instant) { zone3.lockedGroup.visible = false; zone3.groups.forEach(g => { g[0].visible = true; g[0].scale.setScalar(1); }); VAN.group.visible = true; return; }
-  zone3.popT = 0; zone3.lockedGroup.dropping = 0; confetti(18, 2, 24, 70); for (let i = 0; i < 14; i++) dust(rand(13, 24), 0.3, rand(17, 31), 2, 0.9); ring(18, 24, 0x0aa89a, 12); nudge.t = 0; nudge.x = 18; nudge.z = 22; vib(30);
+  zone3.popT = 0; zone3.lockedGroup.dropping = 0; confetti(18, 2, 24, 70); for (let i = 0; i < 14; i++) dust(rand(13, 24), 0.3, rand(17, 31), 2, 0.9); ring(18, 24, 0x0aa89a, 12); nudge.t = 0; nudge.x = 18; nudge.z = 22; nudge.w = 0.95; vib(30);
 }
 function updateVanZone(dt) {
   if (!zone3) return;
@@ -1441,9 +1444,9 @@ function buildDecor() {
   addCollider(14.4, 15.6, 5.1, 7.3);
   // flower pots along edges
   [[-8.6, -5.0, 'tulip', 0], [-6.8, -5.0, 'rose', 1], [4.6, -5.0, 'rose', 2], [6.4, -5.0, 'tulip', 3], [15.4, -5.0, 'rose', 0], [-8.7, 6.0, 'tulip', 1], [-8.7, 10.4, 'rose', 3], [15.7, 10.5, 'tulip', 2], [15.7, 8.8, 'rose', 1]].forEach(a => pot(a[0], a[1], a[2], a[3]));
-  const cp2 = new THREE.Mesh(G.plane, new THREE.MeshLambertMaterial({ color: lc(0x2b3470) })); cp2.rotation.x = -Math.PI / 2; cp2.scale.set(10.6, 3.5, 1); cp2.position.set(0.4, 0.03, POS.upgradeZ2); cp2.receiveShadow = true; world.add(cp2);
+  const cp2 = carpet2 = new THREE.Mesh(G.plane, new THREE.MeshLambertMaterial({ color: lc(0x2b3470) })); cp2.rotation.x = -Math.PI / 2; cp2.scale.set(10.6, 3.5, 1); cp2.position.set(0.4, 0.03, POS.upgradeZ2); cp2.receiveShadow = true; world.add(cp2);
   // upgrade area carpet
-  const cp = new THREE.Mesh(G.plane, new THREE.MeshLambertMaterial({ color: lc(0x2b3470), transparent: true, opacity: 1 })); cp.rotation.x = -Math.PI / 2; cp.scale.set(16.2, 3.7, 1); cp.position.set(1.2, 0.03, POS.upgradeZ); cp.receiveShadow = true; world.add(cp);
+  const cp = carpet1 = new THREE.Mesh(G.plane, new THREE.MeshLambertMaterial({ color: lc(0x2b3470), transparent: true, opacity: 1 })); cp.rotation.x = -Math.PI / 2; cp.scale.set(16.2, 3.7, 1); cp.position.set(1.2, 0.03, POS.upgradeZ); cp.receiveShadow = true; world.add(cp);
 }
 function dark2() { return mat(0x8a5a30); }
 
@@ -1487,7 +1490,7 @@ class Zone {
 }
 class UpgradePad extends Zone {
   constructor(key, x, z, icon, color) {
-    super({ x, z, w: 2.9, color: color || '#ffc21a', res: 384, labelSize: 2.6, draw: null });
+    super({ x, z, w: 3.3, color: color || '#ffc21a', res: 384, labelSize: 3.05, draw: null });
     this.key = key; this.icon = icon; this.locked = false; this.pause = 0; this.off = false; this.hold = 0; this.pop = 0; this.paid = 0; this.tick = 0; this.done = false; this.lastShown = -1;
     this.drawIcon = (ctx, w) => this.paint(ctx, w); this.redraw();
   }
@@ -1497,13 +1500,13 @@ class UpgradePad extends Zone {
   paint(ctx, w) {
     const u = UPG[this.key], lv = this.level(), mx = this.max();
     ctx.fillStyle = 'rgba(22,28,64,.96)'; ctx.strokeStyle = '#ffc21a'; ctx.lineWidth = 18; rrect(ctx, 14, 14, w - 28, w - 28, 54); ctx.fill(); ctx.stroke();
-    if (mx > 1) { ctx.fillStyle = '#ffc21a'; rrect(ctx, 30, 30, 104, 50, 25); ctx.fill(); otext(ctx, lv + '/' + mx, 82, 56, 34, '#1b1b40', '#ffc21a', 0); }
-    ctx.fillStyle = 'rgba(255,255,255,.14)'; ctx.beginPath(); ctx.arc(w / 2, 148, 88, 0, TAU); ctx.fill(); this.icon(ctx, w / 2, 148, 150);
-    otext(ctx, u.name, w / 2, 250, u.name.length > 15 ? 31 : u.name.length > 9 ? 40 : 48, '#fff', '#05071a');
-    iconBill(ctx, 112, 321, 56);
+    if (mx > 1) { ctx.fillStyle = '#ffc21a'; rrect(ctx, 28, 28, 120, 58, 29); ctx.fill(); otext(ctx, lv + '/' + mx, 88, 58, 40, '#1b1b40', '#ffc21a', 0); }
+    ctx.fillStyle = 'rgba(255,255,255,.14)'; ctx.beginPath(); ctx.arc(w / 2, 148, 88, 0, TAU); ctx.fill(); this.icon(ctx, w / 2, 146, 168);
+    otext(ctx, u.name, w / 2, 252, u.name.length > 15 ? 36 : u.name.length > 9 ? 44 : 54, '#fff', '#05071a');
+    iconBill(ctx, 100, 321, 62);
     const rem = Math.max(0, this.cost() - this.paid);
-    otext(ctx, String(rem), 232, 321, 58, '#6dff6a', '#0c1a0c');
-    if (this.locked) { ctx.fillStyle = 'rgba(10,30,20,.62)'; rrect(ctx, 14, 14, w - 28, w - 28, 54); ctx.fill(); ctx.strokeStyle = '#6dff6a'; ctx.lineWidth = 30; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.beginPath(); ctx.moveTo(110, 190); ctx.lineTo(170, 250); ctx.lineTo(280, 120); ctx.stroke(); otext(ctx, 'Seviye ' + lv, w / 2, 315, 46, '#fff', '#05071a'); }
+    otext(ctx, String(rem), 232, 321, 68, '#6dff6a', '#0c1a0c');
+    if (this.locked) { ctx.fillStyle = 'rgba(10,30,20,.5)'; rrect(ctx, 14, 14, w - 28, w - 28, 54); ctx.fill(); ctx.fillStyle = '#2fd45a'; ctx.strokeStyle = '#fff'; ctx.lineWidth = 8; ctx.beginPath(); ctx.arc(w - 66, 66, 40, 0, TAU); ctx.fill(); ctx.stroke(); ctx.strokeStyle = '#fff'; ctx.lineWidth = 12; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.beginPath(); ctx.moveTo(w - 86, 68); ctx.lineTo(w - 70, 84); ctx.lineTo(w - 44, 50); ctx.stroke(); otext(ctx, u.name, w / 2, 252, u.name.length > 15 ? 36 : u.name.length > 9 ? 44 : 54, '#fff', '#05071a'); otext(ctx, 'Seviye ' + lv, w / 2, 316, 54, '#9dffb0', '#05071a'); }
   }
 }
 function drawZoneIcon(fn, scale) {
@@ -1837,10 +1840,16 @@ function updatePacking(dt, t) {
   w.body.position.y = wk * Math.abs(Math.sin(t * 10)) * 0.05;
 }
 
+function padVisible(u) {
+  if (u.vis && !u.vis()) return false;
+  if (!u.shown && (S.money >= 0.5 * u.cost() || u.paid > 0 || S.lv[u.key] > 0)) u.shown = true;
+  return !!u.shown;
+}
 function updateUpgrades(dt) {
+  if (carpet1) { carpet1.visible = ['cap', 'speed', 'pack', 'helper', 'helpSpd'].some(k => upPads[k].shown); carpet2.visible = ['cashier', 'cashSpd', 'carrier', 'carSpd', 'carCap'].some(k => upPads[k].shown); }
   for (const key in upPads) {
     const u = upPads[key]; if (u.done) continue;
-    if (u.vis) { const v = u.vis(); if (v !== u.group.visible) { u.group.visible = v; if (v) { u.redraw(); u.group.scale.set(0.01, 1, 0.01); u.pop = 0.6; } } }
+    { const v = padVisible(u); if (v !== u.group.visible) { u.group.visible = v; if (v) { u.redraw(); u.group.scale.set(0.01, 1, 0.01); u.pop = 0.6; sfx('coin'); } } }
     if (u.pop > 0) { u.pop -= dt; const k = 1 - Math.max(0, u.pop) / 0.6, a = Math.sin(k * Math.PI * 3) * (1 - k) * 0.28; u.group.scale.set(1 + a, 1, 1 - a * 0.8); if (u.pop <= 0) u.group.scale.set(1, 1, 1); }
     if (u.locked) {
       u.pause -= dt; if (!u.inside) u.off = true;
@@ -1923,7 +1932,7 @@ function inputVec(out) {
 const moneyEl = document.getElementById('money'), moneyV = document.getElementById('moneyV'), capP = document.getElementById('capP'), capV = document.getElementById('capV');
 const hintEl = document.getElementById('hint'), hintT = document.getElementById('hintT'), hintArrow = document.getElementById('hintArrow');
 document.getElementById('reset').addEventListener('click', () => {
-  if (window.confirm('Tüm ilerleme silinsin mi?')) { try { localStorage.removeItem(SAVE_KEY); } catch (e) {} window.__resetting = true; try { localStorage.removeItem(SAVE_KEY); } catch (e) {} location.reload(); }
+  if (window.confirm('Ayarlar: Tüm ilerleme silinsin mi?')) { try { localStorage.removeItem(SAVE_KEY); } catch (e) {} window.__resetting = true; try { localStorage.removeItem(SAVE_KEY); } catch (e) {} location.reload(); }
 });
 window.addEventListener('beforeunload', () => writeSave());
 window.addEventListener('pagehide', () => writeSave());
@@ -1936,7 +1945,11 @@ const TUT = [
   { t: 'Buketleri al', done: () => stats.picked >= 1 },
   { t: 'Müşterilere sat', done: () => (stats.delivered || 0) >= 1 },
   { t: 'Paraları topla', done: () => stats.collected >= 1 },
-  { t: 'Geliştirme yap', done: () => stats.upgrades >= 1 }
+  { t: 'Geliştirme yap', done: () => stats.upgrades >= 1 },
+  { t: 'Kasiyer işe al', done: () => S.lv.cashier > 0, pad: 'cashier', show: () => S.money >= 90 },
+  { t: 'Taşıyıcı işe al', done: () => S.lv.carrier > 0, pad: 'carrier', show: () => S.money >= 270 },
+  { t: 'Sera\'yı aç', done: () => S.lv.sera > 0, pad: 'sera', show: () => S.money >= 1080 },
+  { t: 'Minibüsü aç', done: () => S.lv.van > 0, pad: 'van', show: () => S.money >= 3600 }
 ];
 const tutArrow = new THREE.Group();
 (function () {
@@ -1957,13 +1970,13 @@ function tutTarget(step, out) {
     case 2: return out.set(outZone.x, 0.4, outZone.z);
     case 3: return out.set(counterZone.x, 0.4, counterZone.z);
     case 4: return out.set(moneyZone.x, 0.8, moneyZone.z);
-    default: return out.set(upPads.cap.x, 0.4, upPads.cap.z);
+    default: { const pd = upPads[TUT[step].pad || 'cap']; return out.set(pd.x, 0.4, pd.z); }
   }
 }
 const _tt = new THREE.Vector3(), _pp = new THREE.Vector3();
 function updateTutorial(dt, t) {
   while (S.tut < TUT.length && TUT[S.tut].done()) { S.tut++; saveDirty = true; if (S.tut >= TUT.length) writeSave(); }
-  if (S.tut >= TUT.length) { hintEl.style.display = 'none'; tutArrow.visible = false; return; }
+  if (S.tut >= TUT.length || (TUT[S.tut].show && !TUT[S.tut].show())) { hintEl.style.display = 'none'; tutArrow.visible = false; return; }
   if (S.tut === 5 && upPads.cap.done) { /* fall back to any pad */ }
   hintEl.style.display = 'flex'; if (hintT.textContent !== TUT[S.tut].t) hintT.textContent = TUT[S.tut].t;
   tutTarget(S.tut, _tt); tutArrow.visible = true; tutArrow.position.set(_tt.x, _tt.y + 1.9 + Math.sin(t * 5) * 0.28, _tt.z);
@@ -1986,7 +1999,7 @@ function updateHUD(dt) {
    ===================================================================== */
 const camFocus = new THREE.Vector3(CFG.start.x, 0, CFG.start.z); const inV = { x: 0, z: 0 };
 let T = 0, spawnT = 2, camInit = false;
-const nudge = { t: 99, x: 0, z: 0 }; let camS = 1;
+const nudge = { t: 99, x: 0, z: 0, w: 0.6 }; let camS = 1;
 
 let stepT = 0;
 function movePlayer(dt) {
@@ -2085,8 +2098,8 @@ function update(dt) {
   const fw = _v.set(-Math.sin(CFG.yaw), 0, -Math.cos(CFG.yaw));
   const tx = gp.x + P.vel.x * 0.25 + fw.x * 1.8, tz = gp.z + P.vel.z * 0.25 + fw.z * 1.8;
   if (!camInit) { camFocus.set(tx, 0, tz); camInit = true; }
-  nudge.t += dt; const nw = nudge.t < 2.2 ? Math.sin(Math.PI * nudge.t / 2.2) : 0;
-  camFocus.x = damp(camFocus.x, lerp(tx, nudge.x, nw * 0.6), 4.5, dt); camFocus.z = damp(camFocus.z, lerp(tz, nudge.z, nw * 0.6), 4.5, dt);
+  nudge.t += dt; const nw = nudge.t < 1.8 ? Math.sin(Math.PI * nudge.t / 1.8) : 0;
+  camFocus.x = damp(camFocus.x, lerp(tx, nudge.x, nw * nudge.w), 6, dt); camFocus.z = damp(camFocus.z, lerp(tz, nudge.z, nw * nudge.w), 6, dt);
   camS = damp(camS, 1 + (zone2 && !zone2.locked ? 0.2 : 0) + (zone3 && !zone3.locked ? 0.12 : 0), 1.2, dt);
   const cd = camDist * camMul * camS * (1 - 0.1 * nw), H = cd * Math.cos(CFG.tilt), Y = cd * Math.sin(CFG.tilt);
   camera.position.set(camFocus.x + Math.sin(CFG.yaw) * H, Y, camFocus.z + Math.cos(CFG.yaw) * H);
@@ -2142,7 +2155,7 @@ if (S.lv.van > 0) unlockVan(true);
 if (S.lv.helper > 0) spawnHelper(true);
 if (S.lv.cashier > 0) spawnCashier(true);
 if (S.lv.carrier > 0) spawnCarrier(true);
-for (const k in upPads) { const u = upPads[k]; if (S.lv[k] >= u.max()) { u.done = true; u.group.visible = false; } else { if (u.vis) u.group.visible = u.vis(); u.redraw(); } }
+for (const k in upPads) { const u = upPads[k]; if (S.lv[k] >= u.max()) { u.done = true; u.group.visible = false; } else { u.group.visible = padVisible(u); u.redraw(); } }
 restoreExtras(LOADED_X); for (const k in upPads) if (!upPads[k].done) upPads[k].redraw();
 for (let i = 0; i < 3; i++) { spawnCustomer(CFG.queueZ0 + i * CFG.queueGap); const c = customers[customers.length - 1]; c.group.position.x = CFG.queueX; c.yaw = 0; c.group.rotation.y = Math.PI; c.yaw = Math.PI; c.atSlot = true; }
 onResize();
