@@ -2072,7 +2072,7 @@ window.__game = {
   tp(x, z) { P.group.position.set(x, 0, z); P.vel.set(0, 0, 0); camInit = false; },
   sim(sec) { const n = Math.round(sec * 30); for (let i = 0; i < n; i++) update(1 / 30); },
   render() { renderer.render(scene, camera); },
-  tutStep: () => S.tut, forceVip() { custCount = 5; }, zoom(v) { camMul = v; }
+  get calls() { return renderer.info.render.calls; }, tutStep: () => S.tut, forceVip() { custCount = 5; }, zoom(v) { camMul = v; }
 };
 
 let last = performance.now();
