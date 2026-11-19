@@ -1067,7 +1067,7 @@ class Zone {
     this.inside = this.group.visible && this.contains(px, pz);
     const s = 1 + 0.025 * Math.sin(t * 4 + this.phase) + (this.inside ? 0.06 : 0);
     this.base.scale.set(this.w * s, this.d * s, 1);
-    this.baseMat.opacity = this.inside ? 1 : 0.72 + 0.2 * Math.sin(t * 3 + this.phase);
+    this.baseMat.opacity = this.locked ? 0.35 : this.inside ? 1 : 0.72 + 0.2 * Math.sin(t * 3 + this.phase);
     const ls = this.label.userData.s || (this.label.userData.s = this.label.scale.x);
     const lb = 1 + (this.inside ? 0.08 : 0) + 0.03 * Math.sin(t * 5 + this.phase); this.label.scale.set(ls * lb, ls * lb, 1);
   }
@@ -1075,7 +1075,7 @@ class Zone {
 class UpgradePad extends Zone {
   constructor(key, x, z, icon, color) {
     super({ x, z, w: 2.9, color: color || '#ffc21a', res: 384, labelSize: 2.6, draw: null });
-    this.key = key; this.icon = icon; this.paid = 0; this.tick = 0; this.done = false; this.lastShown = -1;
+    this.key = key; this.icon = icon; this.locked = false; this.pause = 0; this.off = false; this.hold = 0; this.pop = 0; this.paid = 0; this.tick = 0; this.done = false; this.lastShown = -1;
     this.drawIcon = (ctx, w) => this.paint(ctx, w); this.redraw();
   }
   level() { return S.lv[this.key]; }
@@ -1090,6 +1090,7 @@ class UpgradePad extends Zone {
     iconBill(ctx, 112, 321, 56);
     const rem = Math.max(0, this.cost() - this.paid);
     otext(ctx, String(rem), 232, 321, 58, '#6dff6a', '#0c1a0c');
+    if (this.locked) { ctx.fillStyle = 'rgba(10,30,20,.62)'; rrect(ctx, 14, 14, w - 28, w - 28, 54); ctx.fill(); ctx.strokeStyle = '#6dff6a'; ctx.lineWidth = 30; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.beginPath(); ctx.moveTo(110, 190); ctx.lineTo(170, 250); ctx.lineTo(280, 120); ctx.stroke(); otext(ctx, 'Seviye ' + lv, w / 2, 315, 46, '#fff', '#05071a'); }
   }
 }
 function drawZoneIcon(fn, scale) {
@@ -1305,15 +1306,22 @@ function updatePacking(dt, t) {
 function updateUpgrades(dt) {
   for (const key in upPads) {
     const u = upPads[key]; if (u.done) continue;
-    if (!u.inside || S.money <= 0) continue;
+    if (u.pop > 0) { u.pop -= dt; const k = 1 - Math.max(0, u.pop) / 0.6, a = Math.sin(k * Math.PI * 3) * (1 - k) * 0.28; u.group.scale.set(1 + a, 1, 1 - a * 0.8); if (u.pop <= 0) u.group.scale.set(1, 1, 1); }
+    if (u.locked) {
+      u.pause -= dt; if (!u.inside) u.off = true;
+      if (u.off && u.pause <= 0 && u.inside) { u.locked = false; u.hold = 0; u.redraw(); } else continue;
+    }
+    if (!u.inside || S.money <= 0) { u.hold = 0; continue; }
+    u.hold += dt;
     u.tick -= dt; if (u.tick > 0) continue; u.tick = 0.05;
-    const cost = u.cost(), rem = cost - u.paid, amt = Math.min(S.money, rem, Math.max(1, Math.ceil(cost / 40)));
+    const cost = u.cost(), rem = cost - u.paid, perSec = cost / 2.5 * (1 + u.hold * 1.1), amt = Math.min(S.money, rem, Math.max(1, Math.ceil(perSec * 0.05)));
     if (amt <= 0) continue;
     S.money -= amt; u.paid += amt; saveDirty = true; sfx('coin');
-    const b = makeBill(); b.position.set(P.group.position.x, 1.4, P.group.position.z); scene.add(b);
-    fly(b, out => { out.set(u.x, 0.5, u.z); return 0; }, 0.3, 1.2, () => rm(b));
+    const b = makeBill(); b.position.set(P.group.position.x + rand(-0.3, 0.3), 1.5, P.group.position.z + rand(-0.3, 0.3)); scene.add(b);
+    const ox = rand(-0.5, 0.5), oz = rand(-0.5, 0.5);
+    fly(b, out => { out.set(u.x + ox, 0.4, u.z + oz); return 0; }, 0.38, 2.2, () => { rm(b); u.group.scale.set(1.04, 1, 1.04); });
     u.redraw();
-    if (u.paid >= cost) purchase(u);
+    if (u.paid >= cost) { purchase(u); break; }
   }
 }
 function applyUpgrade(key, instant) {
@@ -1321,7 +1329,7 @@ function applyUpgrade(key, instant) {
   else if (key === 'helper') spawnHelper(instant);
 }
 function purchase(u) {
-  const key = u.key; S.lv[key]++; u.paid = 0; stats.upgrades++; saveDirty = true;
+  const key = u.key; S.lv[key]++; u.paid = 0; stats.upgrades++; saveDirty = true; u.locked = true; u.pause = 1.0; u.off = false; u.hold = 0; u.pop = 0.6;
   sfx('up'); burst(u.x, 0.8, u.z, 0xffd23f, 16, 4.5); burst(u.x, 0.8, u.z, 0xffffff, 10, 3.5);
   popText(u.x, 2.4, u.z, UPG[key].name + '!', '#7dff7a');
   applyUpgrade(key, false);
