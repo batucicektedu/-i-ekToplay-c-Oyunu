@@ -86,7 +86,7 @@ const CFG = {
 const geo = (base, n) => Array.from({ length: n }, (_, i) => Math.round(base * Math.pow(1.25, i) / 5) * 5);
 const PRICE = { bouquet: 10, pot: 25 };
 const UPG = {
-  sera: { name: 'Sera', costs: [500] }, cashier: { name: 'Kasiyer', costs: [120] }, carrier: { name: 'Taşıyıcı', costs: [250] },
+  sera: { name: 'Sera', costs: [500] }, van: { name: 'Minibüs', costs: [1500] }, cashier: { name: 'Kasiyer', costs: [120] }, carrier: { name: 'Taşıyıcı', costs: [250] },
   cashSpd: { name: 'Kasiyer Hızı', costs: geo(150, 5) }, carSpd: { name: 'Taşıyıcı Hızı', costs: geo(160, 5) },
   carCap: { name: 'Taşıyıcı Kapasite', costs: geo(180, 5) }, helpSpd: { name: 'Bahçıvan Hızı', costs: geo(200, 5) },
   cap:    { name: 'Kapasite',       costs: geo(40, 6) },
@@ -119,7 +119,7 @@ function angDiff(a, b) { let d = (b - a) % TAU; if (d > Math.PI) d -= TAU; if (d
 const easeOutBack = t => { const c = 1.70158; t = clamp(t, 0, 1); return 1 + (c + 1) * Math.pow(t - 1, 3) + c * Math.pow(t - 1, 2); };
 function rm(o) { if (o && o.parent) o.parent.remove(o); }
 
-const S = { money: 0, lv: { cap: 0, speed: 0, pack: 0, bed: 0, helper: 0, cashier: 0, carrier: 0, cashSpd: 0, carSpd: 0, carCap: 0, helpSpd: 0, sera: 0 }, tut: 0 };
+const S = { money: 0, lv: { cap: 0, speed: 0, pack: 0, bed: 0, helper: 0, cashier: 0, carrier: 0, cashSpd: 0, carSpd: 0, carCap: 0, helpSpd: 0, sera: 0, van: 0 }, tut: 0 };
 let saveDirty = false, saveTimer = 0;
 (function loadSave() {
   try {
@@ -1260,6 +1260,150 @@ function updatePotting(dt, t) {
   const w = m.worker; animChar(w, dt, 0, t); const wk = m.working ? 1 : 0; w.armL.rotation.x = -1.2 * wk * (0.6 + 0.4 * Math.sin(t * 10)); w.armR.rotation.x = -1.2 * wk * (0.6 + 0.4 * Math.sin(t * 10 + 2));
 }
 
+/* =====================================================================
+   ZONE 3: TESLIMAT MINIBUSU (delivery van)
+   ===================================================================== */
+let zone3 = null, vanLoad, vanPile, vanZone, vanMoneyZone;
+const VZ = { x0: 12.6, x1: 24.4, z0: 16.6, z1: 32 };
+const VAN = { state: 'parked', group: null, wheels: [], hud: null, sum: 0, trip: 0, path: [], seg: 0, speed: 0, yaw: -Math.PI / 2, sig: '', doors: [], x: 16.2, z: 24 };
+const vanFree = () => VAN.state === 'parked' && zone3 && !zone3.locked ? 8 - vanLoad.length - vanLoad.pend : 0;
+function iconVan(ctx, cx, cy, s) {
+  ctx.lineJoin = 'round'; ctx.lineWidth = s * 0.05; ctx.strokeStyle = '#1d3557';
+  ctx.fillStyle = '#0aa89a'; rrect(ctx, cx - s * 0.5, cy - s * 0.3, s * 0.62, s * 0.5, s * 0.06); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#ffc21a'; ctx.beginPath(); ctx.moveTo(cx + s * 0.12, cy - s * 0.15); ctx.lineTo(cx + s * 0.34, cy - s * 0.15); ctx.lineTo(cx + s * 0.5, cy + s * 0.05); ctx.lineTo(cx + s * 0.5, cy + s * 0.2); ctx.lineTo(cx + s * 0.12, cy + s * 0.2); ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#222'; for (const wx of [-0.3, 0.3]) { ctx.beginPath(); ctx.arc(cx + wx * s, cy + s * 0.22, s * 0.11, 0, TAU); ctx.fill(); }
+  iconFlower(ctx, cx - s * 0.2, cy - s * 0.1, s * 0.32, '#ff2f8f');
+}
+function vanLogoTex() {
+  const c = cv(256, 128), x = c.getContext('2d'); x.fillStyle = '#0aa89a'; x.fillRect(0, 0, 256, 128);
+  x.fillStyle = '#fff'; x.fillRect(0, 100, 256, 12); iconFlower(x, 60, 56, 70, '#ff2f8f'); otext(x, 'ÇİÇEK', 168, 44, 40, '#fff', '#05564e'); otext(x, 'TESLİMAT', 168, 82, 28, '#ffe36a', '#05564e');
+  return canvasTex(c);
+}
+function buildVan() {
+  zone3 = { locked: true, popT: undefined, groups: [] };
+  const lg = new THREE.Group(); zone3.lockedGroup = lg; world.add(lg);
+  const gr = new THREE.Mesh(G.plane, new THREE.MeshLambertMaterial({ color: lc(0x6d7480) })); gr.rotation.x = -Math.PI / 2; gr.scale.set(VZ.x1 - VZ.x0, VZ.z1 - VZ.z0, 1); gr.position.set((VZ.x0 + VZ.x1) / 2, 0.03, (VZ.z0 + VZ.z1) / 2); lg.add(gr);
+  const posts = new THREE.InstancedMesh(new THREE.BoxGeometry(0.28, 1.2, 0.28), mat(0xffffff), 60); let n = 0; const m4 = new THREE.Matrix4();
+  const line = (x0, z0, x1, z1) => { const len = Math.hypot(x1 - x0, z1 - z0), k = Math.max(1, Math.round(len / 1.4)); for (let i = 0; i <= k; i++) { m4.makeTranslation(lerp(x0, x1, i / k), 0.6, lerp(z0, z1, i / k)); posts.setMatrixAt(n++, m4); } for (const y of [0.45, 0.88]) lg.add(mk(G.box, mat(0xffffff), Math.abs(x1 - x0) || 0.12, 0.14, Math.abs(z1 - z0) || 0.12, (x0 + x1) / 2, y, (z0 + z1) / 2)); };
+  line(VZ.x0, VZ.z0, VZ.x1, VZ.z0); line(VZ.x1, VZ.z0, VZ.x1, VZ.z1); line(VZ.x1, VZ.z1, VZ.x0, VZ.z1); line(VZ.x0, VZ.z1, VZ.x0, VZ.z0);
+  posts.count = n; posts.castShadow = true; lg.add(posts);
+  const sg = makeBoard('KİLİTLİ', 2.6, 0.8, 'wood'); sg.position.set(15.5, 1.6, 17.6); sg.rotation.y = CFG.yaw; lg.add(sg);
+  addCollider(VZ.x0 - 0.2, VZ.x1 + 0.2, VZ.z0 - 0.3, VZ.z1 + 0.4, () => zone3.locked);
+  // content: road / pallet / van
+  const rd = pivotGroup(18, 24); rd.visible = false; world.add(rd); zone3.groups.push([rd, 0]);
+  const asph = new THREE.Mesh(G.plane, new THREE.MeshLambertMaterial({ color: lc(0x3a3f4a) })); asph.rotation.x = -Math.PI / 2; asph.scale.set(13, 5.4, 1); asph.receiveShadow = true; ad(rd, asph, 18, 0.035, 24);
+  for (let i = 0; i < 6; i++) ad(rd, mk(G.box, mat(0xfff4c0), 1.0, 0.02, 0.14), 12.8 + i * 1.9, 0.05, 24);
+  const pal = rbox(1.9, 0.14, 3.7, 0.04, woodM()); pal.receiveShadow = true; ad(rd, pal, 19.9, 0.1, 24);
+  const bd = makeBoard('TESLİMAT', 2.6, 0.7, 'wood'); bd.rotation.y = CFG.yaw; bd.scale.setScalar(0.85); ad(rd, bd, 22.8, 2.2, 27); ad(rd, mk(G.cyl, mat(0x5a2f12), 0.07, 2.2, 0.07), 21.9, 1.1, 27);
+  for (const [cx2, cz2] of [[22.9, 21.5], [22.9, 26.6]]) { const co = new THREE.Group(); co.add(mk(G.cone, mat(0xff7a00), 0.28, 0.7, 0.28, 0, 0.4, 0)); co.add(mk(G.box, mat(0xffffff), 0.5, 0.1, 0.5, 0, 0.05, 0)); ad(rd, co, cx2, 0, cz2); }
+  // van
+  const vg = new THREE.Group(); VAN.group = vg; world.add(vg); vg.visible = false;
+  const teal = mat(0x0aa89a), yel = mat(0xffc21a), dk = mat(0x23272f);
+  const chassis = rbox(2.3, 0.5, 4.8, 0.1, dk); chassis.position.y = 0.7; vg.add(chassis);
+  const cargo = rbox(2.4, 2.1, 3.2, 0.2, teal); cargo.position.set(0, 1.95, -0.7); vg.add(cargo);
+  const cab = rbox(2.3, 1.5, 1.6, 0.25, yel); cab.position.set(0, 1.45, 1.9); vg.add(cab);
+  vg.add(mk(G.box, new THREE.MeshLambertMaterial({ color: lc(0x1f3a5a) }), 1.9, 0.65, 0.05, 0, 1.75, 2.72));
+  for (const sx of [-1, 1]) { vg.add(mk(G.box, new THREE.MeshLambertMaterial({ color: lc(0x1f3a5a) }), 0.05, 0.6, 0.9, sx * 1.16, 1.75, 1.95)); vg.add(mk(G.sph, new THREE.MeshBasicMaterial({ color: lc(0xfff3b0) }), 0.18, 0.18, 0.08, sx * 0.8, 0.95, 2.72)); }
+  vg.add(mk(G.box, mat(0xdcdfe4), 2.4, 0.22, 0.3, 0, 0.55, 2.7));
+  const logo = new THREE.MeshLambertMaterial({ map: vanLogoTex() });
+  for (const sx of [-1, 1]) { const lp = new THREE.Mesh(G.plane, logo); lp.scale.set(2.5, 1.5, 1); lp.position.set(sx * 1.215, 1.95, -0.7); lp.rotation.y = sx * Math.PI / 2; vg.add(lp); }
+  vg.add(mk(G.box, mat(0x0b3d38), 2.0, 1.8, 0.05, 0, 1.9, -2.31));
+  for (const sx of [-1, 1]) { const d = mk(G.box, teal, 1.0, 1.9, 0.07, sx * 1.6, 1.9, -2.7); d.rotation.y = sx * 1.25; vg.add(d); VAN.doors.push(d); }
+  VAN.wheels = [];
+  for (const wx of [-1.2, 1.2]) for (const wz of [-1.4, 1.7]) { const wh = new THREE.Mesh(new THREE.CylinderGeometry(0.46, 0.46, 0.32, 14), dk); wh.rotation.z = Math.PI / 2; wh.position.set(wx, 0.46, wz); const hub = mk(G.cyl, mat(0xb8bec8), 0.2, 0.34, 0.2, 0, 0, 0); wh.add(hub); vg.add(wh); VAN.wheels.push(wh); }
+  shadowAll(vg, true, false);
+  VAN.hud = makeSprite(256, 100, () => {}, 3.4, 1.33, false); VAN.hud.position.set(0, 4.6, 0); vg.add(VAN.hud);
+  vanLoad = new Stack(scene, (i, out) => { out.set(19.55 + (i % 2) * 0.8, 0.5, 24 + (Math.floor(i / 2) - 1.5) * 0.85); }, 8); vanLoad.pend = 0;
+  vanPile = new Stack(scene, (i, out) => { const per = 12, l = Math.floor(i / per), r = i % per; out.set(16.2 + ((r % 3) - 1) * 0.9, 0.12 + l * 0.12, 19.6 + (Math.floor(r / 3) - 1.5) * 0.52); }, 60); vanPile.extra = 0;
+  const plate = rbox(3.1, 0.08, 2.5, 0.04, mat(0x9ee59a)); ad(rd, plate, 16.2, 0.06, 19.6);
+  const lamp = (x, z) => { const g = new THREE.Group(); g.add(mk(G.cyl, mat(0x2d3a45), 0.09, 3.2, 0.09, 0, 1.6, 0)); g.add(mk(G.sph, new THREE.MeshBasicMaterial({ color: lc(0xffe9a8) }), 0.26, 0.3, 0.26, 0, 3.3, 0)); ad(rd, g, x, 0, z); }; lamp(13.2, 21); lamp(23.4, 29);
+  VAN.group.position.set(VAN.x, 0, VAN.z); vg.rotation.y = VAN.yaw;
+  vanHud();
+}
+function buildVanZones() {
+  vanZone = new Zone({ x: 22.4, z: 24, w: 2.6, d: 3.6, color: '#ffd400', draw: drawZoneIcon(iconVan, 0.6) });
+  vanMoneyZone = new Zone({ x: 16.2, z: 19.8, w: 3.4, d: 3.0, color: '#1ed760', draw: null, labelSize: 0.01 }); vanMoneyZone.label.visible = false;
+  vanZone.group.visible = vanMoneyZone.group.visible = false;
+}
+function vanHud() {
+  const away = VAN.state === 'away' || VAN.state === 'depart' || VAN.state === 'return', rem = Math.max(0, Math.ceil(20 - VAN.trip));
+  const sig = away ? 'a' + rem : 'p' + vanLoad.length; if (sig === VAN.sig) return; VAN.sig = sig;
+  redrawSprite(VAN.hud, (ctx, w, h) => {
+    ctx.fillStyle = 'rgba(22,28,64,.9)'; ctx.strokeStyle = '#ffc21a'; ctx.lineWidth = 6; rrect(ctx, 6, 6, w - 12, h - 12, 26); ctx.fill(); ctx.stroke();
+    if (away) { iconVan(ctx, 52, 52, 56); otext(ctx, 'Teslimat ' + rem + ' sn', 160, 40, 30, '#fff', '#05071a'); ctx.fillStyle = '#35405a'; rrect(ctx, 90, 62, 140, 16, 8); ctx.fill(); ctx.fillStyle = '#6dff6a'; rrect(ctx, 90, 62, Math.max(8, 140 * clamp(VAN.trip / 20, 0, 1)), 16, 8); ctx.fill(); }
+    else { for (let i = 0; i < 8; i++) { ctx.fillStyle = i < vanLoad.length ? '#6dff6a' : '#35405a'; rrect(ctx, 20 + i * 27, 22, 22, 26, 6); ctx.fill(); } otext(ctx, 'Yükle ' + vanLoad.length + '/8', w / 2, 72, 28, '#fff', '#05071a'); }
+  });
+}
+function toVan(it, who) {
+  if (posable(it.mesh)) bouquetPose(it.mesh, true);
+  const idx = vanLoad.length + vanLoad.pend; vanLoad.pend++; VAN.sum += PRICE[it.type] || 10;
+  fly(it.mesh, out => { vanLoad.slotFn(Math.min(idx, 7), out); return 0; }, 0.36, 1.5, () => { vanLoad.pend--; vanLoad.add(it.mesh, it.type); sfx('drop'); vanHud(); });
+  if (who === P) stats.delivered = (stats.delivered || 0) + 1;
+}
+function unlockVan(instant) {
+  zone3.locked = false; vanZone.group.visible = vanMoneyZone.group.visible = true;
+  if (instant) { zone3.lockedGroup.visible = false; zone3.groups.forEach(g => { g[0].visible = true; g[0].scale.setScalar(1); }); VAN.group.visible = true; return; }
+  zone3.popT = 0; zone3.lockedGroup.dropping = 0; confetti(18, 2, 24, 70); for (let i = 0; i < 14; i++) dust(rand(13, 24), 0.3, rand(17, 31), 2, 0.9); ring(18, 24, 0x0aa89a, 12); nudge.t = 0; nudge.x = 18; nudge.z = 22; vib(30);
+}
+function updateVanZone(dt) {
+  if (!zone3) return;
+  const lg = zone3.lockedGroup;
+  if (lg.dropping !== undefined) { lg.dropping += dt; const k = Math.min(1, lg.dropping / 1.0); lg.position.y = -3.6 * k * k; if (k >= 1) { lg.visible = false; lg.position.y = 0; lg.dropping = undefined; } }
+  if (zone3.popT !== undefined) {
+    zone3.popT += dt;
+    if (zone3.popT > 0.5 && !VAN.group.visible) { VAN.group.visible = true; VAN.group.scale.setScalar(0.01); sparkles(16.2, 1.5, 24, 14, 0xfff2a0, 2); sfx('pack'); }
+    if (VAN.group.visible && zone3.popT < 2) VAN.group.scale.setScalar(Math.max(0.001, easeOutBack((zone3.popT - 0.5) / 0.8)));
+    zone3.groups.forEach(g => { const o = g[0]; if (zone3.popT >= 0.2 && !o.visible) { o.visible = true; dust(18, 0.4, 24, 6, 1.0); } if (o.visible) o.scale.setScalar(Math.max(0.001, easeOutBack((zone3.popT - 0.2) / 0.8))); });
+    if (zone3.popT > 2.5) { zone3.popT = undefined; VAN.group.scale.setScalar(1); zone3.groups.forEach(g => g[0].scale.setScalar(1)); }
+  }
+}
+function vanDrive(dt, accel, maxS, decel) {
+  const wp = VAN.path[VAN.seg]; if (!wp) return true;
+  const dx = wp[0] - VAN.x, dz = wp[1] - VAN.z, d = Math.hypot(dx, dz);
+  const last = VAN.seg === VAN.path.length - 1;
+  VAN.speed = Math.min(maxS, VAN.speed + accel * dt); if (decel && last) VAN.speed = Math.min(VAN.speed, d * 1.8 + 1.2);
+  const ty = Math.atan2(dx, dz); VAN.yaw += angDiff(VAN.yaw, ty) * (1 - Math.exp(-7 * dt));
+  const st = VAN.speed * dt;
+  if (d <= st + 0.02) { VAN.x = wp[0]; VAN.z = wp[1]; VAN.seg++; if (VAN.seg >= VAN.path.length) { VAN.speed = 0; return true; } }
+  else { VAN.x += dx / d * st; VAN.z += dz / d * st; }
+  VAN.group.position.set(VAN.x, 0, VAN.z); VAN.group.rotation.y = VAN.yaw;
+  for (const w of VAN.wheels) w.rotation.x += VAN.speed * dt / 0.46;
+  if (Math.random() < dt * 14 * Math.min(1, VAN.speed / 8)) dust(VAN.x - Math.sin(VAN.yaw) * 2.2, 0.2, VAN.z - Math.cos(VAN.yaw) * 2.2, 1, 0.5);
+  return false;
+}
+function updateVan(dt, t) {
+  if (!zone3 || zone3.locked) return;
+  updateVanZone(dt);
+  if (zone3.popT !== undefined && zone3.popT < 2) return;
+  if (VAN.state === 'parked') {
+    VAN.doors.forEach((d, i) => { d.rotation.y = damp(d.rotation.y, (i ? 1 : -1) * 1.25, 8, dt); });
+    if (vanLoad.length >= 8 && vanLoad.pend === 0) { VAN.state = 'loading'; VAN.t = 0; VAN.k = 0; }
+  } else if (VAN.state === 'loading') {
+    VAN.t += dt;
+    if (VAN.t > VAN.k * 0.12 + 0.5 && VAN.k < 8) { const it = vanLoad.takeLast(); VAN.k++; if (it) fly(it.mesh, out => { out.set(VAN.x - 0.2, 2.6, VAN.z); return 0; }, 0.4, 1.8, () => { rm(it.mesh); sfx('pick'); dust(VAN.x + 2.0, 1.5, VAN.z, 1, 0.3); }); }
+    VAN.doors.forEach((d, i) => { d.rotation.y = damp(d.rotation.y, (i ? 1 : -1) * 0.1, 8, dt); });
+    if (VAN.k >= 8 && VAN.t > 8 * 0.12 + 1.3) { VAN.state = 'depart'; VAN.trip = 0; VAN.path = [[10, 24], [10, 70]]; VAN.seg = 0; VAN.speed = 0; sfx('up'); vib(15); }
+  } else if (VAN.state === 'depart') {
+    VAN.trip += dt; if (vanDrive(dt, 9, 15, false)) { VAN.state = 'away'; VAN.group.visible = false; }
+  } else if (VAN.state === 'away') {
+    VAN.trip += dt;
+    if (VAN.trip >= 14.5) { VAN.state = 'return'; VAN.x = 10; VAN.z = 70; VAN.yaw = Math.PI; VAN.path = [[10, 27.5], [19.6, 27.5], [19.6, 24], [16.2, 24]]; VAN.seg = 0; VAN.speed = 12; VAN.group.visible = true; VAN.doors.forEach((d, i) => { d.rotation.y = (i ? 1 : -1) * 0.1; }); }
+  } else if (VAN.state === 'return') {
+    VAN.trip += dt;
+    if (vanDrive(dt, 8, 15, true)) {
+      VAN.state = 'parked'; VAN.yaw = -Math.PI / 2; VAN.group.rotation.y = VAN.yaw; VAN.x = 16.2; VAN.z = 24; VAN.group.position.set(16.2, 0, 24);
+      const total = VAN.sum * 3, n = Math.round(total / CFG.billValue); VAN.sum = 0; stats.vanRuns = (stats.vanRuns || 0) + 1;
+      confetti(16.2, 2.5, 24, 40); popText(16.2, 4.6, 24, '+' + total, '#6dff6a'); ring(16.2, 24, 0xffc21a, 6); sfx('up'); vib(20);
+      for (let k = 0; k < n; k++) later(0.1 + k * Math.min(0.12, 1.2 / n), () => {
+        const b = makeBill(); b.position.set(16.2, 2.2, 24); scene.add(b); const idx = vanPile.length + (vanPile.pend || 0); vanPile.pend = (vanPile.pend || 0) + 1;
+        fly(b, out => { vanPile.slotFn(Math.min(idx, 59), out); return 0; }, 0.5, 1.8, () => { vanPile.pend--; if (vanPile.length >= 60) { vanPile.extra++; rm(b); } else vanPile.add(b, 'bill'); sfx('cash'); });
+      });
+    }
+  }
+  VAN.wheels.forEach(w => { if (VAN.state === 'parked') w.rotation.x *= 0.9; });
+  if (VAN.state !== 'away') vanHud(); else vanHud();
+}
+
 function buildDecor() {
   // greenhouse next to the garden
   const gh = new THREE.Group(); gh.position.set(-5.6, 0, -9.2);
@@ -1367,7 +1511,8 @@ function buildZones() {
   const mk_ = (key, x, zz, icon, vis) => { const u = new UpgradePad(key, x, zz, icon); u.vis = vis || null; upPads[key] = u; return u; };
   mk_('bed', -8.2, POS.beds[2].z, iconBed);
   mk_('sera', 17.0, 2.4, iconSera);
-  buildSeraZones();
+  buildSeraZones(); buildVanZones();
+  mk_('van', 17.8, 14.6, iconVan);
   mk_('helper', -4.2, z, iconHelper, () => L.helper === 0);
   mk_('helpSpd', -4.2, z, iconBolt, () => L.helper > 0);
   mk_('cap', -0.6, z, iconBackpack); mk_('speed', 3.0, z, iconBolt); mk_('pack', 6.6, z, iconPack);
@@ -1470,18 +1615,18 @@ function updateCarrier(dt, t) {
   const avail = () => outSources().some(q => q.length > 0);
   const load = h.stack.length + h.incoming;
   h.cd -= dt;
-  if (h.state === 'idle') { tx = 6.0; tz = 3.0; if (avail() && shelfFree() - load > 0) h.state = 'toOut'; }
+  if (h.state === 'idle') { tx = 6.0; tz = 3.0; if (avail() && (shelfFree() - load > 0 || vanFree() - load > 0)) { h.dest = shelfFree() - load > 0 ? 'shelf' : 'van'; h.state = 'toOut'; } }
   else if (h.state === 'toOut') { tx = POS.outPad.x; tz = POS.outPad.z + 0.3; if (Math.hypot(tx - gp.x, tz - gp.z) < 0.4) { h.state = 'load'; h.cd = 0.1; } }
   else if (h.state === 'load') {
     tx = null;
     if (h.cd <= 0) {
       const src = outSources().find(q => q.length > 0);
-      if (src && load < h.capFn() && shelfFree() - load > 0) { const it = src.takeLast(); it.mesh.getWorldPosition(_w); scene.add(it.mesh); it.mesh.position.copy(_w); if (posable(it.mesh)) bouquetPose(it.mesh, false); sendToBack(h, it.mesh, it.type, 1.4); h.cd = 0.14; }
+      if (src && load < h.capFn() && (h.dest === 'van' ? vanFree() : shelfFree()) - load > 0) { const it = src.takeLast(); it.mesh.getWorldPosition(_w); scene.add(it.mesh); it.mesh.position.copy(_w); if (posable(it.mesh)) bouquetPose(it.mesh, false); sendToBack(h, it.mesh, it.type, 1.4); h.cd = 0.14; }
       else if (h.incoming === 0) h.state = h.stack.length > 0 ? 'toShelf' : 'idle';
     }
-  } else if (h.state === 'toShelf') { tx = 8.9; tz = -1.1; if (Math.hypot(tx - gp.x, tz - gp.z) < 0.4) { h.state = 'unload'; h.cd = 0.1; } }
+  } else if (h.state === 'toShelf') { if (h.dest === 'van') { tx = 21.6; tz = 24; } else { tx = 8.9; tz = -1.1; } if (Math.hypot(tx - gp.x, tz - gp.z) < 0.4) { h.state = 'unload'; h.cd = 0.1; } }
   else if (h.state === 'unload') {
-    if (h.cd <= 0 && h.stack.length > 0) { if (shelfFree() > 0) { const it = takeFromBack(h, null); toShelf(it, h); h.cd = 0.14; } }
+    if (h.cd <= 0 && h.stack.length > 0) { if (h.dest === 'van') { if (vanFree() > 0) { toVan(takeFromBack(h, null), h); h.cd = 0.14; } else if (vanFree() === 0 && VAN.state !== 'parked') { h.dest = 'shelf'; h.state = 'toShelf'; } } else if (shelfFree() > 0) { const it = takeFromBack(h, null); toShelf(it, h); h.cd = 0.14; } }
     if (h.stack.length === 0) h.state = 'idle';
   }
   let mv = 0, dx = 0, dz = 0;
@@ -1604,10 +1749,10 @@ function pickFromOutput() {
   bouquetPose(it.mesh, false); sendToBack(P, it.mesh, 'bouquet', 1.5); stats.picked++; sfx('pick');
 }
 let collAcc = 0, collT = 0;
-function collectMoney() {
-  const it = moneyPile.takeLast('bill');
+function collectMoney(pile) {
+  pile = pile || moneyPile; const it = pile.takeLast('bill');
   if (!it) {
-    if (moneyPile.extra > 0) { const v = moneyPile.extra * CFG.billValue; moneyPile.extra = 0; addMoney(v); sfx('coin'); stats.collected++; }
+    if (pile.extra > 0) { const v = pile.extra * CFG.billValue; pile.extra = 0; addMoney(v); sfx('coin'); stats.collected++; }
     return false;
   }
   fly(it.mesh, out => { out.set(P.group.position.x, 1.3, P.group.position.z); return 0; }, 0.32, 1.2, () => { rm(it.mesh); addMoney(CFG.billValue); sfx('coin'); stats.collected++; collAcc += CFG.billValue; });
@@ -1665,6 +1810,7 @@ function applyUpgrade(key, instant) {
   if (key === 'bed') unlockBed(beds[2], instant);
   else if (key === 'helper') spawnHelper(instant);
   else if (key === 'sera') unlockSera(instant);
+  else if (key === 'van') unlockVan(instant);
   else if (key === 'cashier') spawnCashier(instant);
   else if (key === 'carrier') spawnCarrier(instant);
 }
@@ -1792,7 +1938,7 @@ function movePlayer(dt) {
   const tvx = inV.x * spd, tvz = inV.z * spd;
   P.vel.x = damp(P.vel.x, tvx, 14, dt); P.vel.z = damp(P.vel.z, tvz, 14, dt);
   const gp = P.group.position; gp.x += P.vel.x * dt; gp.z += P.vel.z * dt;
-  const B = CFG.bounds; gp.x = clamp(gp.x, B.x0, zone2 && !zone2.locked ? 44.5 : B.x1); gp.z = clamp(gp.z, B.z0, B.z1);
+  const B = CFG.bounds; gp.x = clamp(gp.x, B.x0, Math.max(zone2 && !zone2.locked ? 44.5 : B.x1, zone3 && !zone3.locked ? 24.2 : 0)); if (zone3 && !zone3.locked) B.z1 = 31.5; else B.z1 = 16; gp.z = clamp(gp.z, B.z0, B.z1);
   const r = 0.45;
   for (const c of colliders) {
     if (c.active && !c.active()) continue;
@@ -1834,7 +1980,7 @@ function updateBeds(dt) {
   }
 }
 
-let potTick = 0, potOutTick = 0, packTick = 0, outTick = 0, ctrTick = 0, monTick = 0;
+let vanTick = 0, potTick = 0, potOutTick = 0, packTick = 0, outTick = 0, ctrTick = 0, monTick = 0;
 function updateZoneActions(dt) {
   const gp = P.group.position;
   for (const z of zones) z.update(dt, T, gp.x, gp.z);
@@ -1855,7 +2001,12 @@ function updateZoneActions(dt) {
     if (potZone.inside && potTick <= 0 && P.stack.count('orchid') > 0 && potInput.length + (potInput.pend || 0) < CFG.inputCap) { const it = takeFromBack(P, 'orchid'); const idx = potInput.length + (potInput.pend || 0); potInput.pend = (potInput.pend || 0) + 1; fly(it.mesh, out => { potInput.slotFn(Math.min(idx, CFG.inputCap - 1), out); return 0; }, 0.32, 1.3, () => { potInput.pend--; potInput.add(it.mesh, 'orchid'); }); sfx('drop'); potTick = CFG.transferEvery; }
     if (potOutZone.inside && potOutTick <= 0 && potOutput.length > 0 && P.free() > 0) { const it = potOutput.takeLast('pot'); if (it) { bouquetPose(it.mesh, false); sendToBack(P, it.mesh, 'pot', 1.5); sfx('pick'); } potOutTick = CFG.transferEvery; }
   }
-  if (moneyZone.inside && monTick <= 0 && (moneyPile.length > 0 || moneyPile.extra > 0)) { collectMoney(); monTick = 0.035; }
+  if (moneyZone.inside && monTick <= 0 && (moneyPile.length > 0 || moneyPile.extra > 0)) { collectMoney(moneyPile); monTick = 0.035; }
+  if (zone3 && !zone3.locked) {
+    if (vanMoneyZone.inside && monTick <= 0 && (vanPile.length > 0 || vanPile.extra > 0)) { collectMoney(vanPile); monTick = 0.03; }
+    if (vanZone.inside && vanTick <= 0 && vanFree() > 0) { const t = P.stack.count('bouquet') > 0 ? 'bouquet' : P.stack.count('pot') > 0 ? 'pot' : null; if (t) { toVan(takeFromBack(P, t), P); vanTick = 0.1; } }
+    vanTick -= dt;
+  }
 }
 
 function update(dt) {
@@ -1865,13 +2016,13 @@ function update(dt) {
   updateZoneActions(dt);
   updateUpgrades(dt);
   updatePacking(dt, T);
-  updateHelper(dt, T); updateCashier(dt, T); updateCarrier(dt, T); updatePotting(dt, T); updateSera(dt);
+  updateHelper(dt, T); updateCashier(dt, T); updateCarrier(dt, T); updatePotting(dt, T); updateSera(dt); updateVan(dt, T);
   // customers spawning
   spawnT -= dt;
   if (queue.length < 3 && spawnT > CFG.spawnShortEvery) spawnT = CFG.spawnShortEvery;
   if (spawnT <= 0 && queue.length < CFG.queueMax) { spawnCustomer(26); spawnT = queue.length < 3 ? CFG.spawnShortEvery : CFG.spawnEvery; }
   updateCustomers(dt, T);
-  P.stack.update(dt, T); inputPile.update(dt, T); outputPile.update(dt, T); moneyPile.update(dt, T); shelf.update(dt, T); potInput.update(dt, T); potOutput.update(dt, T);
+  P.stack.update(dt, T); inputPile.update(dt, T); outputPile.update(dt, T); moneyPile.update(dt, T); shelf.update(dt, T); potInput.update(dt, T); potOutput.update(dt, T); vanLoad.update(dt, T); vanPile.update(dt, T);
   updateFlights(dt); updateLater(dt); updateParticles(dt); updatePopTexts(dt); updateCollectText(dt);
   // camera
   const gp = P.group.position;
@@ -1880,7 +2031,7 @@ function update(dt) {
   if (!camInit) { camFocus.set(tx, 0, tz); camInit = true; }
   nudge.t += dt; const nw = nudge.t < 2.2 ? Math.sin(Math.PI * nudge.t / 2.2) : 0;
   camFocus.x = damp(camFocus.x, lerp(tx, nudge.x, nw * 0.6), 4.5, dt); camFocus.z = damp(camFocus.z, lerp(tz, nudge.z, nw * 0.6), 4.5, dt);
-  camS = damp(camS, zone2 && !zone2.locked ? 1.2 : 1, 1.2, dt);
+  camS = damp(camS, 1 + (zone2 && !zone2.locked ? 0.2 : 0) + (zone3 && !zone3.locked ? 0.12 : 0), 1.2, dt);
   const cd = camDist * camMul * camS * (1 - 0.1 * nw), H = cd * Math.cos(CFG.tilt), Y = cd * Math.sin(CFG.tilt);
   camera.position.set(camFocus.x + Math.sin(CFG.yaw) * H, Y, camFocus.z + Math.cos(CFG.yaw) * H);
   camera.lookAt(camFocus.x, 0, camFocus.z);
@@ -1900,13 +2051,14 @@ buildHedge(-14, 11.35, 7.4, 0.8, 0.95);
 // plaza edge hedges / bushes
 buildHedge(13.6, 12.9, 4.2, 0.9, 0.9); buildHedge(5.2, 12.9, 6.4, 0.9, 0.9);
 for (const [x, z, s] of [[-18, -9, 1], [-6, -9.5, 1.2], [4, -9, 1], [13, -8.5, 1.2], [-19.2, 13, 1], [18.5, 13, 1.1], [6, 13.4, 0.9]]) buildBush(x, z, s);
-for (const [x, z, s] of [[-24, -14, 1.5], [-22, 3, 1.3], [-24, 14, 1.6], [-12, -16, 1.4], [0, -16, 1.6], [12, -16, 1.4], [23, -13, 1.5], [24, 16, 1.5], [-15, 19, 1.4], [-4, 20, 1.2], [18, 20, 1.5], [-26, -3, 1.6]]) buildTree(x, z, s);
+for (const [x, z, s] of [[-24, -14, 1.5], [-22, 3, 1.3], [-24, 14, 1.6], [-12, -16, 1.4], [0, -16, 1.6], [12, -16, 1.4], [23, -13, 1.5], [-15, 19, 1.4], [-26, -3, 1.6]]) buildTree(x, z, s);
 buildDecorFlowers();
 for (let i = 0; i < 3; i++) buildBed(i);
-buildStations(); buildDecor(); buildSera(); buildZones(); buildPlayer();
+buildStations(); buildDecor(); buildSera(); buildVan(); buildZones(); buildPlayer();
 // restore progress
 if (S.lv.bed > 0) { unlockBed(beds[2], true); upPads.bed.done = true; upPads.bed.group.visible = false; }
 if (S.lv.sera > 0) unlockSera(true);
+if (S.lv.van > 0) unlockVan(true);
 if (S.lv.helper > 0) spawnHelper(true);
 if (S.lv.cashier > 0) spawnCashier(true);
 if (S.lv.carrier > 0) spawnCarrier(true);
@@ -1915,7 +2067,7 @@ for (let i = 0; i < 3; i++) { spawnCustomer(CFG.queueZ0 + i * CFG.queueGap); con
 onResize();
 
 window.__game = {
-  S, stats, P: () => P, queue, beds, machine, inputPile, outputPile, moneyPile, get shelf() { return shelf; }, get potInput() { return potInput; }, get potOutput() { return potOutput; }, get zone2() { return zone2; }, get cashier() { return cashier; }, get carrier() { return carrier; }, upPads, zones, customers, CFG, POS,
+  S, stats, P: () => P, queue, beds, machine, inputPile, outputPile, moneyPile, get shelf() { return shelf; }, get potInput() { return potInput; }, get potOutput() { return potOutput; }, get zone2() { return zone2; }, get zone3() { return zone3; }, VAN, get vanLoad() { return vanLoad; }, get vanPile() { return vanPile; }, get cashier() { return cashier; }, get carrier() { return carrier; }, upPads, zones, customers, CFG, POS,
   helper: () => helper,
   tp(x, z) { P.group.position.set(x, 0, z); P.vel.set(0, 0, 0); camInit = false; },
   sim(sec) { const n = Math.round(sec * 30); for (let i = 0; i < n; i++) update(1 / 30); },
