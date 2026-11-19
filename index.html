@@ -764,6 +764,7 @@ function makeChar(o) {
   if (st === 'long') { head.add(mk(G.sph, hair, 0.45, 0.62, 0.22, 0, -0.35, -0.3)); }
   if (st === 'ponytail') { head.add(mk(G.sph, hair, 0.11, 0.24, 0.11, 0, -0.18, -0.5)); head.add(ns(mk(G.sph, mat(o.tie || 0xff5a6e), 0.07, 0.05, 0.07, 0, 0.0, -0.45))); }
   if (st === 'bun') { head.add(mk(G.sph, hair, 0.16, 0.16, 0.16, 0, 0.45, -0.1)); }
+  if (o.crown) { const gold = mat(0xffc21a); head.add(mk(G.cyl, gold, 0.27, 0.13, 0.27, 0, 0.45, -0.02)); for (let k = 0; k < 5; k++) { const a = k / 5 * TAU; head.add(mk(G.cone, gold, 0.07, 0.15, 0.07, Math.cos(a) * 0.22, 0.59, Math.sin(a) * 0.22 - 0.02)); head.add(ns(mk(G.sph, mat(k % 2 ? 0xe8142e : 0x2f7bff), 0.04, 0.04, 0.04, Math.cos(a) * 0.22, 0.69, Math.sin(a) * 0.22 - 0.02))); } }
   if (o.hat === 'straw') {
     const br = mk(G.cyl, mat(0xe8c36a), 0.54, 0.03, 0.54, 0, 0.34, -0.06); br.rotation.x = -0.28; head.add(br);
     head.add(mk(G.cyl, mat(0xf0d080), 0.3, 0.17, 0.3, 0, 0.45, -0.07)); head.add(ns(mk(G.cyl, mat(0xd8412f), 0.31, 0.045, 0.31, 0, 0.38, -0.07)));
@@ -1493,13 +1494,14 @@ const SHIRTS = [0xff3b30, 0xffd60a, 0x30d158, 0x0a84ff, 0xbf5af2, 0xff9f0a, 0x00
 const HAIRS = [0x2a1a10, 0x6b3e1d, 0xe0b040, 0x1a1a1a, 0xb04a2a, 0x888888];
 const SKINS = [0xffcfa0, 0xf0b98a, 0xc68863, 0x8d5a3c, 0xffdcb8];
 const queueSlot = (i, out) => out.set(CFG.queueX, 0, CFG.queueZ0 + i * CFG.queueGap);
+let custCount = 0;
 function spawnCustomer(z) {
-  const fem = Math.random() < 0.5, sh = pick(SHIRTS);
-  const c = makeChar({ shirt: sh, pants: pick([0x3b4a6b, 0x5b4636, 0x2f6f5f, 0x444444]), hair: pick(HAIRS), skin: pick(SKINS), dress: fem && Math.random() < 0.6 ? pick(SHIRTS) : 0,
+  const fem = Math.random() < 0.5, sh = pick(SHIRTS); custCount++; const vip = custCount % 6 === 0;
+  const c = makeChar(vip ? { shirt: 0xff1fa0, pants: 0x6a2be8, hair: pick(HAIRS), skin: pick(SKINS), hairStyle: fem ? 'long' : 'short', crown: true, shoe: 0xffc21a } : { shirt: sh, pants: pick([0x3b4a6b, 0x5b4636, 0x2f6f5f, 0x444444]), hair: pick(HAIRS), skin: pick(SKINS), dress: fem && Math.random() < 0.6 ? pick(SHIRTS) : 0,
     hairStyle: fem ? pick(['bob', 'long', 'ponytail', 'bun']) : pick(['short', 'spiky', 'short']), hat: !fem && Math.random() < 0.3 ? 'cap' : null, hatColor: pick([0xff5a6e, 0x4d96ff, 0xffd23f]), shoe: pick([0x3a2a22, 0xffffff, 0xd8412f]) });
   c.group.position.set(CFG.queueX + rand(-0.4, 0.4), 0, z); c.yaw = Math.PI; c.group.rotation.y = Math.PI;
   const r = Math.random(); c.want = r < 0.32 ? 1 : r < 0.62 ? 2 : r < 0.85 ? 3 : 4;
-  c.prod = S.lv.sera > 0 && Math.random() < 0.4 ? 'pot' : 'bouquet'; if (c.prod === 'pot') c.want = Math.min(c.want, 2); c.got = 0; c.pending = 0; c.state = 'queue'; c.atSlot = false; c.bubble = null; c.held = null; c.path = null;
+  c.vip = vip; c.prod = S.lv.sera > 0 && Math.random() < 0.4 ? 'pot' : 'bouquet'; if (c.prod === 'pot') c.want = Math.min(c.want, 2); c.got = 0; c.pending = 0; c.state = 'queue'; c.atSlot = false; c.bubble = null; c.held = null; c.path = null;
   scene.add(c.group); customers.push(c); queue.push(c);
 }
 function pick(a) { return a[Math.floor(Math.random() * a.length)]; }
@@ -1516,6 +1518,8 @@ function finishCustomer(c) {
   const gp = c.group.position, total = c.want * PRICE[c.prod] * (c.vip ? 3 : 1), n = Math.round(total / CFG.billValue);
   hearts(gp.x, 3.4, gp.z, 5); coins(gp.x, 2.2, gp.z, 8); popText(gp.x, 4.2, gp.z, '+' + total, '#6dff6a'); vib(8);
   for (let k = 0; k < n; k++) later(0.15 + k * Math.min(0.16, 0.8 / n), () => spawnBill(c));
+  if (c.vip) { confetti(gp.x, 2.5, gp.z, 40); sparkles(gp.x, 2, gp.z, 12, 0xffe36a, 0.6); popText(gp.x, 5.0, gp.z, 'VIP x3!', '#ffd400'); ring(gp.x, gp.z, 0xffc21a, 5); sfx('up'); vib(20); }
+  else if (Math.random() < 0.25) { const tip = Math.max(5, Math.round(total * 0.2 / 5) * 5); later(0.9, () => { popText(gp.x, 3.4, gp.z, 'Bahşiş +' + tip, '#ffd400'); coins(gp.x, 2.4, gp.z, 5); for (let k = 0; k < tip / CFG.billValue; k++) spawnBill(c); }); }
 }
 function spawnBill(c) {
   const b = makeBill(); b.position.set(c.group.position.x, 1.8, c.group.position.z); scene.add(b);
@@ -1544,6 +1548,7 @@ function updateCustomers(dt, t) {
       dx = tx - gp.x; dz = tz - gp.z; const d = Math.hypot(dx, dz);
       if (d > 0.02) { const st = Math.min(d, spd * dt); gp.x += dx / d * st; gp.z += dz / d * st; c.vel.set(dx / d * spd, 0, dz / d * spd); mv = 1; faceChar(c, dx, dz, dt); }
     } else c.vel.set(0, 0, 0);
+    if (c.vip && Math.random() < dt * 4) sparkles(gp.x, 3.1, gp.z, 1, 0xffe36a, 0.4);
     if (c.held) c.held.position.y = 0.85 + Math.sin(t * 3 + i) * 0.02;
     animChar(c, dt, mv, t);
   }
@@ -1915,7 +1920,7 @@ window.__game = {
   tp(x, z) { P.group.position.set(x, 0, z); P.vel.set(0, 0, 0); camInit = false; },
   sim(sec) { const n = Math.round(sec * 30); for (let i = 0; i < n; i++) update(1 / 30); },
   render() { renderer.render(scene, camera); },
-  tutStep: () => S.tut, zoom(v) { camMul = v; }
+  tutStep: () => S.tut, forceVip() { custCount = 5; }, zoom(v) { camMul = v; }
 };
 
 let last = performance.now();
