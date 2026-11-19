@@ -77,7 +77,7 @@ const CFG = {
   growTime: 4, billValue: 10,
   packBase: 1.0, packMul: 0.75,
   transferEvery: 0.08,
-  inputCap: 24, outputCap: 27, moneyCap: 60,
+  inputCap: 24, outputCap: 16, moneyCap: 60,
   queueMax: 6, spawnEvery: 2.75, spawnShortEvery: 1.0, walkSpeed: 5.0, leaveSpeed: 5.7, queueX: 10, queueZ0: -1.5, queueGap: 1.5,
   helperCap: 6,
   bounds: { x0: -19, x1: 17.8, z0: -10.4, z1: 16 },
@@ -265,16 +265,23 @@ function iconFlower(ctx, cx, cy, s, col) {
   ctx.fillStyle = '#ffd23f'; ctx.beginPath(); ctx.arc(cx, cy - s * 0.12, s * 0.12, 0, TAU); ctx.fill();
 }
 function iconBouquet(ctx, cx, cy, s) {
-  ctx.lineJoin = 'round';
-  ctx.fillStyle = '#3fbf4a'; ctx.beginPath(); ctx.ellipse(cx - s * 0.25, cy - s * 0.1, s * 0.13, s * 0.06, -0.7, 0, TAU); ctx.ellipse(cx + s * 0.25, cy - s * 0.1, s * 0.13, s * 0.06, 0.7, 0, TAU); ctx.fill();
-  const cols = ['#ff3d5a', '#ff8fc0', '#ffd23f'];
-  [[-0.2, -0.22], [0.2, -0.22], [0, -0.34]].forEach((p, i) => {
-    ctx.fillStyle = cols[i]; ctx.strokeStyle = 'rgba(60,0,20,.5)'; ctx.lineWidth = s * 0.03;
-    ctx.beginPath(); ctx.arc(cx + p[0] * s, cy + p[1] * s, s * 0.17, 0, TAU); ctx.fill(); ctx.stroke();
+  ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+  ctx.strokeStyle = '#127a4a'; ctx.lineWidth = s * 0.06;
+  for (const dx of [-0.12, -0.04, 0.04, 0.12]) { ctx.beginPath(); ctx.moveTo(cx + dx * s * 0.4, cy + s * 0.5); ctx.lineTo(cx + dx * s * 1.4, cy - s * 0.1); ctx.stroke(); }
+  const paper = (col, rr, hh, off) => { ctx.fillStyle = col; ctx.strokeStyle = 'rgba(70,30,20,.7)'; ctx.lineWidth = s * 0.035; ctx.beginPath(); ctx.moveTo(cx - s * 0.06, cy + s * 0.3); ctx.lineTo(cx - rr * s, cy - hh * s + off); for (let i = 0; i <= 6; i++) ctx.lineTo(cx - rr * s + (2 * rr * s) * i / 6, cy - hh * s + off + (i % 2 ? -s * 0.04 : s * 0.02)); ctx.lineTo(cx + s * 0.06, cy + s * 0.3); ctx.closePath(); ctx.fill(); ctx.stroke(); };
+  paper('#e0952f', 0.46, 0.14, 0);
+  const cols = ['#e0001c', '#ff1f8e', '#ffd400', '#8f2be8', '#fff0cc'];
+  [[-0.3, -0.22], [0.3, -0.22], [-0.15, -0.36], [0.15, -0.36], [0, -0.26]].forEach((p, i) => {
+    ctx.fillStyle = cols[i]; ctx.strokeStyle = 'rgba(50,0,30,.7)'; ctx.lineWidth = s * 0.035; ctx.beginPath(); ctx.arc(cx + p[0] * s, cy + p[1] * s, s * 0.15, 0, TAU); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = 'rgba(255,255,255,.55)'; ctx.beginPath(); ctx.arc(cx + p[0] * s - s * 0.04, cy + p[1] * s - s * 0.04, s * 0.05, 0, TAU); ctx.fill();
   });
-  ctx.fillStyle = '#fff3e0'; ctx.strokeStyle = '#c9a77a'; ctx.lineWidth = s * 0.05;
-  ctx.beginPath(); ctx.moveTo(cx - s * 0.38, cy - s * 0.12); ctx.lineTo(cx + s * 0.38, cy - s * 0.12); ctx.lineTo(cx, cy + s * 0.5); ctx.closePath(); ctx.fill(); ctx.stroke();
-  ctx.fillStyle = '#ff6fa5'; ctx.beginPath(); ctx.moveTo(cx - s * 0.12, cy + s * 0.12); ctx.lineTo(cx + s * 0.12, cy + s * 0.12); ctx.lineTo(cx, cy + s * 0.24); ctx.fill();
+  ctx.fillStyle = '#1fae62'; ctx.beginPath(); ctx.ellipse(cx - s * 0.42, cy - s * 0.2, s * 0.13, s * 0.05, -0.6, 0, TAU); ctx.ellipse(cx + s * 0.42, cy - s * 0.2, s * 0.13, s * 0.05, 0.6, 0, TAU); ctx.fill();
+  paper('#ff6fa5', 0.4, 0.04, s * 0.06);
+  ctx.strokeStyle = 'rgba(70,30,20,.35)'; ctx.lineWidth = s * 0.025; for (const dx of [-0.2, 0, 0.2]) { ctx.beginPath(); ctx.moveTo(cx + dx * s * 0.2, cy + s * 0.28); ctx.lineTo(cx + dx * s, cy - s * 0.02); ctx.stroke(); }
+  ctx.fillStyle = '#ffd400'; ctx.strokeStyle = '#8a6a00'; ctx.lineWidth = s * 0.03;
+  ctx.beginPath(); ctx.ellipse(cx - s * 0.1, cy + s * 0.2, s * 0.1, s * 0.05, 0.5, 0, TAU); ctx.ellipse(cx + s * 0.1, cy + s * 0.2, s * 0.1, s * 0.05, -0.5, 0, TAU); ctx.fill(); ctx.stroke();
+  ctx.beginPath(); ctx.arc(cx, cy + s * 0.22, s * 0.045, 0, TAU); ctx.fill(); ctx.stroke();
+  ctx.strokeStyle = '#127a4a'; ctx.lineWidth = s * 0.06; for (const dx of [-0.08, 0, 0.08]) { ctx.beginPath(); ctx.moveTo(cx + dx * s * 0.5, cy + s * 0.3); ctx.lineTo(cx + dx * s * 0.9, cy + s * 0.5); ctx.stroke(); }
 }
 function iconBill(ctx, cx, cy, s) {
   ctx.fillStyle = '#3fbf4a'; ctx.strokeStyle = '#1e7a2c'; ctx.lineWidth = s * 0.07;
@@ -601,25 +608,42 @@ function itemGeo(type, ci) {
 function makeFlowerItem(ci, type) {
   const g = new THREE.Group(); const m = new THREE.Mesh(itemGeo(type || 'tulip', ci), vcMat); g.add(m); return g;
 }
-function bouquetGeo() {
-  if (_gc.bq) return _gc.bq;
-  const P_ = [], cone = new THREE.ConeGeometry(0.3, 0.62, 18, 1, true);
-  P_.push(part(cone, 0xe0a868, 0, 0.31, 0, 1, 1, 1, Math.PI, 0, 0));
-  P_.push(part(new THREE.TorusGeometry(1, 0.1, 5, 18), 0xf6dcae, 0, 0.62, 0, 0.3, 0.3, 0.3, Math.PI / 2, 0, 0));
-  P_.push(part(new THREE.TorusGeometry(1, 0.2, 5, 14), 0xff6fa5, 0, 0.26, 0, 0.14, 0.14, 0.14, Math.PI / 2, 0, 0));
-  P_.push(part(G.sph6, 0xff6fa5, 0.07, 0.26, 0.15, 0.07, 0.04, 0.035, 0, 0, 0.5), part(G.sph6, 0xff6fa5, -0.07, 0.26, 0.15, 0.07, 0.04, 0.035, 0, 0, -0.5), part(G.sph6, 0xe0457f, 0, 0.26, 0.16, 0.035, 0.035, 0.035));
-  const bl = [[0, 0.5, 0, 0, 0, 'tulip', 0], [0.13, 0.46, 0.05, 0, 0, 'rose', 1], [-0.13, 0.46, -0.03, 0, 0, 'tulip', 2], [0.02, 0.44, -0.14, 0, 0, 'rose', 3], [0.04, 0.44, 0.14, 0, 0, 'tulip', 1]];
-  for (const b of bl) {
-    const tilt = Math.atan2(b[1] === 0.5 ? 0 : b[0], 0.6) ;
-    const bm = new THREE.Matrix4().makeTranslation(b[0], b[1] + 0.05, b[2]).multiply(new THREE.Matrix4().makeRotationZ(-b[0] * 1.5)).multiply(new THREE.Matrix4().makeRotationX(b[2] * 1.5)).multiply(new THREE.Matrix4().makeScale(0.75, 0.75, 0.75));
-    const c = FLOWER_COLS[b[6]];
-    for (const q of (b[5] === 'tulip' ? tulipBloom : roseBloom)(c)) P_.push({ g: q.g, c: q.c, m: bm.clone().multiply(q.m) });
+const WRAPS = [[0xc8893f, 0xdfa662, 0xf0c98a, 0xe8283c], [0xff4f93, 0xff86b4, 0xffd0e2, 0xffd400], [0xa070ff, 0xc6a6ff, 0xece0ff, 0xff1f8e], [0xf3ebe0, 0xffffff, 0xffe9f0, 0x8f2be8]];
+function wrapGeo(rTop, h, phase, crinkle) {
+  const seg = 20, rg = 4, pos = [], idx = [];
+  for (let j = 0; j <= rg; j++) {
+    const t = j / rg;
+    for (let i = 0; i < seg; i++) {
+      const th = i / seg * TAU, r = lerp(0.05, rTop, Math.pow(t, 0.8)) * (1 + crinkle * t * Math.sin(th * 6 + phase)), y = h * t + (j === rg ? Math.sin(th * 3 + phase) * 0.05 + Math.sin(th * 7) * 0.02 : 0);
+      pos.push(r * Math.cos(th), y, r * Math.sin(th));
+    }
   }
-  for (const th of [0.5, 2.2, 3.9, 5.4]) P_.push(petal(GREEN2, 0.14, 0.6, th, -0.7, 0.012, 0.12, 0.06));
-  const W = new THREE.Matrix4().makeRotationZ(-Math.PI / 2).multiply(new THREE.Matrix4().makeTranslation(0, -0.45, 0));
-  return (_gc.bq = mergeParts(P_, W));
+  for (let j = 0; j < rg; j++) for (let i = 0; i < seg; i++) { const a = j * seg + i, b = j * seg + (i + 1) % seg, c = (j + 1) * seg + i, d = (j + 1) * seg + (i + 1) % seg; idx.push(a, c, b, b, c, d); }
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setIndex(idx); g.computeVertexNormals(); return g;
 }
-function makeBouquetItem() { const g = new THREE.Group(); g.add(new THREE.Mesh(bouquetGeo(), vcMat2)); return g; }
+function bouquetGeo(v, up) {
+  v = (v || 0) % WRAPS.length; const k = 'bq' + v + (up ? 'u' : ''); if (_gc[k]) return _gc[k];
+  const w = WRAPS[v], P_ = [];
+  for (let k2 = 0; k2 < 5; k2++) P_.push(petal(GREEN, 0.02, 0.06, k2 * 1.2566, -0.09, 0.02, 0.41, 0.02));
+  P_.push({ g: wrapGeo(0.48, 0.52, 0, 0.07), c: w[0], m: new THREE.Matrix4().makeRotationZ(0.06) });
+  P_.push({ g: wrapGeo(0.43, 0.46, 1.6, 0.08), c: w[1], m: new THREE.Matrix4().makeRotationY(1.0).multiply(new THREE.Matrix4().makeRotationZ(-0.05)) });
+  P_.push({ g: wrapGeo(0.37, 0.4, 3.1, 0.09), c: w[2], m: new THREE.Matrix4().makeRotationY(2.3) });
+  const bl = [[0, 0, 'rose', 1, 0], [0.19, 0.3, 'tulip', 0, 1], [0.19, 1.35, 'rose', 4, 2], [0.19, 2.4, 'tulip', 2, 3], [0.19, 3.45, 'rose', 3, 4], [0.19, 4.5, 'tulip', 1, 0], [0.19, 5.55, 'rose', 0, 1]];
+  for (const b of bl) {
+    const r = b[0], th = b[1];
+    const bm = new THREE.Matrix4().makeTranslation(r * Math.cos(th), 0.46 + (r ? 0 : 0.06), r * Math.sin(th)).multiply(new THREE.Matrix4().makeRotationY(-th)).multiply(new THREE.Matrix4().makeRotationZ(r ? -0.5 : 0)).multiply(new THREE.Matrix4().makeScale(0.68, 0.68, 0.68));
+    const c = FLOWER_COLS[b[3] % FLOWER_COLS.length];
+    for (const q of (b[2] === 'tulip' ? tulipBloom : roseBloom)(c)) P_.push({ g: q.g, c: q.c, m: bm.clone().multiply(q.m) });
+  }
+  for (const th of [0.9, 1.9, 3.0, 4.0, 5.1]) P_.push(petal(GREEN2, 0.3, 0.42, th, -0.95, 0.012, 0.13, 0.07));
+  P_.push(part(G.torus, w[3], 0, 0.1, 0, 0.1, 0.1, 0.1, Math.PI / 2, 0, 0));
+  P_.push(part(G.sph6, w[3], 0.1, 0.13, 0.11, 0.1, 0.05, 0.04, 0, 0, 0.5), part(G.sph6, w[3], -0.1, 0.13, 0.11, 0.1, 0.05, 0.04, 0, 0, -0.5), part(G.sph6, shade(w[3], -0.25), 0, 0.12, 0.12, 0.045, 0.045, 0.045));
+  P_.push(part(G.sph6, w[3], 0.05, 0.0, 0.12, 0.028, 0.12, 0.02, 0, 0, 0.3), part(G.sph6, w[3], -0.05, 0.0, 0.12, 0.028, 0.12, 0.02, 0, 0, -0.3));
+  const W = up ? new THREE.Matrix4().makeScale(0.85, 0.85, 0.85) : new THREE.Matrix4().makeRotationZ(-Math.PI / 2).multiply(new THREE.Matrix4().makeScale(0.6, 0.6, 0.6)).multiply(new THREE.Matrix4().makeTranslation(0, -0.2, 0));
+  return (_gc[k] = mergeParts(P_, W));
+}
+function makeBouquetItem(v, up) { if (v === undefined) v = Math.floor(Math.random() * WRAPS.length); const g = new THREE.Group(); g.add(new THREE.Mesh(bouquetGeo(v, up), vcMat2)); g.userData.v = v; return g; }
+function bouquetPose(m, up) { m.children[0].geometry = bouquetGeo(m.userData.v, up); }
 let _billMat = null;
 function makeBill() {
   if (!_billMat) _billMat = new THREE.MeshLambertMaterial({ map: billTex() });
@@ -1013,8 +1037,8 @@ function buildStations() {
   for (const [sx, sz, wx, wz] of [[0, 0.95, 3.5, 0.08], [0, -0.95, 3.5, 0.08], [1.75, 0, 0.08, 1.9], [-1.75, 0, 0.08, 1.9]]) { const rr = mk(G.box, WM, wx, 0.16, wz, ot.x + sx, TABLE_Y + 0.1, ot.z + sz); world.add(rr); }
   const s2 = makeBoard('BUKETLER', 1.7, 0.45, 'wood'); s2.position.set(ot.x, TABLE_Y + 1.35, ot.z - 0.9); s2.rotation.x = -0.15; world.add(s2);
   outputPile = new Stack(scene, (i, out) => {
-    const cx = 3, cz = 3, per = cx * cz, l = Math.floor(i / per), r = i % per;
-    out.set(ot.x + ((r % cx) - 1) * 1.05, TABLE_Y + 0.28 + l * 0.46, ot.z + (Math.floor(r / cx) - 1) * 0.62);
+    const per = 8, l = Math.floor(i / per), r = i % per;
+    out.set(ot.x + ((r % 4) - 1.5) * 0.86 + l * 0.0, TABLE_Y + 0.4 + l * 0.7, ot.z + (Math.floor(r / 4) - 0.5) * 0.85);
   }, CFG.outputCap);
   // ---- flower shop kiosk
   const ct = POS.counter, blue = mat(0x1747d6), cw = mat(0xf7f2e6);
@@ -1279,7 +1303,7 @@ function updateCustomers(dt, t) {
       dx = tx - gp.x; dz = tz - gp.z; const d = Math.hypot(dx, dz);
       if (d > 0.02) { const st = Math.min(d, spd * dt); gp.x += dx / d * st; gp.z += dz / d * st; c.vel.set(dx / d * spd, 0, dz / d * spd); mv = 1; faceChar(c, dx, dz, dt); }
     } else c.vel.set(0, 0, 0);
-    if (c.held) c.held.position.y = 1.05 + Math.sin(t * 3 + i) * 0.02;
+    if (c.held) c.held.position.y = 0.85 + Math.sin(t * 3 + i) * 0.02;
     animChar(c, dt, mv, t);
   }
 }
@@ -1309,7 +1333,7 @@ function transferToCounter(c) {
   c.pending++;
   fly(it.mesh, out => { out.set(c.group.position.x, 1.15, c.group.position.z + 0.5); return Math.PI / 2; }, 0.34, 1.2, () => {
     c.pending--; c.got++; rm(it.mesh); sfx('drop');
-    if (!c.held) { c.held = makeBouquetItem(); c.held.rotation.set(0, 0, Math.PI / 2); c.held.scale.setScalar(0.9); c.held.position.set(0.0, 1.05, 0.5); c.group.add(c.held); }
+    if (!c.held) { c.held = makeBouquetItem(undefined, true); c.held.scale.setScalar(0.9); c.held.position.set(0.0, 0.85, 0.5); c.group.add(c.held); }
     c._shown = -1;
     if (c.got >= c.want) finishCustomer(c);
   });
@@ -1317,7 +1341,7 @@ function transferToCounter(c) {
 }
 function pickFromOutput() {
   const it = outputPile.takeLast('bouquet'); if (!it) return;
-  sendToBack(P, it.mesh, 'bouquet', 1.5); stats.picked++; sfx('pick');
+  bouquetPose(it.mesh, false); sendToBack(P, it.mesh, 'bouquet', 1.5); stats.picked++; sfx('pick');
 }
 let collAcc = 0, collT = 0;
 function collectMoney() {
@@ -1345,7 +1369,7 @@ function updatePacking(dt, t) {
     m.group.scale.y = 1 + Math.sin(t * 22) * 0.025; m.group.position.y = TABLE_Y + Math.abs(Math.sin(t * 14)) * 0.03;
     if (m.timer >= interval) {
       m.working = false; m.pendingOut++; stats.packed++;
-      const b = makeBouquetItem(); b.position.set(m.x, TABLE_Y + 0.6, m.z + 0.9); scene.add(b);
+      const b = makeBouquetItem(undefined, true); b.position.set(m.x, TABLE_Y + 0.6, m.z + 0.9); scene.add(b);
       const idx = outputPile.length + m.pendingOut - 1; sparkles(m.x, TABLE_Y + 0.8, m.z + 0.9, 4, 0xffffff, 0.3);
       fly(b, out => { outputPile.slotFn(Math.min(idx, CFG.outputCap - 1), out); return 0; }, 0.5, 1.6, () => { m.pendingOut--; outputPile.add(b, 'bouquet'); sfx('drop'); outputPile.slotFn(outputPile.length - 1, _w); sparkles(_w.x, _w.y + 0.3, _w.z, 7, 0xfff2a0, 0.5); });
     }
