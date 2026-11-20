@@ -148,7 +148,7 @@ const PRICE = { bouquet: 15, pot: 45, sachet: 70, perfume: 250, sbq: 120, tea: 4
 const PROD_LIST = ['bouquet', 'pot', 'sachet', 'perfume', 'sbq'], LANES = {}, SRCS = {}, OUTSPOT = {}, ICONF = {}, PZ = {}, STN = {};
 let priceMul = () => 1;
 const UPG = {
-  sera: { name: 'Sera', costs: [1800] }, van: { name: 'Minibüs', costs: [3000] }, cashier: { name: 'Kasiyer', costs: [90] }, carrier: { name: 'Taşıyıcı', costs: [320] },
+  sera: { name: 'Sera', costs: [1800] }, van: { name: 'Minibüs', costs: [2500] }, cashier: { name: 'Kasiyer', costs: [90] }, carrier: { name: 'Taşıyıcı', costs: [320] },
   cashSpd: { name: 'Kasiyer Hızı', costs: geo(100, 5) }, carSpd: { name: 'Taşıyıcı Hızı', costs: geo(140, 5) },
   carCap: { name: 'Taşıyıcı Kapasite', costs: geo(160, 5) }, helpSpd: { name: 'Bahçıvan Hızı', costs: geo(120, 5) },
   cap:    { name: 'Kapasite',       costs: geo(50, 5) },
@@ -2191,8 +2191,8 @@ function drawGoalIcon() {
 function updateGoalBar() {
   if (!curGoal || !introDone) { goalEl.style.display = 'none'; return; }
   goalEl.style.display = 'flex';
-  const u = upPads[curGoal.key], pct = Math.round(clamp((u.paid + S.money) / Math.max(1, u.cost()), 0, 1) * 100);
-  const w = pct + '%'; if (goalF.style.width !== w) { goalF.style.width = w; goalP.textContent = w; }
+  const u = upPads[curGoal.key], cost = u.cost(); if (!(cost > 0)) return;
+  const pct = Math.round(clamp((u.paid + S.money) / cost, 0, 1) * 100), w = pct + '%'; if (goalP.textContent !== w) { goalF.style.width = w; goalP.textContent = w; }
 }
 /* ---- guidance: arrow + glowing trail ---- */
 const tutArrow = new THREE.Group();
@@ -2506,7 +2506,7 @@ function updateAmbient(dt, t) {
    ===================================================================== */
 const ECON = {
   lav: 4500, lavW: 1500, keseSpd: 700, parf: 15500, parfW: 2500, parfSpd: 1000, cafe: 33000, cafeW: 4000, cafeSpd: 1500,
-  wed: 50000, wedBonus: 5000, sunf: 55000, sunW: 9000, sbqSpd: 3000, city: 45000, cityW: 6000, citySpd: 2000, stars: 18000
+  wed: 50000, wedBonus: 5000, sunf: 48000, sunW: 9000, sbqSpd: 3000, city: 45000, cityW: 6000, citySpd: 2000, stars: 18000
 };
 function iconLav(ctx, cx, cy, s) {
   ctx.lineCap = 'round'; ctx.strokeStyle = '#2e9a3e'; ctx.lineWidth = s * 0.06;
@@ -2748,13 +2748,13 @@ function updateExtZones(dt) {
 /* ---- bölgeler ---- */
 function extPad(key, name, costs, x, z, icon, vis) { UPG[key] = { name, costs }; const u = new UpgradePad(key, x, z, icon); u.vis = vis || null; upPads[key] = u; return u; }
 const unlockedZ = id => EXTZ[id] && !EXTZ[id].locked;
-function slab(z, g, col) { const m = new THREE.Mesh(G.plane, LM({ color: lc(col || 0xe9dfc0) })); m.rotation.x = -Math.PI / 2; m.scale.set(z.R.x1 - z.R.x0 - 1, z.R.z1 - z.R.z0 - 1, 1); ad(g, m, z.cx, 0.03, z.cz); m.receiveShadow = true; }
+function slab(z, g, col) { /* zemin: çim kalsın (derinlik çakışması yok) */ }
 function decorTree(g, x, z, sc) { const t = new THREE.Group(); t.add(mk(G.cyl, mat(0x8a5a36), 0.35 * sc, 1.6 * sc, 0.35 * sc, 0, 0.8 * sc, 0)); t.add(mk(G.sphT, mat(0x2fae4a), 1.4 * sc, 1.3 * sc, 1.4 * sc, 0, 2.3 * sc, 0)); shadowAll(t, true, false); ad(g, t, x, 0, z); }
 function lamp(g, x, z) { const o = new THREE.Group(); o.add(mk(G.cyl, mat(0x2d3a45), 0.09, 3.2, 0.09, 0, 1.6, 0)); o.add(mk(G.sph, new THREE.MeshBasicMaterial({ color: lc(0xffe9a8) }), 0.26, 0.3, 0.26, 0, 3.3, 0)); if (g.userData.px === undefined) { o.position.set(x, 0, z); g.add(o); } else ad(g, o, x, 0, z); }
 let cafe = null, wed = null, city = null, tractor = null;
 function buildExpansion() {
   // sokak
-  { const m = new THREE.Mesh(G.plane, LM({ map: cobbleTex() })); m.rotation.x = -Math.PI / 2; m.scale.set(3.6, 82, 1); m.position.set(5.4, 0.02, -52); m.receiveShadow = true; world.add(m); m.material.map.repeat.set(3.6 * 14 / 25.7, 82 * 9.5 / 17.7);
+  { const m = new THREE.Mesh(G.plane, LM({ map: cobbleTex(), polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 })); m.rotation.x = -Math.PI / 2; m.scale.set(3.6, 82, 1); m.position.set(5.4, 0.02, -52); m.receiveShadow = true; world.add(m); m.material.map.repeat.set(3.6 * 14 / 25.7, 82 * 9.5 / 17.7);
     for (const sx of [3.6, 7.2]) { const cu = rbox(0.25, 0.2, 82, 0.09, mat(0xf1e4c3)); cu.position.set(sx, 0.08, -52); world.add(cu); }
     for (let zz = -20; zz > -92; zz -= 12) { lamp(world, 3.2, zz); lamp(world, 7.6, zz - 6); } }
   addCollider(-20.6, 1.6, -12.6, -11.8); addCollider(9.2, 20.6, -12.6, -11.8);
@@ -2940,7 +2940,7 @@ function updateTractor(dt, t) {
 }
 /* ---- şehir şubesi ---- */
 function spawnCityCust() {
-  const types = PROD_LIST.filter(prodOK); const ty = pick(types), c = makeChar({ shirt: pick(SHIRTS), pants: pick([0x3b4a6b, 0x5b4636, 0x2f6f5f]), hair: pick(HAIRS), skin: pick(SKINS), hairStyle: pick(['bob', 'short', 'long', 'spiky']), shoe: 0x3a2a22 });
+  const types = PROD_LIST.filter(prodOK), have = types.filter(q => city.stock.items.some(i => i.type === q)), ty = have.length && Math.random() < 0.8 ? pick(have) : pick(types), c = makeChar({ shirt: pick(SHIRTS), pants: pick([0x3b4a6b, 0x5b4636, 0x2f6f5f]), hair: pick(HAIRS), skin: pick(SKINS), hairStyle: pick(['bob', 'short', 'long', 'spiky']), shoe: 0x3a2a22 });
   c.group.position.set(7.0, 0, -72); c.prod = ty; c.want = Math.min(2 + (Math.random() * 4 | 0), maxWant(ty)); c.got = 0; c.pending = 0; c.state = 'cq'; c.bubble = null; c.held = null; c.wait = 0; scene.add(c.group); city.queue.push(c);
 }
 function updateCity(dt, t) {
@@ -3019,6 +3019,7 @@ for (const k in upPads) { const u = upPads[k]; if (!u.done) { u.group.visible = 
 
 window.__game = {
   path(tx, tz) { return findPath(P.group.position.x, P.group.position.z, tx, tz); }, colliders,
+  EXTZ, STN, GARD, cafe: () => cafe, wed: () => wed, city: () => city, tractor: () => tractor, give(type, n) { for (let i = 0; i < n; i++) P.stack.add(['orchid', 'lav', 'sun', 'rosep', 'flower'].includes(type) ? makeFlowerItem(0, type === 'flower' ? 'tulip' : type) : makeItemOf(type), type); },
   bot(x, z) { BOT = (x || z) ? { x, z } : null; if (BOT) hideIntro(); }, hideIntro, objective() { objective(_obj); return Object.assign({}, _obj); }, get goal() { return curGoal; }, GOALS, UPG,
   S, stats, P: () => P, queue, beds, machine, inputPile, outputPile, moneyPile, get shelf() { return shelfB; }, get shelfP() { return shelfP; }, get potInput() { return potInput; }, get potOutput() { return potOutput; }, get zone2() { return zone2; }, get zone3() { return zone3; }, VAN, get vanLoad() { return vanLoad; }, get vanPile() { return vanPile; }, get cashier() { return cashier; }, get carrier() { return carrier; }, upPads, zones, customers, CFG, POS,
   helper: () => helper,
