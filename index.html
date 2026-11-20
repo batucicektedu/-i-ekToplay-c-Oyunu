@@ -144,7 +144,7 @@ const CFG = {
   start: { x: -5.5, z: 2.6 }
 };
 const geo = (base, n) => Array.from({ length: n }, (_, i) => Math.max(5, Math.round(base * Math.pow(1.3, i) / 5) * 5));
-const PRICE = { bouquet: 15, pot: 45 };
+const PRICE = { bouquet: 15, pot: 45, sachet: 70, perfume: 250, sbq: 120, tea: 45 };
 const PROD_LIST = ['bouquet', 'pot', 'sachet', 'perfume', 'sbq'], LANES = {}, SRCS = {}, OUTSPOT = {}, ICONF = {}, PZ = {}, STN = {};
 let priceMul = () => 1;
 const UPG = {
@@ -202,7 +202,7 @@ let introDone = false, curGoal = null, curGoalIdx = -1, lastGoalIdx = -2;
     const s = JSON.parse(localStorage.getItem(SAVE_KEY));
     if (s && typeof s === 'object') {
       S.money = Math.max(0, Math.floor(+s.money || 0));
-      for (const k in S.lv) S.lv[k] = clamp(Math.floor((s.lv && s.lv[k]) || 0), 0, UPG[k] ? UPG[k].costs.length : 5);
+      for (const k in S.lv) S.lv[k] = clamp(Math.floor((s.lv && s.lv[k]) || 0), 0, UPG[k] ? UPG[k].costs.length : 7);
       S.tut = clamp(Math.floor(+s.tut || 0), 0, 12); LOADED_X = s.x && typeof s.x === 'object' ? s.x : null;
     }
   } catch (e) {}
@@ -1879,8 +1879,8 @@ let custCount = 0;
 function potStock() { return (potOutput ? potOutput.length : 0) + shelfP.length + potInput.length + P.stack.count('pot') + (potM.working ? 1 : 0) + (carrier ? carrier.stack.count('pot') : 0); }
 function potsPossible() { return zone2 && !zone2.locked && (potStock() > 0 || S.lv.helper > 0); }
 function stockOf(t) { if (t === 'pot') return lane(t).length + potStock(); if (t === 'bouquet') return lane(t).length + outputPile.length + P.stack.count('bouquet') + (carrier ? carrier.stack.count('bouquet') : 0); const o = srcOf(t); return lane(t).length + (o ? o.length : 0) + P.stack.count(t) + (carrier ? carrier.stack.count(t) : 0); }
-function prodOK(t) { if (t === 'bouquet') return true; if (t === 'pot') return potsPossible() && S.lv.sera > 0; const z = PZ[t]; return !!(z && !z.locked && (stockOf(t) > 0 || (z.st && z.st.made > 0) || (z.hire && z.hire()))); }
-function pickProduct() { const l = PROD_LIST.filter(prodOK); if (l.length === 1) return l[0]; const w = l.map((t, i) => t === 'bouquet' ? 3 : 2 + 1.6 * i); let r = Math.random() * w.reduce((a, b) => a + b, 0); for (let i = 0; i < l.length; i++) { r -= w[i]; if (r <= 0) return l[i]; } return l[0]; }
+function prodOK(t) { if (t === 'bouquet') return true; if (t === 'pot') return potsPossible() && S.lv.sera > 0 && (stockOf('pot') > 0 || potM.working || potInput.length > 0 || Math.random() < 0.12); const z = PZ[t]; return !!(z && !z.locked && z.st && ((z.st.made > 0 || (z.hire && z.hire())) && (stockOf(t) > 0 || z.st.working || z.st.ins.some(q => q.stack.length > 0) || Math.random() < 0.12))); }
+function pickProduct() { const l = PROD_LIST.filter(prodOK); if (l.length === 1) return l[0]; const w = l.map((t, i) => t === 'bouquet' ? 3 : 1.5 + 1.2 * i); let r = Math.random() * w.reduce((a, b) => a + b, 0); for (let i = 0; i < l.length; i++) { r -= w[i]; if (r <= 0) return l[i]; } return l[0]; }
 const maxWant = t => t === 'bouquet' ? 6 : t === 'perfume' ? 2 : 3;
 function leaveSad(c) {
   const qi = queue.indexOf(c); if (qi >= 0) queue.splice(qi, 1);
@@ -1904,7 +1904,7 @@ function setBubble(c, kind) {
 }
 function finishCustomer(c) {
   const qi = queue.indexOf(c); if (qi >= 0) queue.splice(qi, 1);
-  c.state = 'leaving'; setBubble(c, 'happy'); c.hideBubble = 1.2; stats.sold++; sfx('happy');
+  c.state = 'leaving'; setBubble(c, 'happy'); c.hideBubble = 1.2; stats.sold++; stats['s_' + c.prod] = (stats['s_' + c.prod] || 0) + c.want; sfx('happy');
   c.path = [[12.4, -0.3], [12.4, 12.5], [10, 18], [10, 40]];
   const gp = c.group.position, total = Math.round(c.want * PRICE[c.prod] * (c.vip ? 3 : 1) * priceMul()), n = clamp(Math.round(total / CFG.billValue), 1, 10), bv = total / n;
   hearts(gp.x, 3.4, gp.z, 5); coins(gp.x, 2.2, gp.z, 8); popText(gp.x, 4.2, gp.z, '+' + fmt(total), '#6dff6a'); vib(8);
@@ -1931,7 +1931,7 @@ function updateCustomers(dt, t) {
       if (c.atSlot && qi === 0 && c.bubble && c.bubKind === 'want' && c._shown !== c.want - c.got) { c._shown = c.want - c.got; setBubble(c, 'want'); }
       if (c.atSlot && qi === 0) {
         if (c.lastGot !== c.got) { c.lastGot = c.got; c.wait = 0; } c.wait += dt;
-        if (c.wait > 20 && c.got === 0 && c.pending === 0 && !c.switched) { const o = PROD_LIST.find(q => q !== c.prod && prodOK(q) && stockOf(q) > 0); if (o) { c.prod = o; c.switched = true; c.want = Math.min(c.want, maxWant(o)); c._shown = -1; c.wait = 0; setBubble(c, 'want'); sparkles(gp.x, 3.3, gp.z, 6, 0xfff2a0, 0.4); } }
+        if (c.wait > 9 && c.got === 0 && c.pending === 0 && !c.switched) { const o = PROD_LIST.find(q => q !== c.prod && prodOK(q) && stockOf(q) > 0); if (o) { c.prod = o; c.switched = true; c.want = Math.min(c.want, maxWant(o)); c._shown = -1; c.wait = 0; setBubble(c, 'want'); sparkles(gp.x, 3.3, gp.z, 6, 0xfff2a0, 0.4); } }
         if (c.wait > 45 && c.pending === 0) { if (c.got > 0) { c.want = c.got; finishCustomer(c); } else leaveSad(c); }
       }
       if (c.atSlot) { faceChar(c, 0, -1, dt); tx = null; }
@@ -2272,8 +2272,9 @@ function objective(out) {
   const gp = curGoal ? upPads[curGoal.key] : null;
   if (gp && gp.group.visible && !gp.done && S.money + gp.paid >= gp.cost()) return set(gp.x, 0.4, gp.z, 'pad');
   const ripe = () => { let best = null, bd = 1e9; for (const bb of beds) { if (bb.locked || bb.nohelp) continue; for (const f of bb.flowers) if (f.t >= f.gt) { const d = (f.x - P.group.position.x) ** 2 + (f.z - P.group.position.z) ** 2; if (d < bd) { bd = d; best = f; } } } return best; };
-  if (outZone.inside && outputPile.length > 0 && P.free() > 0) return set(outZone.x, 0.4, outZone.z, 'out');
+  if (outZone.inside && outputPile.length > 0 && P.free() > 0 && nB < 14) return set(outZone.x, 0.4, outZone.z, 'out');
   const hold = t => st.count(t), prodHeld = PROD_LIST.some(t => hold(t) > 0);
+  if (wed && !wed.z.locked && wed.ord && PROD_LIST.some(t => hold(t) >= 5 && (wed.ord.got[t] || 0) < (wed.ord.need[t] || 0))) return set(wed.zone.x, 0.4, wed.zone.z, 'wed');
   if (PROD_LIST.some(t => hold(t) > 0 && (!cashier || shelfFree(t) > 0))) return set(counterZone.x, 0.4, counterZone.z, 'counter');
   if (prodHeld) {
     if (wed && !wed.z.locked && wed.ord && PROD_LIST.some(t => hold(t) > 0 && (wed.ord.got[t] || 0) < (wed.ord.need[t] || 0))) return set(wed.zone.x, 0.4, wed.zone.z, 'wed');
@@ -2283,11 +2284,11 @@ function objective(out) {
   { let cand = null; for (const sn of STATIONS) { if (sn.zone.locked) continue; for (const q of sn.ins) if (hold(q.type) > 0 && !(q.type === 'orchid' && zone2 && !zone2.locked && sn.id !== 'tea' ) && q.stack.length + (q.stack.pend || 0) < 24 && (!cand || q.stack.length < cand.stack.length)) { if (q.type === 'orchid' && sn.id === 'tea' && nO > 0 && zone2 && !zone2.locked && potInput.length < 6) continue; cand = q; } } if (cand) return set(cand.zone.x, 0.4, cand.zone.z, 'drop'); }
   if (moneyPile.length + (moneyPile.extra || 0) > 0) return set(moneyZone.x, 0.8, moneyZone.z + 1.0, 'money');
   if (zone3 && !zone3.locked && vanPile.length + (vanPile.extra || 0) > 0) return set(vanMoneyZone.x, 0.8, vanMoneyZone.z, 'money');
-  for (const sn of STATIONS) { if (sn.zone.locked || sn.id === 'tea' && !cafe.tables.some(q => q.guest && q.guest.state === 'wait')) continue; if (sn.out.length >= 3 && P.free() > 0) return set(sn.outZone.x, 0.4, sn.outZone.z, 'take'); }
+  for (const sn of STATIONS) { if (sn.zone.locked || sn.id === 'tea' && !cafe.tables.some(q => q.guest && q.guest.state === 'wait')) continue; if (sn.out.length >= 3 && P.free() > 0 && hold(sn.o.out) < 10) return set(sn.outZone.x, 0.4, sn.outZone.z, 'take'); }
   if (outputPile.length >= 4 && P.free() > 0) { const need = [['lav', 'lavW', () => STN.kese.ins[0]], ['rosep', 'parfW', () => STN.parf.ins[0]], ['lav', 'lavW', () => STN.parf.ins[1]], ['sun', 'sunW', () => STN.sbq.ins[0]]]; for (const [ty, hk, gi] of need) { const sn = ty === 'lav' ? (gi() === STN.kese.ins[0] ? EXTZ.lav : EXTZ.parf) : ty === 'rosep' ? EXTZ.parf : EXTZ.sunf; if (!sn || sn.locked || S.lv[hk] > 0 || gi().stack.length >= 5) continue; let best = null, bd = 1e9; for (const b of (ty === 'lav' ? EXTZ.lav : sn).beds) for (const f of b.flowers) if (f.t >= f.gt) { const d = (f.x - P.group.position.x) ** 2 + (f.z - P.group.position.z) ** 2; if (d < bd) { bd = d; best = f; } } if (best && P.free() > 0 && !prodHeld) return set(best.x, 1.2, best.z, 'harvest'); } }
-  const thr = Math.min(P.capFn(), 16 + 6 * S.lv.cap), fl = P.free() > 0 && nF < thr ? ripe() : null, canPack = nF > 0 && inputPile.length + (inputPile.pend || 0) < CFG.inputCap;
+  const thr = Math.min(P.capFn(), 20), fl = P.free() > 0 && nF < thr ? ripe() : null, canPack = nF > 0 && inputPile.length + (inputPile.pend || 0) < CFG.inputCap;
   if (canPack && (nF >= thr || (!fl && nF > 0))) return set(packZone.x, 0.4, packZone.z, 'pack');
-  if (outputPile.length >= 3 && P.free() > 0) return set(outZone.x, 0.4, outZone.z, 'out');
+  if (outputPile.length >= 3 && P.free() > 0 && nB < (wed && wed.ord ? 24 : 12)) return set(outZone.x, 0.4, outZone.z, 'out');
   if (fl) return set(fl.x, 1.2, fl.z, 'harvest');
   if (canPack) return set(packZone.x, 0.4, packZone.z, 'pack');
   if (nO > 0 && zone2 && !zone2.locked) return set(potZone.x, 0.4, potZone.z, 'pot');
@@ -2504,8 +2505,8 @@ function updateAmbient(dt, t) {
    16. GENİŞLEME BÖLGELERİ (Lavanta, Parfüm, Kafe, Düğün, Ayçiçeği, Şehir)
    ===================================================================== */
 const ECON = {
-  lav: 8000, lavW: 2600, keseSpd: 1400, parf: 26000, parfW: 7000, parfSpd: 3800, cafe: 70000, cafeW: 14000, cafeSpd: 8000,
-  wed: 150000, wedBonus: 26000, sunf: 330000, sunW: 60000, sbqSpd: 36000, city: 700000, cityW: 100000, citySpd: 60000, stars: 220000
+  lav: 4500, lavW: 1500, keseSpd: 700, parf: 15500, parfW: 2500, parfSpd: 1000, cafe: 33000, cafeW: 4000, cafeSpd: 1500,
+  wed: 50000, wedBonus: 5000, sunf: 55000, sunW: 9000, sbqSpd: 3000, city: 45000, cityW: 6000, citySpd: 2000, stars: 18000
 };
 function iconLav(ctx, cx, cy, s) {
   ctx.lineCap = 'round'; ctx.strokeStyle = '#2e9a3e'; ctx.lineWidth = s * 0.06;
@@ -2765,7 +2766,7 @@ function buildExpansion() {
     z.onShow = () => { const a = STN.kese.ins[0]; if (a) a.zone.group.visible = true; };
     extPad('lav', 'Lavanta', [ECON.lav], 5.4, -17.0, iconLav, null);
     extPad('lavW', 'Lavanta Bahçıvanı', [ECON.lavW], -8.5, -16.6, iconHelper, () => unlockedZ('lav'));
-    extPad('keseSpd', 'Kese Hızı', geo(ECON.keseSpd, 5), -13.5, -16.6, iconBolt, () => unlockedZ('lav'));
+    extPad('keseSpd', 'Kese Hızı', geo(ECON.keseSpd, 7), -13.5, -16.6, iconBolt, () => unlockedZ('lav'));
     EXTAPPLY.lav = i => unlockExt(z, i); EXTAPPLY.lavW = i => spawnGardener({ type: 'lav', shirt: 0xa47be8, spdKey: 'keseSpd', beds: () => EXTZ.lav.beds, sx: -12, sz: -20, dest: () => { const a = STN.kese.ins[0]; if (!unlockedZ('parf')) return a; const b = STN.parf.ins[1]; return a.stack.length <= b.stack.length ? a : b; } }, i);
   }
   /* ----- Parfüm ----- */
@@ -2774,7 +2775,7 @@ function buildExpansion() {
     const g1 = mkGroup(z, 0.5); buildStation(z, g1, { id: 'parf', name: 'PARFÜM ATÖLYESİ', x: 20.5, z: -26, flip: true, awn: '#ff6fa5', col: '#ff4f9a', col2: 0xff8fc4, mcol: 0xd04a8a, shirt: 0xffd0e4, inputs: [{ type: 'rosep' }, { type: 'lav' }], out: 'perfume', base: 3.4, hire: 'parfW' });
     extPad('parf', 'Parfüm', [ECON.parf], 5.4, -20.5, iconPerfume, null);
     extPad('parfW', 'Gül Bahçıvanı', [ECON.parfW], 15, -16.6, iconHelper, () => unlockedZ('parf'));
-    extPad('parfSpd', 'Parfüm Hızı', geo(ECON.parfSpd, 5), 19.5, -16.6, iconBolt, () => unlockedZ('parf'));
+    extPad('parfSpd', 'Parfüm Hızı', geo(ECON.parfSpd, 7), 19.5, -16.6, iconBolt, () => unlockedZ('parf'));
     EXTAPPLY.parf = i => unlockExt(z, i); EXTAPPLY.parfW = i => spawnGardener({ type: 'rosep', shirt: 0xff8fc4, spdKey: 'parfSpd', beds: () => EXTZ.parf.beds, sx: 26, sz: -22, dest: () => STN.parf.ins[0] }, i);
   }
   /* ----- Kafe ----- */
@@ -2793,7 +2794,7 @@ function buildExpansion() {
     z.onShow = () => { cafe.tables.forEach(t => { t.zone.group.visible = true; }); };
     extPad('cafe', 'Çiçek Kafe', [ECON.cafe], 5.4, -39.4, iconCafe, null);
     extPad('cafeW', 'Garson', [ECON.cafeW], -8.5, -42.6, iconHelper, () => unlockedZ('cafe'));
-    extPad('teaSpd', 'Çay Hızı', geo(ECON.cafeSpd, 5), -13.5, -42.6, iconBolt, () => unlockedZ('cafe'));
+    extPad('teaSpd', 'Çay Hızı', geo(ECON.cafeSpd, 7), -13.5, -42.6, iconBolt, () => unlockedZ('cafe'));
     EXTAPPLY.cafe = i => unlockExt(z, i); EXTAPPLY.cafeW = i => { cafe.waiter = spawnWaiter(i); };
   }
   /* ----- Düğün ----- */
@@ -2822,7 +2823,7 @@ function buildExpansion() {
     STN.sbq.o.id = 'sbq';
     extPad('sunf', 'Ayçiçeği', [ECON.sunf], 5.4, -66.5, iconSun, null);
     extPad('sunW', 'Traktör', [ECON.sunW], -8.5, -68.6, iconTractor, () => unlockedZ('sunf'));
-    extPad('sbqSpd', 'Çiçek Hızı', geo(ECON.sbqSpd, 5), -13.5, -68.6, iconBolt, () => unlockedZ('sunf'));
+    extPad('sbqSpd', 'Çiçek Hızı', geo(ECON.sbqSpd, 7), -13.5, -68.6, iconBolt, () => unlockedZ('sunf'));
     EXTAPPLY.sunf = i => unlockExt(z, i); EXTAPPLY.sunW = i => { tractor = buildTractor(z, i); };
   }
   /* ----- Şehir Çiçekçisi ----- */
@@ -2839,7 +2840,7 @@ function buildExpansion() {
     city.zone.group.visible = false; z.onShow = () => { city.zone.group.visible = true; };
     extPad('city', 'Şehir Şubesi', [ECON.city], 5.4, -70.0, iconShop, null);
     extPad('cityW', 'Şube Kasiyeri', [ECON.cityW], 14, -68.6, iconCashier, () => unlockedZ('city'));
-    extPad('citySpd', 'Şube Hızı', geo(ECON.citySpd, 5), 18.5, -68.6, iconBolt, () => unlockedZ('city'));
+    extPad('citySpd', 'Şube Hızı', geo(ECON.citySpd, 7), 18.5, -68.6, iconBolt, () => unlockedZ('city'));
     EXTAPPLY.city = i => unlockExt(z, i);
     EXTAPPLY.cityW = i => { const c = makeChar({ shirt: 0xffffff, pants: 0x222833, hair: 0x2a1a10, hairStyle: 'short', outfit: 'apron', apron: 0x2f7bff, skin: 0xf0b98a }); c.group.position.set(cx + 1.5, 0, cz - 1.1); c.yaw = 0; c.group.rotation.y = 0; scene.add(c.group); city.cashier = c; popInWorker(c, i); };
   }
@@ -2872,7 +2873,7 @@ function updateGuest(c, dt, t, i) {
   const gp = c.group.position; let tx = null, tz = null, spd = 4.6, mv = 0;
   if (c.state === 'walk') { tx = c.seat[0]; tz = c.seat[1]; if (Math.hypot(tx - gp.x, tz - gp.z) < 0.25) { c.state = 'wait'; setBubble(c, 'want'); c.bubble.position.y = 3.2; } }
   else if (c.state === 'wait') { tx = null; faceChar(c, c.table.x - gp.x, c.table.z - gp.z, dt); c.wait += dt; if (c.wait > 60) { c.state = 'leave'; c.table.guest = null; setBubble(c, 'sad'); c.hideBubble = 1.2; } }
-  else if (c.state === 'drink') { c.drink -= dt; faceChar(c, c.table.x - gp.x, c.table.z - gp.z, dt); if (c.drink <= 0) { const total = Math.round(PRICE.tea * (c.vip ? 3 : 1) * priceMul()), tip = Math.random() < 0.5 ? Math.round(total * 0.5) : 0; payDirect(gp.x, gp.z, total + tip, tip ? 'Bahşiş!' : ''); c.state = 'leave'; c.table.guest = null; sfx('happy'); hearts(gp.x, 3.4, gp.z, 4); if (c.held) { rm(c.held); c.held = null; } if (c.vip) confetti(gp.x, 2.5, gp.z, 30); } }
+  else if (c.state === 'drink') { c.drink -= dt; faceChar(c, c.table.x - gp.x, c.table.z - gp.z, dt); if (c.drink <= 0) { const total = Math.round(PRICE.tea * (c.vip ? 3 : 1) * priceMul()), tip = Math.random() < 0.5 ? Math.round(total * 0.5) : 0; payDirect(gp.x, gp.z, total + tip, tip ? 'Bahşiş!' : ''); stats.cafeServed = (stats.cafeServed || 0) + 1; c.state = 'leave'; c.table.guest = null; sfx('happy'); hearts(gp.x, 3.4, gp.z, 4); if (c.held) { rm(c.held); c.held = null; } if (c.vip) confetti(gp.x, 2.5, gp.z, 30); } }
   if (c.state === 'leave') { if (c.hideBubble > 0) { c.hideBubble -= dt; if (c.hideBubble <= 0 && c.bubble) c.bubble.visible = false; } tx = 5.4; tz = -40.4; spd = 5.2; if (Math.hypot(tx - gp.x, tz - gp.z) < 0.5) { const ci = cafe.guests.indexOf(c); if (ci >= 0) { cafe.guests.splice(ci, 1); rm(c.group); if (c.bubble) { c.bubble.material.map.dispose(); c.bubble.material.dispose(); } } return true; } }
   if (tx !== null) { const dx = tx - gp.x, dz = tz - gp.z, d = Math.hypot(dx, dz); if (d > 0.02) { const s2 = Math.min(d, spd * dt); gp.x += dx / d * s2; gp.z += dz / d * s2; c.vel.set(dx / d * spd, 0, dz / d * spd); mv = 1; faceChar(c, dx, dz, dt); } } else c.vel.set(0, 0, 0);
   animChar(c, dt, mv, t); return false;
@@ -2895,9 +2896,9 @@ function updateCafe(dt, t) {
 /* ---- düğün ---- */
 function makeOrder() {
   const k = wed.done, it = {}; it.bouquet = 12 + 4 * k;
-  if (S.lv.sera > 0) it.pot = 6 + 2 * k; if (unlockedZ('parf')) it.perfume = 2 + k; if (unlockedZ('lav') && k >= 1) it.sachet = 4 + 2 * k; if (unlockedZ('sunf') && k >= 2) it.sbq = 3 + k;
+  if (S.lv.sera > 0) it.pot = 6 + 2 * k; if (unlockedZ('parf')) it.perfume = 2 + k; if (unlockedZ('lav')) it.sachet = 6 + 2 * k; if (unlockedZ('sunf')) it.sbq = 3 + k;
   let val = 0; for (const t in it) val += it[t] * PRICE[t];
-  wed.ord = { need: it, got: {}, time: 480, reward: Math.round(val * 3 * priceMul() * (1 + 0.15 * (S.lv.wedBonus || 0))) }; wed.state = 'active'; wed.sig = '';
+  wed.ord = { need: it, got: {}, time: 480, reward: Math.round(val * 14 * priceMul() * (1 + 0.15 * (S.lv.wedBonus || 0))) }; wed.state = 'active'; wed.sig = '';
   praise('Yeni düğün siparişi!', true);
 }
 function updateWedding(dt, t) {
@@ -2948,7 +2949,7 @@ function updateCity(dt, t) {
   const present = city.zone.inside; city.sv = (city.sv || 0) - dt;
   for (let i = city.queue.length - 1; i >= 0; i--) {
     const c = city.queue[i], gp = c.group.position; let tx = null, tz = null, spd = 4.8, mv = 0;
-    if (c.state === 'cq') { const qi = city.queue.indexOf(c); tx = city.cx; tz = city.cz + 2.2 + qi * 1.5; if (Math.hypot(tx - gp.x, tz - gp.z) < 0.3) { tx = null; faceChar(c, 0, -1, dt); if (qi === 0 && !c.bubble) setBubble(c, 'want'); if (qi === 0 && c._s !== c.want - c.got) { c._s = c.want - c.got; setBubble(c, 'want'); } if (qi === 0 && city.sv <= 0 && (present || city.cashier) && c.pending === 0) { const it = city.stock.takeLast(c.prod); if (it) { c.pending++; city.sv = city.cashier && !present ? 0.55 * Math.pow(0.85, S.lv.citySpd || 0) : 0.15; fly(it.mesh, out => { out.set(c.group.position.x, 1.2, c.group.position.z - 0.4); return 0; }, 0.22, 1.2, () => { rm(it.mesh); c.pending--; c.got++; c._s = -1; sfx('drop'); if (c.got >= c.want) { const total = Math.round(c.want * PRICE[c.prod] * 1.5 * priceMul()); payDirect(gp.x, gp.z, total, ''); hearts(gp.x, 3.4, gp.z, 4); sfx('happy'); c.state = 'cl'; city.queue.splice(city.queue.indexOf(c), 1); setBubble(c, 'happy'); c.hideBubble = 1.0; city.out = city.out || []; city.out.push(c); } }); } } } }
+    if (c.state === 'cq') { const qi = city.queue.indexOf(c); tx = city.cx; tz = city.cz + 2.2 + qi * 1.5; if (Math.hypot(tx - gp.x, tz - gp.z) < 0.3) { tx = null; faceChar(c, 0, -1, dt); if (qi === 0 && !c.bubble) setBubble(c, 'want'); if (qi === 0 && c._s !== c.want - c.got) { c._s = c.want - c.got; setBubble(c, 'want'); } if (qi === 0 && city.sv <= 0 && (present || city.cashier) && c.pending === 0) { const it = city.stock.takeLast(c.prod); if (it) { c.pending++; city.sv = city.cashier && !present ? 0.55 * Math.pow(0.85, S.lv.citySpd || 0) : 0.15; fly(it.mesh, out => { out.set(c.group.position.x, 1.2, c.group.position.z - 0.4); return 0; }, 0.22, 1.2, () => { rm(it.mesh); c.pending--; c.got++; c._s = -1; sfx('drop'); if (c.got >= c.want) { const total = Math.round(c.want * PRICE[c.prod] * 1.5 * priceMul()); payDirect(gp.x, gp.z, total, ''); stats.citySold = (stats.citySold || 0) + 1; hearts(gp.x, 3.4, gp.z, 4); sfx('happy'); c.state = 'cl'; city.queue.splice(city.queue.indexOf(c), 1); setBubble(c, 'happy'); c.hideBubble = 1.0; city.out = city.out || []; city.out.push(c); } }); } } } }
     if (c.state === 'cq' && !c.pending && c.wait !== undefined) { c.wait += dt; if (c.wait > 90 && c.got === 0 && city.queue[0] !== c) { /* sabırsız */ } }
     if (tx !== null) { const dx = tx - gp.x, dz = tz - gp.z, d = Math.hypot(dx, dz); if (d > 0.02) { const s2 = Math.min(d, spd * dt); gp.x += dx / d * s2; gp.z += dz / d * s2; c.vel.set(dx / d * spd, 0, dz / d * spd); mv = 1; faceChar(c, dx, dz, dt); } } else c.vel.set(0, 0, 0);
     animChar(c, dt, mv, t);
@@ -2969,13 +2970,16 @@ function buildLanes() {
   mkLane('sachet', 1.5, ct.x - 1.9); mkLane('sbq', 1.5, ct.x + 0.3); mkLane('perfume', 2.2, ct.x - 1.9);
 }
 GOALS.push(
-  { key: 'lav', lv: 1 }, { key: 'lavW', lv: 1 }, { key: 'keseSpd', lv: 1 }, { key: 'keseSpd', lv: 2 }, { key: 'keseSpd', lv: 3 }, { key: 'keseSpd', lv: 4 }, { key: 'keseSpd', lv: 5 },
-  { key: 'parf', lv: 1 }, { key: 'parfW', lv: 1 }, { key: 'parfSpd', lv: 1 }, { key: 'parfSpd', lv: 2 }, { key: 'parfSpd', lv: 3 }, { key: 'parfSpd', lv: 4 }, { key: 'parfSpd', lv: 5 },
-  { key: 'cafe', lv: 1 }, { key: 'cafeW', lv: 1 }, { key: 'teaSpd', lv: 1 }, { key: 'teaSpd', lv: 2 }, { key: 'teaSpd', lv: 3 }, { key: 'teaSpd', lv: 4 }, { key: 'teaSpd', lv: 5 },
-  { key: 'wed', lv: 1 }, { key: 'wedBonus', lv: 1 }, { key: 'wedBonus', lv: 2 }, { key: 'wedBonus', lv: 3 }, { key: 'wedBonus', lv: 4 }, { key: 'wedBonus', lv: 5 },
-  { key: 'sunf', lv: 1 }, { key: 'sunW', lv: 1 }, { key: 'sbqSpd', lv: 1 }, { key: 'sbqSpd', lv: 2 }, { key: 'sbqSpd', lv: 3 }, { key: 'sbqSpd', lv: 4 }, { key: 'sbqSpd', lv: 5 },
-  { key: 'city', lv: 1 }, { key: 'cityW', lv: 1 }, { key: 'citySpd', lv: 1 }, { key: 'citySpd', lv: 2 }, { key: 'citySpd', lv: 3 }, { key: 'citySpd', lv: 4 }, { key: 'citySpd', lv: 5 },
-  { key: 'stars', lv: 1 }, { key: 'stars', lv: 2 }, { key: 'stars', lv: 3 }, { key: 'stars', lv: 4 }, { key: 'stars', lv: 5 }
+  { key: 'lav', lv: 1 }, { key: 'lavW', lv: 1 }, { key: 'keseSpd', lv: 1 }, { key: 'keseSpd', lv: 2 }, { key: 'keseSpd', lv: 3 }, { key: 'parf', lv: 1 },
+  { key: 'parfW', lv: 1 }, { key: 'parfSpd', lv: 1 }, { key: 'keseSpd', lv: 4 }, { key: 'parfSpd', lv: 2 }, { key: 'keseSpd', lv: 5 }, { key: 'parfSpd', lv: 3 },
+  { key: 'keseSpd', lv: 6 }, { key: 'cafe', lv: 1 }, { key: 'cafeW', lv: 1 }, { key: 'teaSpd', lv: 1 }, { key: 'parfSpd', lv: 4 }, { key: 'teaSpd', lv: 2 },
+  { key: 'keseSpd', lv: 7 }, { key: 'teaSpd', lv: 3 }, { key: 'parfSpd', lv: 5 }, { key: 'teaSpd', lv: 4 }, { key: 'parfSpd', lv: 6 }, { key: 'wed', lv: 1 },
+  { key: 'wedBonus', lv: 1 }, { key: 'parfSpd', lv: 7 }, { key: 'teaSpd', lv: 5 }, { key: 'wedBonus', lv: 2 }, { key: 'stars', lv: 1 }, { key: 'wedBonus', lv: 3 },
+  { key: 'teaSpd', lv: 6 }, { key: 'wedBonus', lv: 4 }, { key: 'stars', lv: 2 }, { key: 'wedBonus', lv: 5 }, { key: 'teaSpd', lv: 7 }, { key: 'sunf', lv: 1 },
+  { key: 'sunW', lv: 1 }, { key: 'sbqSpd', lv: 1 }, { key: 'sbqSpd', lv: 2 }, { key: 'city', lv: 1 }, { key: 'cityW', lv: 1 }, { key: 'stars', lv: 3 },
+  { key: 'sbqSpd', lv: 3 }, { key: 'citySpd', lv: 1 }, { key: 'sbqSpd', lv: 4 }, { key: 'citySpd', lv: 2 }, { key: 'stars', lv: 4 }, { key: 'sbqSpd', lv: 5 },
+  { key: 'citySpd', lv: 3 }, { key: 'sbqSpd', lv: 6 }, { key: 'citySpd', lv: 4 }, { key: 'stars', lv: 5 }, { key: 'sbqSpd', lv: 7 }, { key: 'citySpd', lv: 5 },
+  { key: 'citySpd', lv: 6 }, { key: 'citySpd', lv: 7 }
 );
 GOALS.forEach((g, i) => { if (GFIRST[g.key] === undefined) GFIRST[g.key] = i; });
 Object.assign(MAIN_UNLOCKS, { lav: 1, parf: 1, cafe: 1, wed: 1, sunf: 1, city: 1, lavW: 1, parfW: 1, cafeW: 1, sunW: 1, cityW: 1, stars: 1 });
