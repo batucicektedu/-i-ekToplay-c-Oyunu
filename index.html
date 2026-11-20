@@ -50,6 +50,35 @@
     border:3px solid rgba(255,255,255,.55);display:none;pointer-events:none;z-index:5}
   #joyKnob{position:absolute;left:50%;top:50%;width:52px;height:52px;margin:-26px 0 0 -26px;border-radius:50%;background:rgba(255,255,255,.85);
     box-shadow:0 3px 0 rgba(0,0,0,.2)}
+  #goal{position:absolute;left:max(150px,calc(env(safe-area-inset-left) + 138px));right:max(12px,env(safe-area-inset-right));top:calc(max(12px,env(safe-area-inset-top)) + 54px);height:44px;display:none;align-items:center;gap:8px;padding:3px 12px 3px 4px;border-radius:999px;
+    background:linear-gradient(rgba(60,110,160,.82),rgba(18,48,84,.88));box-shadow:0 4px 0 rgba(0,0,0,.25),0 8px 14px rgba(0,0,0,.2),inset 0 2px 0 rgba(255,255,255,.4),inset 0 0 0 2px rgba(255,255,255,.18)}
+  #goal canvas{width:38px;height:38px;flex:none;border-radius:50%;background:rgba(255,255,255,.2)}
+  #goal .gm{flex:1;min-width:0}
+  #goal .gn{font-size:13px;line-height:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;-webkit-text-stroke:3px #16324a}
+  #goal .gb{position:relative;height:16px;margin-top:2px;border-radius:8px;background:rgba(10,20,40,.7);overflow:hidden;box-shadow:inset 0 2px 3px rgba(0,0,0,.4)}
+  #goal .gb i{position:absolute;left:0;top:0;bottom:0;width:0;border-radius:8px;background:linear-gradient(#9dff6a,#2fc43a);box-shadow:inset 0 2px 0 rgba(255,255,255,.5)}
+  #goal .gb b{position:absolute;inset:0;text-align:center;font-size:12px;line-height:16px;-webkit-text-stroke:3px #16324a}
+  #goal.pulse{animation:gpulse .5s ease-out}
+  @keyframes gpulse{0%{transform:scale(1)}35%{transform:scale(1.12)}100%{transform:scale(1)}}
+  #intro{position:absolute;left:0;right:0;top:56%;height:180px;display:none;pointer-events:none;z-index:6;text-align:center}
+  #intro .hand{position:absolute;left:50%;top:0;width:84px;height:100px;margin-left:-42px;animation:swipe 1.7s ease-in-out infinite;filter:drop-shadow(0 6px 4px rgba(0,0,0,.35))}
+  #intro .ring{position:absolute;left:50%;top:6px;width:60px;height:60px;margin-left:-30px;border-radius:50%;border:5px solid rgba(255,255,255,.85);animation:swipeRing 1.7s ease-in-out infinite}
+  #intro .path{position:absolute;left:50%;top:30px;width:150px;height:0;margin-left:-75px;border-top:6px dotted rgba(255,255,255,.75);border-radius:6px}
+  #intro .it{position:absolute;left:0;right:0;top:118px;font-size:30px;animation:hintPulse2 1.2s ease-in-out infinite}
+  @keyframes swipe{0%{transform:translate(-75px,10px) scale(1)}12%{transform:translate(-75px,14px) scale(.86)}78%{transform:translate(75px,14px) scale(.86)}92%,100%{transform:translate(75px,10px) scale(1);opacity:0}}
+  @keyframes swipeRing{0%{transform:translate(-75px,10px) scale(.6);opacity:0}12%{transform:translate(-75px,14px) scale(1);opacity:1}78%{transform:translate(75px,14px) scale(1);opacity:1}92%,100%{transform:translate(75px,10px) scale(1.3);opacity:0}}
+  @keyframes hintPulse2{0%,100%{transform:scale(1)}50%{transform:scale(1.07)}}
+  #praise{position:absolute;left:0;right:0;top:30%;text-align:center;font-size:46px;pointer-events:none;opacity:0;z-index:7}
+  #praise.big{font-size:40px}
+  #praise.show{animation:praisePop 1.3s cubic-bezier(.2,1.4,.4,1) forwards}
+  @keyframes praisePop{0%{transform:scale(.3) rotate(-6deg);opacity:0}18%{transform:scale(1.25) rotate(3deg);opacity:1}30%{transform:scale(1) rotate(0)}78%{transform:scale(1);opacity:1}100%{transform:scale(1) translateY(-40px);opacity:0}}
+  #flash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none;z-index:6}
+  #flash.on{animation:flashA .35s ease-out}
+  @keyframes flashA{0%{opacity:.55}100%{opacity:0}}
+  #fx{position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:6}
+  .coin{position:absolute;width:22px;height:22px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fff3a0,#ffc21a 55%,#c98400);border:2px solid #8a5a00;box-shadow:0 2px 0 rgba(0,0,0,.3)}
+  .gain{position:absolute;font-size:24px;color:#6dff6a;font-weight:900;-webkit-text-stroke:4px #0c2a12;paint-order:stroke fill;animation:gainUp .9s ease-out forwards}
+  @keyframes gainUp{0%{transform:translateY(0) scale(.7);opacity:0}15%{transform:translateY(-6px) scale(1.15);opacity:1}100%{transform:translateY(-44px) scale(1);opacity:0}}
   #msg{position:fixed;inset:0;display:none;align-items:center;justify-content:center;color:#16324a;font-size:20px;text-align:center;padding:20px;background:#8fd8ff;z-index:10}
 </style>
 </head>
@@ -71,10 +100,15 @@
       <svg id="hintArrow" viewBox="0 0 48 48"><path d="M6 18h20V8l16 16-16 16V30H6z" fill="#ffb703" stroke="#b36b00" stroke-width="3" stroke-linejoin="round"/></svg>
       <span id="hintT"></span>
     </div>
+    <div id="goal"><canvas id="goalIc" width="76" height="76"></canvas><div class="gm"><div class="gn txt" id="goalN"></div><div class="gb"><i id="goalF"></i><b class="txt" id="goalP"></b></div></div></div>
     <button id="reset" aria-label="Ayarlar"><svg viewBox="0 0 24 24"><path fill="#fff" d="M12 8a4 4 0 100 8 4 4 0 000-8zm9 5v-2l-2.2-.5a7 7 0 00-.7-1.7l1.2-1.9-1.4-1.4-1.9 1.2a7 7 0 00-1.7-.7L13 3h-2l-.5 2.2a7 7 0 00-1.7.7L6.9 4.7 5.5 6.1l1.2 1.9a7 7 0 00-.7 1.7L3.8 11v2l2.2.5c.2.6.4 1.2.7 1.7l-1.2 1.9 1.4 1.4 1.9-1.2c.5.3 1.1.5 1.7.7L11 21h2l.5-2.2c.6-.2 1.2-.4 1.7-.7l1.9 1.2 1.4-1.4-1.2-1.9c.3-.5.5-1.1.7-1.7z"/></svg></button>
     <button id="fsBtn" aria-label="Tam ekran"><svg viewBox="0 0 24 24"><path fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
   </div>
   <div id="menu"><div class="mbox"><div class="mt">Ayarlar</div><button id="mQ"></button><button id="mFs" style="display:none">Tam Ekran</button><button id="mReset">İlerlemeyi sıfırla</button><button id="mClose">Kapat</button></div></div>
+  <div id="fx"></div><div id="flash"></div><div id="praise" class="txt"></div>
+  <div id="intro"><div class="path"></div><div class="ring"></div>
+    <svg class="hand" viewBox="0 0 84 100"><path d="M30 8c0-5 4-8 8-8s8 3 8 8v36l4-2c4-2 9 0 10 4l1 3 4-1c4-1 8 1 9 5l1 4 3-1c4-1 8 2 8 6v18c0 14-10 26-24 26H46c-9 0-15-5-20-12L8 62c-3-4-1-9 3-11 3-1 7 0 9 3l10 14z" fill="#ffe0bd" stroke="#16324a" stroke-width="4" stroke-linejoin="round" transform="scale(.9) translate(2,4)"/></svg>
+    <div class="it txt">Kaydır ve oyna</div></div>
   <div id="toast"></div>
   <div id="joyBase"><div id="joyKnob"></div></div>
 </div>
@@ -99,27 +133,37 @@ const CFG = {
   yaw: 0.45, tilt: 52 * Math.PI / 180, fov: 45,
   baseSpeed: 5.6, speedStep: 0.15,
   capBase: 25, capStep: 10,
-  growTime: 4, billValue: 5,
-  packBase: 1.0, packMul: 0.75,
-  transferEvery: 0.08,
+  growTime: 4, billValue: 15,
+  packBase: 0.5, packMul: 0.75,
+  transferEvery: 0.04,
   inputCap: 24, outputCap: 16, moneyCap: 60,
-  queueMax: 6, spawnEvery: 2.0, spawnShortEvery: 0.8, walkSpeed: 5.0, leaveSpeed: 5.7, queueX: 10, queueZ0: -1.5, queueGap: 1.5,
+  queueMax: 6, spawnEvery: 1.4, spawnShortEvery: 0.6, walkSpeed: 5.0, leaveSpeed: 5.7, queueX: 10, queueZ0: -1.5, queueGap: 1.5,
   helperCap: 6,
   bounds: { x0: -19, x1: 17.8, z0: -10.4, z1: 16 },
   start: { x: -5.5, z: 2.6 }
 };
-const geo = (base, n) => Array.from({ length: n }, (_, i) => Math.round(base * Math.pow(1.5, i) / 5) * 5);
-const PRICE = { bouquet: 10, pot: 25 };
+const geo = (base, n) => Array.from({ length: n }, (_, i) => Math.max(5, Math.round(base * Math.pow(1.3, i) / 5) * 5));
+const PRICE = { bouquet: 15, pot: 45 };
 const UPG = {
-  sera: { name: 'Sera', costs: [1800] }, van: { name: 'Minibüs', costs: [6000] }, cashier: { name: 'Kasiyer', costs: [150] }, carrier: { name: 'Taşıyıcı', costs: [450] },
-  cashSpd: { name: 'Kasiyer Hızı', costs: geo(300, 7) }, carSpd: { name: 'Taşıyıcı Hızı', costs: geo(300, 7) },
-  carCap: { name: 'Taşıyıcı Kapasite', costs: geo(350, 7) }, helpSpd: { name: 'Bahçıvan Hızı', costs: geo(400, 7) },
-  cap:    { name: 'Kapasite',       costs: geo(70, 7) },
-  speed:  { name: 'Hız',            costs: geo(100, 7) },
-  pack:   { name: 'Paketleme Hızı', costs: geo(130, 7) },
-  bed:    { name: 'Yeni Bahçe',     costs: [300] },
-  helper: { name: 'Yardımcı',       costs: [450] }
+  sera: { name: 'Sera', costs: [1800] }, van: { name: 'Minibüs', costs: [3000] }, cashier: { name: 'Kasiyer', costs: [90] }, carrier: { name: 'Taşıyıcı', costs: [320] },
+  cashSpd: { name: 'Kasiyer Hızı', costs: geo(100, 5) }, carSpd: { name: 'Taşıyıcı Hızı', costs: geo(140, 5) },
+  carCap: { name: 'Taşıyıcı Kapasite', costs: geo(160, 5) }, helpSpd: { name: 'Bahçıvan Hızı', costs: geo(120, 5) },
+  cap:    { name: 'Kapasite',       costs: geo(50, 5) },
+  speed:  { name: 'Hız',            costs: geo(25, 5) },
+  pack:   { name: 'Paketleme Hızı', costs: geo(40, 5) },
+  bed:    { name: 'Yeni Bahçe',     costs: [150] },
+  helper: { name: 'Yardımcı',       costs: [220] }
 };
+const GOALS = [
+  { key: 'speed', lv: 1 }, { key: 'pack', lv: 1 }, { key: 'cap', lv: 1 }, { key: 'cashier', lv: 1 }, { key: 'bed', lv: 1 }, { key: 'helper', lv: 1 },
+  { key: 'speed', lv: 2 }, { key: 'carrier', lv: 1 }, { key: 'pack', lv: 2 }, { key: 'cap', lv: 2 }, { key: 'cashSpd', lv: 1 }, { key: 'helpSpd', lv: 1 },
+  { key: 'sera', lv: 1 },
+  { key: 'carSpd', lv: 1 }, { key: 'carCap', lv: 1 }, { key: 'pack', lv: 3 }, { key: 'speed', lv: 3 }, { key: 'van', lv: 1 },
+  { key: 'cap', lv: 3 }, { key: 'cashSpd', lv: 2 }, { key: 'helpSpd', lv: 2 }, { key: 'carSpd', lv: 2 }, { key: 'carCap', lv: 2 }, { key: 'pack', lv: 4 }, { key: 'speed', lv: 4 }, { key: 'cap', lv: 4 },
+  { key: 'cashSpd', lv: 3 }, { key: 'helpSpd', lv: 3 }, { key: 'carSpd', lv: 3 }, { key: 'carCap', lv: 3 }, { key: 'pack', lv: 5 }, { key: 'speed', lv: 5 }, { key: 'cap', lv: 5 },
+  { key: 'cashSpd', lv: 4 }, { key: 'helpSpd', lv: 4 }, { key: 'carSpd', lv: 4 }, { key: 'carCap', lv: 4 }, { key: 'cashSpd', lv: 5 }, { key: 'helpSpd', lv: 5 }, { key: 'carSpd', lv: 5 }, { key: 'carCap', lv: 5 }
+];
+const GFIRST = {}; GOALS.forEach((g, i) => { if (GFIRST[g.key] === undefined) GFIRST[g.key] = i; });
 const POS = {
   packTable: { x: -2.2, z: -2.2 }, packPad: { x: -6.2, z: 0.7 },
   outTable: { x: 1.4, z: -2.2 }, outPad: { x: 1.4, z: 0.7 },
@@ -146,8 +190,10 @@ function rm(o) { if (o && o.parent) o.parent.remove(o); }
 
 let fountainWater = null, clouds = [], butterflies = [];
 let LOADED_X = null, carpet1 = null, carpet2 = null;
+const MAIN_UNLOCKS = { bed: 1, helper: 1, cashier: 1, carrier: 1, sera: 1, van: 1 };
 const S = { money: 0, lv: { cap: 0, speed: 0, pack: 0, bed: 0, helper: 0, cashier: 0, carrier: 0, cashSpd: 0, carSpd: 0, carCap: 0, helpSpd: 0, sera: 0, van: 0 }, tut: 0 };
 let saveDirty = false, saveTimer = 0;
+let introDone = false, curGoal = null, curGoalIdx = -1, lastGoalIdx = -2;
 (function loadSave() {
   try {
     const s = JSON.parse(localStorage.getItem(SAVE_KEY));
@@ -926,7 +972,7 @@ function sendToBack(c, mesh, type, h) {
   fly(mesh, out => {
     const idx = Math.min(base, c.stack.length + c.incoming - 1);
     c.slotFn(idx, _w); charToWorld(c, _w, out); return c.yaw;
-  }, 0.34, h || 1.4, () => { c.incoming--; c.stack.add(mesh, type); if (c === P) { charToWorld(c, _w.set(0, 1.2, -0.7), _e); dust(_e.x, _e.y, _e.z, 2, 0.22); } });
+  }, 0.2, h || 1.4, () => { c.incoming--; c.stack.add(mesh, type); if (c === P) { charToWorld(c, _w.set(0, 1.2, -0.7), _e); dust(_e.x, _e.y, _e.z, 2, 0.22); } });
 }
 function takeFromBack(c, type) {
   const it = c.stack.takeLast(type); if (!it) return null;
@@ -1062,9 +1108,9 @@ function growFlower(f) {
 function buildBed(idx) {
   const p = POS.beds[idx], bed = { idx, x: p.x, z: p.z, locked: idx === 2, flowers: [], group: new THREE.Group() };
   const soil = rbox(6.6, 0.3, 5.4, 0.12, mat(0x4a2a14)); soil.position.set(p.x, 0.1, p.z); soil.receiveShadow = true; world.add(soil);
-  for (let r = 0; r < 4; r++) for (let c = 0; c < 5; c++) {
+  for (let r = 0; r < 5; r++) for (let c = 0; c < 7; c++) {
     const ty = idx === 0 ? 'tulip' : idx === 1 ? 'rose' : ((r + c) % 2 ? 'rose' : 'tulip');
-    const fx = p.x + (c - 2) * 1.2, fz = p.z + (r - 1.5) * 1.15; const f = newFlower(bed, r + c + idx, ty, fx, 0.2, fz, rand(0, CFG.growTime), CFG.growTime); f.vis = idx !== 2;
+    const fx = p.x + (c - 3) * 0.95, fz = p.z + (r - 2) * 0.98; const f = newFlower(bed, r + c + idx, ty, fx, 0.2, fz, rand(0, CFG.growTime), CFG.growTime); f.vis = idx !== 2;
     bed.flowers.push(f);
   }
   if (idx === 2) {
@@ -1095,7 +1141,7 @@ function buildBed(idx) {
 }
 function unlockBed(bed, instant) {
   bed.locked = false; bed.group.visible = !!instant ? false : true; bed.flowers.forEach(f => { f.vis = true; f.t = instant ? rand(0, f.gt) : 0; });
-  if (!instant) { bed.group.visible = true; bed.dropping = 0; confetti(bed.x, 1.5, bed.z, 50); for (let i = 0; i < 14; i++) dust(bed.x + rand(-3.2, 3.2), 0.3, bed.z + rand(-2.6, 2.6), 2, 0.8); ring(bed.x, bed.z, 0x7dff7a, 7); nudge.t = 0; nudge.x = bed.x; nudge.z = bed.z; nudge.w = 0.7; }
+  if (!instant) { bed.group.visible = true; bed.dropping = 0; confetti(bed.x, 1.5, bed.z, 50); for (let i = 0; i < 14; i++) dust(bed.x + rand(-3.2, 3.2), 0.3, bed.z + rand(-2.6, 2.6), 2, 0.8); ring(bed.x, bed.z, 0x7dff7a, 7); panTo(bed.x, bed.z, 0.7, 1.4); }
 }
 
 /* ---- furniture: tables, machine, counter ---- */
@@ -1290,8 +1336,8 @@ function buildSera() {
   ad(gh, mk(G.box, white, 11.5, 0.14, 0.14), 28.5, 4.75, -3);
   const soil = rbox(6.6, 0.3, 5.4, 0.12, mat(0x4a2a14)); soil.receiveShadow = true; ad(gh, soil, 28.5, 0.15, -3);
   const bed = { idx: 3, x: 28.5, z: -3, locked: true, nohelp: true, flowers: [], group: new THREE.Group() };
-  for (let r = 0; r < 4; r++) for (let c = 0; c < 5; c++) {
-    const ci = (r * 2 + c) % 4, fx = 28.5 + (c - 2) * 1.2, fz = -3 + (r - 1.5) * 1.15;
+  for (let r = 0; r < 5; r++) for (let c = 0; c < 7; c++) {
+    const ci = (r * 2 + c) % 4, fx = 28.5 + (c - 3) * 0.95, fz = -3 + (r - 2) * 0.98;
     bed.flowers.push(newFlower(bed, ci, 'orchid', fx, 0.3, fz, 0, 8));
   }
   beds.push(bed); zone2.bed = bed;
@@ -1344,7 +1390,7 @@ function unlockSera(instant) {
   potZone.group.visible = potOutZone.group.visible = true;
   if (instant) { zone2.lockedGroup.visible = false; zone2.groups.forEach(g => { g[0].visible = true; g[0].scale.setScalar(1); }); return; }
   zone2.popT = 0; zone2.popFlags = []; zone2.lockedGroup.dropping = 0;
-  confetti(33, 2, 0, 70); for (let i = 0; i < 16; i++) dust(rand(22, 44), 0.3, rand(-11, 11), 2, 0.9); ring(33, 0, 0xa64dff, 12); nudge.t = 0; nudge.x = 33; nudge.z = -2; nudge.w = 0.95; vib(30);
+  confetti(33, 2, 0, 70); for (let i = 0; i < 16; i++) dust(rand(22, 44), 0.3, rand(-11, 11), 2, 0.9); ring(33, 0, 0xa64dff, 12); panTo(33, -2, 0.95, 1.8); vib(30);
 }
 function updateSera(dt) {
   if (!zone2) return;
@@ -1364,7 +1410,7 @@ function updatePotting(dt, t) {
   if (!zone2 || zone2.locked || zone2.popT !== undefined && zone2.popT < 1.5) return;
   const m = potM, interval = CFG.packBase * 1.4;
   if (!m.working && potInput.length > 0 && potOutput.length + m.pendingOut < 8) {
-    const it = potInput.takeLast('orchid'); fly(it.mesh, out => { out.set(m.x, TABLE_Y + 1.5, m.z); return 0; }, 0.25, 0.6, () => { rm(it.mesh); sfx('pack'); });
+    const it = potInput.takeLast('orchid'); fly(it.mesh, out => { out.set(m.x, TABLE_Y + 1.5, m.z); return 0; }, 0.15, 0.6, () => { rm(it.mesh); sfx('pack'); });
     m.working = true; m.timer = 0;
   }
   if (m.working) {
@@ -1459,13 +1505,13 @@ function vanHud() {
 function toVan(it, who) {
   if (posable(it.mesh)) bouquetPose(it.mesh, true);
   const idx = vanLoad.length + vanLoad.pend; vanLoad.pend++; VAN.sum += PRICE[it.type] || 10;
-  fly(it.mesh, out => { vanLoad.slotFn(Math.min(idx, 7), out); return 0; }, 0.36, 1.5, () => { vanLoad.pend--; vanLoad.add(it.mesh, it.type); sfx('drop'); vanHud(); });
+  fly(it.mesh, out => { vanLoad.slotFn(Math.min(idx, 7), out); return 0; }, 0.22, 1.5, () => { vanLoad.pend--; vanLoad.add(it.mesh, it.type); sfx('drop'); vanHud(); });
   if (who === P) stats.delivered = (stats.delivered || 0) + 1;
 }
 function unlockVan(instant) {
   zone3.locked = false; vanZone.group.visible = vanMoneyZone.group.visible = true;
   if (instant) { zone3.lockedGroup.visible = false; zone3.groups.forEach(g => { g[0].visible = true; g[0].scale.setScalar(1); }); VAN.group.visible = true; return; }
-  zone3.popT = 0; zone3.lockedGroup.dropping = 0; confetti(18, 2, 24, 70); for (let i = 0; i < 14; i++) dust(rand(13, 24), 0.3, rand(17, 31), 2, 0.9); ring(18, 24, 0x0aa89a, 12); nudge.t = 0; nudge.x = 18; nudge.z = 22; nudge.w = 0.95; vib(30);
+  zone3.popT = 0; zone3.lockedGroup.dropping = 0; confetti(18, 2, 24, 70); for (let i = 0; i < 14; i++) dust(rand(13, 24), 0.3, rand(17, 31), 2, 0.9); ring(18, 24, 0x0aa89a, 12); panTo(18, 22, 0.95, 1.8); vib(30);
 }
 function updateVanZone(dt) {
   if (!zone3) return;
@@ -1690,7 +1736,7 @@ function helperKind() {
 function dropToPot(who) {
   const it = takeFromBack(who, 'orchid'); if (!it) return false;
   const idx = potInput.length + (potInput.pend || 0); potInput.pend = (potInput.pend || 0) + 1;
-  fly(it.mesh, out => { potInput.slotFn(Math.min(idx, CFG.inputCap - 1), out); return 0; }, 0.32, 1.3, () => { potInput.pend--; potInput.add(it.mesh, 'orchid'); }); sfx('drop'); return true;
+  fly(it.mesh, out => { potInput.slotFn(Math.min(idx, CFG.inputCap - 1), out); return 0; }, 0.18, 1.3, () => { potInput.pend--; potInput.add(it.mesh, 'orchid'); }); sfx('drop'); return true;
 }
 function updateHelper(dt, t) {
   const h = helper; if (!h) return;
@@ -1747,7 +1793,7 @@ function updateCashier(dt, t) {
   const h = cashier; if (!h) return; workerPop(h, dt);
   h.cd -= dt; h.busy = Math.max(0, h.busy - dt);
   const c = queue[0];
-  if (h.cd <= 0 && c && c.state === 'queue' && c.atSlot && c.want - c.got - c.pending > 0 && lane(c.prod).count(c.prod) > 0) { serveFromShelf(c); h.cd = 1.2 * Math.pow(0.8, S.lv.cashSpd); h.busy = 0.5; }
+  if (h.cd <= 0 && c && c.state === 'queue' && c.atSlot && c.want - c.got - c.pending > 0 && lane(c.prod).count(c.prod) > 0) { serveFromShelf(c); h.cd = 0.6 * Math.pow(0.8, S.lv.cashSpd); h.busy = 0.5; }
   animChar(h, dt, 0, t); const w = h.busy > 0 ? 1 : 0; h.armR.rotation.x = -1.3 * w * (0.7 + 0.3 * Math.sin(t * 14));
 }
 function spawnCarrier(instant) {
@@ -1823,8 +1869,8 @@ function spawnCustomer(z) {
   const c = makeChar(vip ? { shirt: 0xff1fa0, pants: 0x6a2be8, hair: pick(HAIRS), skin: pick(SKINS), hairStyle: fem ? 'long' : 'short', crown: true, shoe: 0xffc21a } : { shirt: sh, pants: pick([0x3b4a6b, 0x5b4636, 0x2f6f5f, 0x444444]), hair: pick(HAIRS), skin: pick(SKINS), dress: fem && Math.random() < 0.6 ? pick(SHIRTS) : 0,
     hairStyle: fem ? pick(['bob', 'long', 'ponytail', 'bun']) : pick(['short', 'spiky', 'short']), hat: !fem && Math.random() < 0.3 ? 'cap' : null, hatColor: pick([0xff5a6e, 0x4d96ff, 0xffd23f]), shoe: pick([0x3a2a22, 0xffffff, 0xd8412f]) });
   c.group.position.set(CFG.queueX + rand(-0.4, 0.4), 0, z); c.yaw = Math.PI; c.group.rotation.y = Math.PI;
-  const r = Math.random(); c.want = r < 0.32 ? 1 : r < 0.62 ? 2 : r < 0.85 ? 3 : 4;
-  c.vip = vip; c.prod = S.lv.sera > 0 && potsPossible() && Math.random() < 0.4 ? 'pot' : 'bouquet'; c.wait = 0; c.lastGot = 0; if (c.prod === 'pot') c.want = Math.min(c.want, 2); c.got = 0; c.pending = 0; c.state = 'queue'; c.atSlot = false; c.bubble = null; c.held = null; c.path = null;
+  const r = Math.random(); c.want = r < 0.2 ? 2 : r < 0.45 ? 3 : r < 0.7 ? 4 : r < 0.88 ? 5 : 6;
+  c.vip = vip; c.prod = S.lv.sera > 0 && potsPossible() && Math.random() < 0.4 ? 'pot' : 'bouquet'; c.wait = 0; c.lastGot = 0; if (c.prod === 'pot') c.want = Math.min(c.want, 3); c.got = 0; c.pending = 0; c.state = 'queue'; c.atSlot = false; c.bubble = null; c.held = null; c.path = null;
   scene.add(c.group); customers.push(c); queue.push(c);
 }
 function pick(a) { return a[Math.floor(Math.random() * a.length)]; }
@@ -1842,7 +1888,7 @@ function finishCustomer(c) {
   hearts(gp.x, 3.4, gp.z, 5); coins(gp.x, 2.2, gp.z, 8); popText(gp.x, 4.2, gp.z, '+' + total, '#6dff6a'); vib(8);
   for (let k = 0; k < n; k++) later(0.15 + k * Math.min(0.16, 0.8 / n), () => spawnBill(c));
   if (c.vip) { confetti(gp.x, 2.5, gp.z, 40); sparkles(gp.x, 2, gp.z, 12, 0xffe36a, 0.6); popText(gp.x, 5.0, gp.z, 'VIP x3!', '#ffd400'); ring(gp.x, gp.z, 0xffc21a, 5); sfx('up'); vib(20); }
-  else if (Math.random() < 0.25) { const tip = Math.max(5, Math.round(total * 0.2 / 5) * 5); later(0.9, () => { popText(gp.x, 3.4, gp.z, 'Bahşiş +' + tip, '#ffd400'); coins(gp.x, 2.4, gp.z, 5); for (let k = 0; k < tip / CFG.billValue; k++) spawnBill(c); }); }
+  else if (Math.random() < 0.25) { const tip = Math.max(15, Math.round(total * 0.2 / 15) * 15); later(0.9, () => { popText(gp.x, 3.4, gp.z, 'Bahşiş +' + tip, '#ffd400'); coins(gp.x, 2.4, gp.z, 5); for (let k = 0; k < tip / CFG.billValue; k++) spawnBill(c); }); }
 }
 function spawnBill(c) {
   const b = makeBill(); b.position.set(c.group.position.x, 1.8, c.group.position.z); scene.add(b);
@@ -1863,7 +1909,7 @@ function updateCustomers(dt, t) {
       if (c.atSlot && qi === 0 && c.bubble && c.bubKind === 'want' && c._shown !== c.want - c.got) { c._shown = c.want - c.got; setBubble(c, 'want'); }
       if (c.atSlot && qi === 0) {
         if (c.lastGot !== c.got) { c.lastGot = c.got; c.wait = 0; } c.wait += dt;
-        if (c.wait > 20 && c.got === 0 && c.pending === 0 && !c.switched) { const o = c.prod === 'pot' ? 'bouquet' : 'pot'; if (stockOf(o) > 0 && (o === 'bouquet' || (zone2 && !zone2.locked))) { c.prod = o; c.switched = true; c.want = Math.min(c.want, o === 'pot' ? 2 : 4); c._shown = -1; c.wait = 0; setBubble(c, 'want'); sparkles(gp.x, 3.3, gp.z, 6, 0xfff2a0, 0.4); } }
+        if (c.wait > 20 && c.got === 0 && c.pending === 0 && !c.switched) { const o = c.prod === 'pot' ? 'bouquet' : 'pot'; if (stockOf(o) > 0 && (o === 'bouquet' || (zone2 && !zone2.locked))) { c.prod = o; c.switched = true; c.want = Math.min(c.want, o === 'pot' ? 3 : 6); c._shown = -1; c.wait = 0; setBubble(c, 'want'); sparkles(gp.x, 3.3, gp.z, 6, 0xfff2a0, 0.4); } }
         if (c.wait > 45 && c.pending === 0) { if (c.got > 0) { c.want = c.got; finishCustomer(c); } else leaveSad(c); }
       }
       if (c.atSlot) { faceChar(c, 0, -1, dt); tx = null; }
@@ -1899,7 +1945,7 @@ function harvest(f, who) {
 function transferToInput(who) {
   const it = takeFromBack(who, 'flower'); if (!it) return;
   const idx = inputPile.length + (inputPile.pend || 0); inputPile.pend = (inputPile.pend || 0) + 1;
-  fly(it.mesh, out => { inputPile.slotFn(Math.min(idx, CFG.inputCap - 1), out); return 0; }, 0.32, 1.3, () => { inputPile.pend--; inputPile.add(it.mesh, 'flower'); });
+  fly(it.mesh, out => { inputPile.slotFn(Math.min(idx, CFG.inputCap - 1), out); return 0; }, 0.18, 1.3, () => { inputPile.pend--; inputPile.add(it.mesh, 'flower'); });
   if (who === P) { stats.dropped++; } sfx('drop');
 }
 function landAtCustomer(c, mesh) {
@@ -1910,7 +1956,7 @@ function landAtCustomer(c, mesh) {
 }
 function flyToCustomer(c, mesh) {
   c.pending++;
-  fly(mesh, out => { out.set(c.group.position.x, 1.15, c.group.position.z + 0.5); return Math.PI / 2; }, 0.34, 1.2, () => landAtCustomer(c, mesh));
+  fly(mesh, out => { out.set(c.group.position.x, 1.15, c.group.position.z + 0.5); return Math.PI / 2; }, 0.2, 1.2, () => landAtCustomer(c, mesh));
 }
 function transferToCounter(c) {
   const it = takeFromBack(P, c.prod); if (!it) return;
@@ -1920,7 +1966,7 @@ const shelfFree = t => { const l = lane(t); return l.cap - l.length - l.pend; };
 function toShelf(it, who) {
   if (posable(it.mesh)) bouquetPose(it.mesh, true);
   const l = lane(it.type), idx = l.length + l.pend; l.pend++;
-  fly(it.mesh, out => { l.slotFn(Math.min(idx, 5), out); return 0; }, 0.36, 1.4, () => { l.pend--; l.add(it.mesh, it.type); sfx('drop'); });
+  fly(it.mesh, out => { l.slotFn(Math.min(idx, 5), out); return 0; }, 0.22, 1.4, () => { l.pend--; l.add(it.mesh, it.type); sfx('drop'); });
   if (who === P) stats.delivered = (stats.delivered || 0) + 1;
 }
 function serveFromShelf(c) {
@@ -1938,17 +1984,18 @@ function collectMoney(pile) {
     if (pile.extra > 0) { const v = pile.extra * CFG.billValue; pile.extra = 0; addMoney(v); sfx('coin'); stats.collected++; }
     return false;
   }
-  fly(it.mesh, out => { out.set(P.group.position.x, 1.3, P.group.position.z); return 0; }, 0.32, 1.2, () => { rm(it.mesh); addMoney(CFG.billValue); sfx('coin'); stats.collected++; collAcc += CFG.billValue; });
+  fly(it.mesh, out => { out.set(P.group.position.x, 1.3, P.group.position.z); return 0; }, 0.2, 1.2, () => { rm(it.mesh); addMoney(CFG.billValue); sfx('coin'); stats.collected++; collAcc += CFG.billValue; coinFly(P.group.position.x, 1.6, P.group.position.z); });
   return true;
 }
 function updateCollectText(dt) { collT -= dt; if (collAcc > 0 && collT <= 0) { popText(P.group.position.x, 3.6, P.group.position.z, '+' + collAcc, '#6dff6a'); collAcc = 0; collT = 0.4; } }
-function addMoney(v) { S.money += v; stats.earned += v; saveDirty = true; moneyEl.classList.remove('bump'); void moneyEl.offsetWidth; moneyEl.classList.add('bump'); }
+const MONEY_MS = [100, 400, 1000, 2500, 6000, 15000, 40000]; let moneyMs = 0;
+function addMoney(v) { S.money += v; stats.earned += v; gainAcc += v; saveDirty = true; if (moneyMs < MONEY_MS.length && stats.earned >= MONEY_MS[moneyMs]) { moneyMs++; if (introDone) praise(pick(PRAISE)); } }
 
 function updatePacking(dt, t) {
   const m = machine, interval = packInterval();
   if (!m.working && inputPile.length > 0 && outputPile.length + m.pendingOut < CFG.outputCap) {
     const it = inputPile.takeLast('flower');
-    fly(it.mesh, out => { out.set(m.x, TABLE_Y + 1.5, m.z); return 0; }, 0.25, 0.6, () => { rm(it.mesh); sfx('pack'); });
+    fly(it.mesh, out => { out.set(m.x, TABLE_Y + 1.5, m.z); return 0; }, 0.15, 0.6, () => { rm(it.mesh); sfx('pack'); });
     m.working = true; m.timer = 0;
   }
   if (m.working) {
@@ -1959,7 +2006,7 @@ function updatePacking(dt, t) {
       m.working = false; m.pendingOut++; stats.packed++;
       const b = makeBouquetItem(undefined, true); b.position.set(m.x, TABLE_Y + 0.6, m.z + 0.9); scene.add(b);
       const idx = outputPile.length + m.pendingOut - 1; sparkles(m.x, TABLE_Y + 0.8, m.z + 0.9, 4, 0xffffff, 0.3);
-      fly(b, out => { outputPile.slotFn(Math.min(idx, CFG.outputCap - 1), out); return 0; }, 0.5, 1.6, () => { m.pendingOut--; outputPile.add(b, 'bouquet'); sfx('drop'); outputPile.slotFn(outputPile.length - 1, _w); sparkles(_w.x, _w.y + 0.3, _w.z, 7, 0xfff2a0, 0.5); });
+      fly(b, out => { outputPile.slotFn(Math.min(idx, CFG.outputCap - 1), out); return 0; }, 0.3, 1.6, () => { m.pendingOut--; outputPile.add(b, 'bouquet'); sfx('drop'); outputPile.slotFn(outputPile.length - 1, _w); sparkles(_w.x, _w.y + 0.3, _w.z, 7, 0xfff2a0, 0.5); });
     }
   } else { machine.bar.visible = machine.barBg.visible = false; m.group.scale.y = damp(m.group.scale.y, 1, 10, dt); m.group.position.y = TABLE_Y; }
   const w = m.worker; animChar(w, dt, 0, t);
@@ -1967,10 +2014,20 @@ function updatePacking(dt, t) {
   w.body.position.y = wk * Math.abs(Math.sin(t * 10)) * 0.05;
 }
 
+function goalIndex() { for (let i = 0; i < GOALS.length; i++) if (S.lv[GOALS[i].key] < GOALS[i].lv) return i; return -1; }
 function padVisible(u) {
   if (u.vis && !u.vis()) return false;
-  if (!u.shown && (S.money >= 0.5 * u.cost() || u.paid > 0 || S.lv[u.key] > 0)) u.shown = true;
+  if (!u.shown && (S.lv[u.key] > 0 || u.paid > 0 || (GFIRST[u.key] !== undefined && curGoalIdx >= GFIRST[u.key]) || (curGoalIdx < 0 && introDone))) u.shown = true;
   return !!u.shown;
+}
+const payDur = c => 0.6 + 0.6 * clamp((c - 300) / 1500, 0, 1);
+function updateGoalState() {
+  curGoalIdx = goalIndex(); curGoal = curGoalIdx >= 0 ? GOALS[curGoalIdx] : null;
+  if (curGoalIdx !== lastGoalIdx) {
+    const first = lastGoalIdx === -2; lastGoalIdx = curGoalIdx;
+    if (curGoal && !first) { const u = upPads[curGoal.key]; u.shown = true; later(0.25, () => { u.group.visible = padVisible(u); if (u.group.visible && !u.done) { u.pop = 0.6; panTo(u.x, u.z, 1, 1.0); } }); }
+    drawGoalIcon(); goalEl.classList.remove('pulse'); void goalEl.offsetWidth; goalEl.classList.add('pulse');
+  }
 }
 function updateUpgrades(dt) {
   if (carpet1) { carpet1.visible = ['cap', 'speed', 'pack', 'helper', 'helpSpd'].some(k => upPads[k].shown); carpet2.visible = ['cashier', 'cashSpd', 'carrier', 'carSpd', 'carCap'].some(k => upPads[k].shown); }
@@ -1982,16 +2039,15 @@ function updateUpgrades(dt) {
       u.pause -= dt; if (!u.inside) u.off = true;
       if (u.off && u.pause <= 0 && u.inside) { u.locked = false; u.hold = 0; u.redraw(); } else continue;
     }
-    if (!u.inside || S.money <= 0) { u.hold = 0; u.dwell = 0; continue; }
-    u.dwell = (u.dwell || 0) + dt; if (u.dwell < 0.5) continue;
+    if (!u.inside || S.money <= 0) { u.hold = 0; continue; }
     u.hold += dt;
-    u.tick -= dt; if (u.tick > 0) continue; u.tick = 0.05;
-    const cost = u.cost(), rem = cost - u.paid, perSec = cost / 2.5 * (1 + u.hold * 1.1), amt = Math.min(S.money, rem, Math.max(1, Math.ceil(perSec * 0.05)));
+    u.tick -= dt; if (u.tick > 0) continue; u.tick = 0.03;
+    const cost = u.cost(), rem = cost - u.paid, perSec = cost / payDur(cost) * (1 + u.hold * 0.8), amt = Math.min(S.money, rem, Math.max(1, Math.ceil(perSec * 0.03)));
     if (amt <= 0) continue;
     S.money -= amt; u.paid += amt; saveDirty = true; sfx('coin');
     const b = makeBill(); b.position.set(P.group.position.x + rand(-0.3, 0.3), 1.5, P.group.position.z + rand(-0.3, 0.3)); scene.add(b);
     const ox = rand(-0.5, 0.5), oz = rand(-0.5, 0.5);
-    fly(b, out => { out.set(u.x + ox, 0.4, u.z + oz); return 0; }, 0.38, 2.2, () => { rm(b); u.group.scale.set(1.04, 1, 1.04); });
+    fly(b, out => { out.set(u.x + ox, 0.4, u.z + oz); return 0; }, 0.25, 2.2, () => { rm(b); u.group.scale.set(1.04, 1, 1.04); });
     u.redraw();
     if (u.paid >= cost) { purchase(u); break; }
   }
@@ -2005,11 +2061,12 @@ function applyUpgrade(key, instant) {
   else if (key === 'carrier') spawnCarrier(instant);
 }
 function purchase(u) {
-  const key = u.key; S.lv[key]++; u.paid = 0; stats.upgrades++; saveDirty = true; u.locked = true; u.pause = 1.0; u.off = false; u.hold = 0; u.pop = 0.6;
+  const key = u.key; S.lv[key]++; u.paid = 0; stats.upgrades++; saveDirty = true; u.locked = true; u.pause = 0.3; u.off = false; u.hold = 0; u.pop = 0.6;
   sfx('up'); confetti(u.x, 1.2, u.z, 44); sparkles(u.x, 0.8, u.z, 14, 0xfff2a0, 1.0); ring(u.x, u.z, 0xffc21a, 4.5);
   ring(P.group.position.x, P.group.position.z, 0x7dff7a, 3); sparkles(P.group.position.x, 0.6, P.group.position.z, 12, 0x9dffb0, 0.5); vib(18);
   popText(u.x, 2.6, u.z, '+ ' + UPG[key].name + '!', '#7dff7a');
   applyUpgrade(key, false);
+  if (MAIN_UNLOCKS[key]) { praise(UPG[key].name + ' açıldı!', true); flash(); coinBurstUI(); } else if (stats.upgrades % 3 === 0) praise(pick(PRAISE));
   if (key === 'carCap' && carrier) { const cp = carrier.group.position; popText(cp.x, 4.2, cp.z, 'Kapasite ' + (6 + 4 * S.lv.carCap), '#9dffb0'); sparkles(cp.x, 1.5, cp.z, 12, 0x9dffb0, 0.6); ring(cp.x, cp.z, 0x9dffb0, 3); }
   if (S.lv[key] >= u.max()) { u.done = true; u.group.visible = false; } else u.redraw();
   writeSave();
@@ -2018,9 +2075,10 @@ function purchase(u) {
 /* =====================================================================
    12. INPUT
    ===================================================================== */
+let BOT = null;
 const keys = {}; let joy = { id: null, ox: 0, oy: 0, x: 0, y: 0 };
 const joyBase = document.getElementById('joyBase'), joyKnob = document.getElementById('joyKnob');
-window.addEventListener('keydown', e => { initAudio(); keys[e.code] = true; if (/^(Arrow|Space)/.test(e.code)) e.preventDefault(); });
+window.addEventListener('keydown', e => { initAudio(); if (/^(Key[WASD]|Arrow)/.test(e.code)) hideIntro(); keys[e.code] = true; if (/^(Arrow|Space)/.test(e.code)) e.preventDefault(); });
 window.addEventListener('keyup', e => { keys[e.code] = false; });
 window.addEventListener('blur', () => { for (const k in keys) keys[k] = false; joy.id = null; joy.x = joy.y = 0; joyBase.style.display = 'none'; });
 function joyStart(e) {
@@ -2034,7 +2092,7 @@ function joyMove(e) {
   if (e.pointerId !== joy.id) return;
   let dx = e.clientX - joy.ox, dy = e.clientY - joy.oy; const R = 52, l = Math.hypot(dx, dy);
   if (l > R) { dx = dx / l * R; dy = dy / l * R; }
-  joy.x = dx / R; joy.y = dy / R; joyKnob.style.transform = 'translate(' + dx + 'px,' + dy + 'px)';
+  joy.x = dx / R; joy.y = dy / R; if (l > 8) hideIntro(); joyKnob.style.transform = 'translate(' + dx + 'px,' + dy + 'px)';
 }
 function joyEnd(e) { if (e.pointerId !== joy.id) return; joy.id = null; joy.x = joy.y = 0; joyBase.style.display = 'none'; }
 window.addEventListener('pointerdown', joyStart); window.addEventListener('pointermove', joyMove);
@@ -2043,6 +2101,7 @@ document.addEventListener('touchmove', e => e.preventDefault(), { passive: false
 document.addEventListener('gesturestart', e => e.preventDefault());
 document.addEventListener('contextmenu', e => e.preventDefault());
 function inputVec(out) {
+  if (BOT) { out.x = BOT.x; out.z = BOT.z; return out; }
   let x = joy.x, y = joy.y;
   if (keys.KeyA || keys.ArrowLeft) x -= 1; if (keys.KeyD || keys.ArrowRight) x += 1;
   if (keys.KeyW || keys.ArrowUp) y -= 1; if (keys.KeyS || keys.ArrowDown) y += 1;
@@ -2074,17 +2133,44 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) write
 let dispMoney = S.money;
 
 const TUT = [
-  { t: 'Çiçekleri topla', done: () => stats.harvested >= 4 },
-  { t: 'Paketleme alanına bırak', done: () => stats.dropped >= 3 },
-  { t: 'Buketleri al', done: () => stats.picked >= 1 },
-  { t: 'Müşterilere sat', done: () => (stats.delivered || 0) >= 1 },
-  { t: 'Paraları topla', done: () => stats.collected >= 1 },
-  { t: 'Geliştirme yap', done: () => stats.upgrades >= 1 },
-  { t: 'Kasiyer işe al', done: () => S.lv.cashier > 0, pad: 'cashier', show: () => S.money >= 90 },
-  { t: 'Taşıyıcı işe al', done: () => S.lv.carrier > 0, pad: 'carrier', show: () => S.money >= 270 },
-  { t: 'Sera\'yı aç', done: () => S.lv.sera > 0, pad: 'sera', show: () => S.money >= 1080 },
-  { t: 'Minibüsü aç', done: () => S.lv.van > 0, pad: 'van', show: () => S.money >= 3600 }
+  { done: () => stats.harvested >= 4 }, { done: () => stats.dropped >= 3 }, { done: () => stats.picked >= 1 },
+  { done: () => (stats.delivered || 0) >= 1 }, { done: () => stats.collected >= 1 }, { done: () => stats.upgrades >= 1 }
 ];
+const LABELS = { harvest: 'Çiçekleri topla', pack: 'Paketle', out: 'Buketleri al', counter: 'Müşteriye sat', money: 'Parayı topla', pad: 'Geliştir!', pot: 'Saksıya bırak', potOut: 'Saksıları al' };
+const goalEl = document.getElementById('goal'), goalN = document.getElementById('goalN'), goalF = document.getElementById('goalF'), goalP = document.getElementById('goalP'), goalIc = document.getElementById('goalIc');
+const introEl = document.getElementById('intro'), praiseEl = document.getElementById('praise'), flashEl = document.getElementById('flash'), fxEl = document.getElementById('fx');
+const PRAISE = ['Harika!', 'Süper!', 'Müthiş!', 'Bravo!', 'Muhteşem!'], PRAISE_COL = ['#ffe14a', '#7dff7a', '#ff9ad0', '#8fe0ff', '#ffb04a'];
+function hideIntro() { if (introDone) return; introDone = true; introEl.style.display = 'none'; }
+function praise(t, big) { praiseEl.textContent = t; praiseEl.style.color = pick(PRAISE_COL); praiseEl.className = 'txt' + (big ? ' big' : ''); void praiseEl.offsetWidth; praiseEl.classList.add('show'); sfx('happy'); }
+function flash() { flashEl.classList.remove('on'); void flashEl.offsetWidth; flashEl.classList.add('on'); }
+const _v2 = new THREE.Vector3();
+function toScreen(x, y, z, o) { _v2.set(x, y, z).project(camera); o.x = (_v2.x * 0.5 + 0.5) * window.innerWidth; o.y = (-_v2.y * 0.5 + 0.5) * window.innerHeight; return o; }
+let coinN = 0, lastCoin = 0; const _sc = { x: 0, y: 0 };
+function coinFlyScreen(x, y) {
+  const r = moneyEl.getBoundingClientRect(), e = document.createElement('div'); e.className = 'coin'; e.style.left = x + 'px'; e.style.top = y + 'px'; fxEl.appendChild(e); coinN++;
+  const dx = r.left + 32 - x, dy = r.top + r.height / 2 - y;
+  const fin = () => { e.remove(); coinN--; moneyEl.classList.remove('bump'); void moneyEl.offsetWidth; moneyEl.classList.add('bump'); };
+  try { const an = e.animate([{ transform: 'translate(-50%,-50%) scale(.6)', opacity: 1 }, { transform: 'translate(calc(-50% + ' + dx * 0.4 + 'px),calc(-50% + ' + (dy * 0.4 - 50) + 'px)) scale(1.15)', opacity: 1, offset: 0.4 }, { transform: 'translate(calc(-50% + ' + dx + 'px),calc(-50% + ' + dy + 'px)) scale(.7)', opacity: 0.9 }], { duration: 600, easing: 'cubic-bezier(.3,.6,.4,1)' }); an.onfinish = fin; } catch (err) { fin(); }
+}
+function coinFly(x, y, z) { if (coinN > 16) return; const now = performance.now(); if (now - lastCoin < 70) return; lastCoin = now; toScreen(x, y, z, _sc); coinFlyScreen(_sc.x, _sc.y); }
+function coinBurstUI() { const w = window.innerWidth, h = window.innerHeight; for (let i = 0; i < 10; i++) setTimeout(() => { if (coinN < 24) coinFlyScreen(w / 2 + rand(-60, 60), h * 0.45 + rand(-30, 30)); }, i * 45); }
+let gainAcc = 0, gainT = 0;
+function updateGain(dt) {
+  gainT -= dt; if (gainAcc <= 0 || gainT > 0) return; gainT = 0.4;
+  const r = moneyEl.getBoundingClientRect(), e = document.createElement('div'); e.className = 'gain'; e.textContent = '+' + gainAcc; e.style.left = (r.left + r.width + 4) + 'px'; e.style.top = (r.top + 4) + 'px'; fxEl.appendChild(e); gainAcc = 0; setTimeout(() => e.remove(), 950);
+}
+function drawGoalIcon() {
+  if (!curGoal) { goalEl.style.display = 'none'; return; }
+  const u = upPads[curGoal.key], c = goalIc.getContext('2d'); c.clearRect(0, 0, 76, 76); if (u && u.icon) u.icon(c, 38, 38, 58);
+  const n = UPG[curGoal.key].name; goalN.textContent = UPG[curGoal.key].costs.length > 1 ? n + ' ' + curGoal.lv : n;
+}
+function updateGoalBar() {
+  if (!curGoal || !introDone) { goalEl.style.display = 'none'; return; }
+  goalEl.style.display = 'flex';
+  const u = upPads[curGoal.key], pct = Math.round(clamp((u.paid + S.money) / Math.max(1, u.cost()), 0, 1) * 100);
+  const w = pct + '%'; if (goalF.style.width !== w) { goalF.style.width = w; goalP.textContent = w; }
+}
+/* ---- guidance: arrow + glowing trail ---- */
 const tutArrow = new THREE.Group();
 (function () {
   const sh = new THREE.Shape(); sh.moveTo(-0.28, 1.3); sh.lineTo(0.28, 1.3); sh.lineTo(0.28, 0.65); sh.lineTo(0.62, 0.65); sh.lineTo(0, 0); sh.lineTo(-0.62, 0.65); sh.lineTo(-0.28, 0.65); sh.closePath();
@@ -2093,35 +2179,71 @@ const tutArrow = new THREE.Group();
   const o = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: lc(0x16324a) })); o.scale.set(1.2, 1.12, 0.6); o.position.y = -0.03;
   tutArrow.add(o, m); tutArrow.rotation.y = CFG.yaw; tutArrow.visible = false; scene.add(tutArrow);
 })();
-function tutTarget(step, out) {
-  switch (step) {
-    case 0: {
-      let best = null, bd = 1e9; const b = beds[0];
-      for (const bb of beds) { if (bb.locked || bb.nohelp) continue; for (const f of bb.flowers) if (f.t >= f.gt) { const d = (f.x - P.group.position.x) ** 2 + (f.z - P.group.position.z) ** 2; if (d < bd) { bd = d; best = f; } } }
-      return best ? out.set(best.x, 1.2, best.z) : out.set(b.x, 1.2, b.z);
-    }
-    case 1: return out.set(packZone.x, 0.4, packZone.z);
-    case 2: return out.set(outZone.x, 0.4, outZone.z);
-    case 3: return out.set(counterZone.x, 0.4, counterZone.z);
-    case 4: return out.set(moneyZone.x, 0.8, moneyZone.z);
-    default: { const pd = upPads[TUT[step].pad || 'cap']; return out.set(pd.x, 0.4, pd.z); }
+const TRAIL_N = 40;
+const trailMesh = (function () {
+  const c = cv(64, 64), x = c.getContext('2d'); x.lineCap = 'round'; x.lineJoin = 'round';
+  x.shadowColor = '#fff6a0'; x.shadowBlur = 12; x.strokeStyle = '#ffe14a'; x.lineWidth = 11;
+  x.beginPath(); x.moveTo(12, 44); x.lineTo(32, 20); x.lineTo(52, 44); x.stroke();
+  x.shadowBlur = 0; x.strokeStyle = '#fffbe0'; x.lineWidth = 4; x.beginPath(); x.moveTo(12, 44); x.lineTo(32, 20); x.lineTo(52, 44); x.stroke();
+  const m = new THREE.InstancedMesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ map: canvasTex(c), transparent: true, depthWrite: false, fog: false }), TRAIL_N);
+  m.frustumCulled = false; m.renderOrder = 4; m.visible = false; m.userData.dyn = true; scene.add(m); return m;
+})();
+const _tq = new THREE.Quaternion(), _tq2 = new THREE.Quaternion(), _tM = new THREE.Matrix4(), _tp = new THREE.Vector3(), _ts = new THREE.Vector3(), _tY = new THREE.Vector3(0, 1, 0), _tX = new THREE.Vector3(1, 0, 0);
+const sstep = (a, b, v) => { const k = clamp((v - a) / (b - a), 0, 1); return k * k * (3 - 2 * k); };
+function updateTrail(tx, tz, show, t) {
+  if (!show) { trailMesh.visible = false; return; }
+  const px = P.group.position.x, pz = P.group.position.z, dx = tx - px, dz = tz - pz, d = Math.hypot(dx, dz), st = 1.6, en = d - 1.0, len = en - st;
+  if (len < 1.2) { trailMesh.visible = false; return; }
+  trailMesh.visible = true;
+  const ux = dx / d, uz = dz / d, sp = Math.max(1.5, len / (TRAIL_N - 1)), ph = (t * 1.5) % 1;
+  _tq.setFromAxisAngle(_tY, Math.atan2(-ux, -uz)); _tq2.setFromAxisAngle(_tX, -Math.PI / 2); _tq.multiply(_tq2);
+  for (let i = 0; i < TRAIL_N; i++) {
+    const dist = st + (i + ph) * sp; let sc = 0;
+    if (dist < en) sc = (1.2 + 0.18 * Math.sin(t * 6 - i * 0.9)) * sstep(st, st + 1.6, dist) * sstep(en, en - 1.6, dist);
+    _tM.compose(_tp.set(px + ux * dist, 0.1, pz + uz * dist), _tq, _ts.set(sc, sc, sc)); trailMesh.setMatrixAt(i, _tM);
   }
+  trailMesh.instanceMatrix.needsUpdate = true;
 }
-const _tt = new THREE.Vector3(), _pp = new THREE.Vector3();
+let _obj = { x: 0, y: 0, z: 0, kind: '', ok: false };
+function objective(out) {
+  out.ok = false; if (!introDone) return out;
+  const st = P.stack, nF = st.count('flower'), nB = st.count('bouquet'), nO = st.count('orchid'), nP = st.count('pot');
+  const set = (x, y, z, kind) => { out.x = x; out.y = y; out.z = z; out.kind = kind; out.ok = true; return out; };
+  const gp = curGoal ? upPads[curGoal.key] : null;
+  if (gp && gp.group.visible && !gp.done && S.money + gp.paid >= gp.cost()) return set(gp.x, 0.4, gp.z, 'pad');
+  const ripe = () => { let best = null, bd = 1e9; for (const bb of beds) { if (bb.locked || bb.nohelp) continue; for (const f of bb.flowers) if (f.t >= f.gt) { const d = (f.x - P.group.position.x) ** 2 + (f.z - P.group.position.z) ** 2; if (d < bd) { bd = d; best = f; } } } return best; };
+  if (outZone.inside && outputPile.length > 0 && P.free() > 0) return set(outZone.x, 0.4, outZone.z, 'out');
+  if (nB > 0 && (!cashier || shelfFree('bouquet') > 0) || nP > 0 && (!cashier || shelfFree('pot') > 0)) return set(counterZone.x, 0.4, counterZone.z, 'counter');
+  if (moneyPile.length + (moneyPile.extra || 0) > 0) return set(moneyZone.x, 0.8, moneyZone.z + 1.0, 'money');
+  if (zone3 && !zone3.locked && vanPile.length + (vanPile.extra || 0) > 0) return set(vanMoneyZone.x, 0.8, vanMoneyZone.z, 'money');
+  const thr = Math.min(P.capFn(), 16 + 6 * S.lv.cap), fl = P.free() > 0 && nF < thr ? ripe() : null, canPack = nF > 0 && inputPile.length + (inputPile.pend || 0) < CFG.inputCap;
+  if (canPack && (nF >= thr || (!fl && nF > 0))) return set(packZone.x, 0.4, packZone.z, 'pack');
+  if (outputPile.length >= 3 && P.free() > 0) return set(outZone.x, 0.4, outZone.z, 'out');
+  if (fl) return set(fl.x, 1.2, fl.z, 'harvest');
+  if (canPack) return set(packZone.x, 0.4, packZone.z, 'pack');
+  if (nO > 0 && zone2 && !zone2.locked) return set(potZone.x, 0.4, potZone.z, 'pot');
+  if (outputPile.length > 0 && P.free() > 0) return set(outZone.x, 0.4, outZone.z, 'out');
+  if (zone2 && !zone2.locked && potOutput.length > 0 && P.free() > 0) return set(potOutZone.x, 0.4, potOutZone.z, 'potOut');
+  if (P.free() > 0) { const f = ripe(); if (f) return set(f.x, 1.2, f.z, 'harvest'); }
+  if (gp && gp.group.visible && !gp.done) return set(gp.x, 0.4, gp.z, 'pad');
+  return out;
+}
 function updateTutorial(dt, t) {
   while (S.tut < TUT.length && TUT[S.tut].done()) { S.tut++; saveDirty = true; if (S.tut >= TUT.length) writeSave(); }
-  if (S.tut >= TUT.length || (TUT[S.tut].show && !TUT[S.tut].show())) { hintEl.style.display = 'none'; tutArrow.visible = false; return; }
-  if (S.tut === 5 && upPads.cap.done) { /* fall back to any pad */ }
-  hintEl.style.display = 'flex'; if (hintT.textContent !== TUT[S.tut].t) hintT.textContent = TUT[S.tut].t;
-  tutTarget(S.tut, _tt); tutArrow.visible = true; tutArrow.position.set(_tt.x, _tt.y + 1.9 + Math.sin(t * 5) * 0.28, _tt.z);
-  // screen direction
-  _pp.copy(P.group.position); _pp.y = 1; _pp.project(camera); const tv = new THREE.Vector3(_tt.x, 0.5, _tt.z).project(camera);
+  const o = objective(_obj);
+  if (!o.ok) { hintEl.style.display = 'none'; tutArrow.visible = false; updateTrail(0, 0, false, t); return; }
+  const near = Math.hypot(o.x - P.group.position.x, o.z - P.group.position.z) < (o.kind === 'harvest' ? 1.2 : 1.4);
+  if (S.tut < TUT.length && !near) { hintEl.style.display = 'flex'; const lb = LABELS[o.kind] || ''; if (hintT.textContent !== lb) hintT.textContent = lb; } else hintEl.style.display = 'none';
+  tutArrow.visible = !near; tutArrow.position.set(o.x, o.y + 1.9 + Math.sin(t * 5) * 0.28, o.z);
+  updateTrail(o.x, o.z, !near, t);
+  _pp.copy(P.group.position); _pp.y = 1; _pp.project(camera); const tv = new THREE.Vector3(o.x, 0.5, o.z).project(camera);
   const w = window.innerWidth, h = window.innerHeight;
-  const ang = Math.atan2(-(tv.y - _pp.y) * h / 2, (tv.x - _pp.x) * w / 2);
-  hintArrow.style.transform = 'rotate(' + ang + 'rad)';
+  hintArrow.style.transform = 'rotate(' + Math.atan2(-(tv.y - _pp.y) * h / 2, (tv.x - _pp.x) * w / 2) + 'rad)';
 }
+const _pp = new THREE.Vector3();
 function updateHUD(dt) {
-  dispMoney = damp(dispMoney, S.money, 12, dt); if (Math.abs(dispMoney - S.money) < 0.5) dispMoney = S.money;
+  const dm = S.money - dispMoney, stp = Math.max(Math.abs(dm) * 7, 40) * dt; dispMoney = Math.abs(dm) <= stp ? S.money : dispMoney + Math.sign(dm) * stp;
+  updateGain(dt); updateGoalBar();
   const v = String(Math.round(dispMoney)); if (moneyV.textContent !== v) moneyV.textContent = v;
   const used = P.stack.length + P.incoming, cap = P.capFn();
   const ct = used + '/' + cap; if (capV.textContent !== ct) capV.textContent = ct;
@@ -2133,7 +2255,8 @@ function updateHUD(dt) {
    ===================================================================== */
 const camFocus = new THREE.Vector3(CFG.start.x, 0, CFG.start.z); const inV = { x: 0, z: 0 };
 let T = 0, spawnT = 2, camInit = false;
-const nudge = { t: 99, x: 0, z: 0, w: 0.6 }; let camS = 1;
+const nudge = { t: 99, x: 0, z: 0, w: 0.6, dur: 1.8, skip: 0 }; let camS = 1;
+function panTo(x, z, w, dur) { nudge.t = 0; nudge.x = x; nudge.z = z; nudge.w = w || 0.8; nudge.dur = dur || 1.8; nudge.skip = 0; }
 
 let stepT = 0;
 function movePlayer(dt) {
@@ -2177,7 +2300,7 @@ function updateBeds(dt) {
     for (const b of beds) {
       if (b.locked || Math.abs(gp.x - b.x) > 4.2 || Math.abs(gp.z - b.z) > 3.6) continue;
       for (const f of b.flowers) {
-        if (f.t >= f.gt && f.pop <= 0 && (f.x - gp.x) ** 2 + (f.z - gp.z) ** 2 < 1.0) { harvest(f, P); P.cd = 0.07; if (P.free() <= 0) break; if (P.cd > 0) break; }
+        if (f.t >= f.gt && f.pop <= 0 && (f.x - gp.x) ** 2 + (f.z - gp.z) ** 2 < 1.0) { harvest(f, P); P.cd = 0.04; if (P.free() <= 0) break; if (P.cd > 0) break; }
       }
       if (P.cd > 0) break;
     }
@@ -2194,10 +2317,10 @@ function updateZoneActions(dt) {
   if (counterZone.inside && ctrTick <= 0) {
     const c = queue[0];
     if (cashier) {
-      const t = P.stack.count('bouquet') > 0 && shelfFree('bouquet') > 0 ? 'bouquet' : P.stack.count('pot') > 0 && shelfFree('pot') > 0 ? 'pot' : null; if (t) { const it = takeFromBack(P, t); toShelf(it, P); ctrTick = 0.1; }
+      const t = P.stack.count('bouquet') > 0 && shelfFree('bouquet') > 0 ? 'bouquet' : P.stack.count('pot') > 0 && shelfFree('pot') > 0 ? 'pot' : null; if (t) { const it = takeFromBack(P, t); toShelf(it, P); ctrTick = 0.05; }
     } else if (c && c.state === 'queue' && c.atSlot && c.want - c.got - c.pending > 0) {
-      if (P.stack.count(c.prod) > 0) { transferToCounter(c); ctrTick = 0.12; }
-      else if (lane(c.prod).count(c.prod) > 0) { serveFromShelf(c); ctrTick = 0.2; }
+      if (P.stack.count(c.prod) > 0) { transferToCounter(c); ctrTick = 0.05; }
+      else if (lane(c.prod).count(c.prod) > 0) { serveFromShelf(c); ctrTick = 0.06; }
     }
   }
   if (zone2 && !zone2.locked) {
@@ -2205,10 +2328,10 @@ function updateZoneActions(dt) {
     if (potZone.inside && potTick <= 0 && P.stack.count('orchid') > 0 && potInput.length + (potInput.pend || 0) < CFG.inputCap) { dropToPot(P); potTick = CFG.transferEvery; }
     if (potOutZone.inside && potOutTick <= 0 && potOutput.length > 0 && P.free() > 0) { const it = potOutput.takeLast('pot'); if (it) { bouquetPose(it.mesh, false); sendToBack(P, it.mesh, 'pot', 1.5); sfx('pick'); } potOutTick = CFG.transferEvery; }
   }
-  if (moneyZone.inside && monTick <= 0 && (moneyPile.length > 0 || moneyPile.extra > 0)) { collectMoney(moneyPile); monTick = 0.035; }
+  if (moneyZone.inside && monTick <= 0 && (moneyPile.length > 0 || moneyPile.extra > 0)) { collectMoney(moneyPile); monTick = 0.025; }
   if (zone3 && !zone3.locked) {
     if (vanMoneyZone.inside && monTick <= 0 && (vanPile.length > 0 || vanPile.extra > 0)) { collectMoney(vanPile); monTick = 0.03; }
-    if (vanZone.inside && vanTick <= 0 && vanFree() > 0) { const t = P.stack.count('bouquet') > 0 ? 'bouquet' : P.stack.count('pot') > 0 ? 'pot' : null; if (t) { toVan(takeFromBack(P, t), P); vanTick = 0.1; } }
+    if (vanZone.inside && vanTick <= 0 && vanFree() > 0) { const t = P.stack.count('bouquet') > 0 ? 'bouquet' : P.stack.count('pot') > 0 ? 'pot' : null; if (t) { toVan(takeFromBack(P, t), P); vanTick = 0.05; } }
     vanTick -= dt;
   }
 }
@@ -2218,7 +2341,7 @@ function update(dt) {
   movePlayer(dt);
   updateBeds(dt);
   updateZoneActions(dt);
-  updateUpgrades(dt);
+  updateGoalState(); updateUpgrades(dt);
   updatePacking(dt, T);
   updateHelper(dt, T); updateCashier(dt, T); updateCarrier(dt, T); updatePotting(dt, T); updateSera(dt); updateVan(dt, T); updateAmbient(dt, T);
   // customers spawning
@@ -2233,7 +2356,8 @@ function update(dt) {
   const fw = _v.set(-Math.sin(CFG.yaw), 0, -Math.cos(CFG.yaw));
   const tx = gp.x + P.vel.x * 0.25 + fw.x * 1.8, tz = gp.z + P.vel.z * 0.25 + fw.z * 1.8;
   if (!camInit) { camFocus.set(tx, 0, tz); camInit = true; }
-  nudge.t += dt; const nw = nudge.t < 1.8 ? Math.sin(Math.PI * nudge.t / 1.8) : 0;
+  if (nudge.t < 90) { if (Math.hypot(inV.x, inV.z) > 0.3) nudge.skip += dt; else nudge.skip = 0; if (nudge.skip > 0.25) nudge.t = 99; }
+  nudge.t += dt; const nk = nudge.t / nudge.dur; const nw = nk >= 1 ? 0 : nk < 0.3 ? sstep(0, 1, nk / 0.3) : nk < 0.7 ? 1 : sstep(0, 1, (1 - nk) / 0.3);
   camFocus.x = damp(camFocus.x, lerp(tx, nudge.x, nw * nudge.w), 6, dt); camFocus.z = damp(camFocus.z, lerp(tz, nudge.z, nw * nudge.w), 6, dt);
   camS = damp(camS, 1 + (zone2 && !zone2.locked ? 0.2 : 0) + (zone3 && !zone3.locked ? 0.12 : 0), 1.2, dt);
   const cd = camDist * camMul * camS * (1 - 0.1 * nw), H = cd * Math.cos(CFG.tilt), Y = cd * Math.sin(CFG.tilt);
@@ -2329,8 +2453,13 @@ for (const k in upPads) { const u = upPads[k]; if (S.lv[k] >= u.max()) { u.done 
 restoreExtras(LOADED_X); for (const k in upPads) if (!upPads[k].done) upPads[k].redraw();
 for (let i = 0; i < 3; i++) { spawnCustomer(CFG.queueZ0 + i * CFG.queueGap); const c = customers[customers.length - 1]; c.group.position.x = CFG.queueX; c.yaw = 0; c.group.rotation.y = Math.PI; c.yaw = Math.PI; c.atSlot = true; }
 buildAmbient(); setupPost(); onResize();
+introDone = !(S.tut === 0 && S.money === 0 && !Object.keys(S.lv).some(k => S.lv[k] > 0));
+if (!introDone) introEl.style.display = 'block';
+curGoalIdx = goalIndex(); curGoal = curGoalIdx >= 0 ? GOALS[curGoalIdx] : null; lastGoalIdx = curGoalIdx; drawGoalIcon();
+for (const k in upPads) { const u = upPads[k]; if (!u.done) { u.group.visible = padVisible(u); } }
 
 window.__game = {
+  bot(x, z) { BOT = (x || z) ? { x, z } : null; if (BOT) hideIntro(); }, hideIntro, objective() { objective(_obj); return Object.assign({}, _obj); }, get goal() { return curGoal; }, GOALS, UPG,
   S, stats, P: () => P, queue, beds, machine, inputPile, outputPile, moneyPile, get shelf() { return shelfB; }, get shelfP() { return shelfP; }, get potInput() { return potInput; }, get potOutput() { return potOutput; }, get zone2() { return zone2; }, get zone3() { return zone3; }, VAN, get vanLoad() { return vanLoad; }, get vanPile() { return vanPile; }, get cashier() { return cashier; }, get carrier() { return carrier; }, upPads, zones, customers, CFG, POS,
   helper: () => helper,
   carry(n) { while (P.stack.length) P.stack.items.pop(); for (let i = 0; i < n; i++) P.stack.add(makeFlowerItem(0, "tulip"), "flower"); },
