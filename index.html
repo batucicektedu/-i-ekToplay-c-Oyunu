@@ -69,6 +69,13 @@
 </div>
 <div id="msg">Three.js yüklenemedi. İnternet bağlantınızı kontrol edip sayfayı yenileyin.</div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/CopyShader.js" onerror="void 0"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/LuminosityHighPassShader.js" onerror="void 0"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/FXAAShader.js" onerror="void 0"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/EffectComposer.js" onerror="void 0"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/RenderPass.js" onerror="void 0"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/ShaderPass.js" onerror="void 0"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/UnrealBloomPass.js" onerror="void 0"></script>
 <script>
 (function () {
 'use strict';
@@ -202,10 +209,28 @@ const scene = new THREE.Scene();
 scene.fog = new THREE.Fog(lc(0xcfe8fa), 90, 190);
 const camera = new THREE.PerspectiveCamera(CFG.fov, 1, 0.5, 220);
 let camDist = 26, camMul = 1;
+/* ---- post-processing (optional: falls back to plain render when scripts are missing) ---- */
+let composer = null, bloomPass = null, fxaaPass = null, gradePass = null, postPR = 1;
+function setupPost() {
+  if (!HQ || !THREE.EffectComposer || !THREE.RenderPass || !THREE.ShaderPass || !THREE.UnrealBloomPass || !THREE.FXAAShader || !THREE.CopyShader || !THREE.LuminosityHighPassShader) return;
+  try {
+    const gl2 = renderer.capabilities.isWebGL2;
+    const rt = new THREE.WebGLRenderTarget(4, 4, { minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter, format: THREE.RGBAFormat, type: gl2 ? THREE.HalfFloatType : THREE.UnsignedByteType });
+    composer = new THREE.EffectComposer(renderer, rt);
+    composer.addPass(new THREE.RenderPass(scene, camera));
+    bloomPass = new THREE.UnrealBloomPass(new THREE.Vector2(256, 256), 0.32, 0.6, 0.93); composer.addPass(bloomPass);
+    const Grade = { uniforms: { tDiffuse: { value: null }, sat: { value: 1.14 }, contrast: { value: 1.07 }, tint: { value: new THREE.Vector3(1.035, 1.0, 0.95) }, vig: { value: 0.3 } },
+      vertexShader: 'varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',
+      fragmentShader: 'uniform sampler2D tDiffuse;uniform float sat;uniform float contrast;uniform vec3 tint;uniform float vig;varying vec2 vUv;void main(){vec3 col=texture2D(tDiffuse,vUv).rgb*tint;float l=dot(col,vec3(.2126,.7152,.0722));col=mix(vec3(l),col,sat);col=max((col-.18)*contrast+.18,0.);col=pow(col,vec3(1./2.2));vec2 d=(vUv-.5)*vec2(1.,1.1);col*=1.-vig*smoothstep(.32,.92,length(d));gl_FragColor=vec4(col,1.);}' };
+    gradePass = new THREE.ShaderPass(Grade); composer.addPass(gradePass);
+    fxaaPass = new THREE.ShaderPass(THREE.FXAAShader); composer.addPass(fxaaPass);
+  } catch (e) { composer = null; }
+}
 function onResize() {
   const w = window.innerWidth, h = window.innerHeight;
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
   renderer.setSize(w, h, false);
+  if (composer) { postPR = Math.min(window.devicePixelRatio || 1, 1.5); if (w * h * postPR * postPR > 1.5e6) postPR = Math.sqrt(1.5e6 / (w * h)); composer.setPixelRatio(postPR); composer.setSize(w, h); fxaaPass.material.uniforms.resolution.value.set(1 / (w * postPR), 1 / (h * postPR)); }
   camera.aspect = w / h; camera.updateProjectionMatrix();
   const t = Math.tan(CFG.fov * Math.PI / 360);
   camDist = clamp(16 / (2 * t * camera.aspect), 23, 40);
@@ -2255,21 +2280,21 @@ if (S.lv.carrier > 0) spawnCarrier(true);
 for (const k in upPads) { const u = upPads[k]; if (S.lv[k] >= u.max()) { u.done = true; u.group.visible = false; } else { u.group.visible = padVisible(u); u.redraw(); } }
 restoreExtras(LOADED_X); for (const k in upPads) if (!upPads[k].done) upPads[k].redraw();
 for (let i = 0; i < 3; i++) { spawnCustomer(CFG.queueZ0 + i * CFG.queueGap); const c = customers[customers.length - 1]; c.group.position.x = CFG.queueX; c.yaw = 0; c.group.rotation.y = Math.PI; c.yaw = Math.PI; c.atSlot = true; }
-onResize();
+setupPost(); onResize();
 
 window.__game = {
   S, stats, P: () => P, queue, beds, machine, inputPile, outputPile, moneyPile, get shelf() { return shelfB; }, get shelfP() { return shelfP; }, get potInput() { return potInput; }, get potOutput() { return potOutput; }, get zone2() { return zone2; }, get zone3() { return zone3; }, VAN, get vanLoad() { return vanLoad; }, get vanPile() { return vanPile; }, get cashier() { return cashier; }, get carrier() { return carrier; }, upPads, zones, customers, CFG, POS,
   helper: () => helper,
   tp(x, z) { P.group.position.set(x, 0, z); P.vel.set(0, 0, 0); camInit = false; },
   sim(sec) { const n = Math.round(sec * 30); for (let i = 0; i < n; i++) update(1 / 30); },
-  render() { renderer.render(scene, camera); },
+  render() { if (composer) composer.render(0); else renderer.render(scene, camera); },
   get scene() { return scene; }, fill(name, n) { const M = { input: [inputPile, () => makeFlowerItem(0, 'tulip'), 'flower'], output: [outputPile, () => makeBouquetItem(undefined, true), 'bouquet'], potIn: [potInput, () => makeFlowerItem(0, 'orchid'), 'orchid'], potOut: [potOutput, () => makePotItem(true), 'pot'], shelfB: [shelfB, () => makeBouquetItem(undefined, true), 'bouquet'], shelfP: [shelfP, () => makePotItem(true), 'pot'], vanLoad: [vanLoad, () => makeBouquetItem(undefined, true), 'bouquet'], money: [moneyPile, makeBill, 'bill'], vanMoney: [vanPile, makeBill, 'bill'] }[name]; const st = M[0]; while (st.length) rm(st.items.pop().mesh); fillStack(st, n, M[1], M[2]); }, get calls() { return renderer.info.render.calls; }, get tris() { return renderer.info.render.triangles; }, tutStep: () => S.tut, forceVip() { custCount = 5; }, zoom(v) { camMul = v; }
 };
 
 let last = performance.now();
 function loop(now) {
   const dt = Math.min(0.05, Math.max(0, (now - last) / 1000)); last = now;
-  update(dt); renderer.info.reset(); renderer.render(scene, camera); requestAnimationFrame(loop);
+  update(dt); renderer.info.reset(); if (composer) composer.render(dt); else renderer.render(scene, camera); requestAnimationFrame(loop);
 }
 requestAnimationFrame(loop);
 })();
