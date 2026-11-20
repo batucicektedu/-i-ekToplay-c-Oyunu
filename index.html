@@ -455,7 +455,7 @@ class Stack {
   count(type) { let n = 0; for (const it of this.items) if (it.type === type) n++; return n; }
   add(mesh, type) {
     const i = this.items.length; this.items.push({ mesh, type }); this.parent.add(mesh);
-    this.slotFn(i, _v); mesh.position.copy(_v); mesh.rotation.set(0, 0, 0); mesh.scale.set(1, 1, 1); mesh.userData.sq = 0.22;
+    this.slotFn(i, _v); mesh.position.copy(_v); mesh.rotation.set(0, 0, 0); mesh.scale.set(1, 1, 1); mesh.userData.sq = 0.22; if (this.jitter) mesh.rotation.y = (Math.random() - 0.5) * this.jitter;
     if (this.parent === scene) dust(_v.x, _v.y + 0.1, _v.z, 2, 0.25);
   }
   takeLast(type) {
@@ -855,7 +855,7 @@ function charToWorld(c, p, out) {
 }
 /* back stack setup shared by player + helper */
 function attachBackStack(c, capFn) {
-  const slot = (i, out) => { const pitch = Math.min(0.34, 5.4 / capFn()); out.set(0, 0.8 + i * pitch, -0.62); };
+  const slot = (i, out) => { const cap = capFn(), cols = cap <= 20 ? 1 : cap <= 40 ? 2 : 3, rows = Math.ceil(cap / cols), pitch = Math.min(0.34, 5.4 / rows), col = i % cols; out.set((col - (cols - 1) / 2) * 0.62, 0.8 + Math.floor(i / cols) * pitch, -0.62); };
   const sway = (i, out, t) => {
     const hf = Math.pow(Math.max(0, out.y - 0.8) / 3, 1.25);
     out.x += c.swayX * hf + Math.sin(t * 9 + i * 0.45) * 0.035 * c.moving * hf * 2;
@@ -1006,7 +1006,7 @@ function writeFlower(f) {
 function growFlower(f) {
   const p = clamp(f.t / f.gt, 0, 1);
   f.ss = Math.max(0.001, easeOutBack(Math.min(1, p / 0.5)));
-  f.bs = p < 0.45 ? 0.001 : Math.max(0.001, easeOutBack((p - 0.45) / 0.55));
+  f.bs = p < 0.4 ? 0.001 : p < 0.75 ? 0.45 * easeOutBack((p - 0.4) / 0.35) + 0.001 : 0.45 + 0.55 * easeOutBack((p - 0.75) / 0.25);
 }
 function buildBed(idx) {
   const p = POS.beds[idx], bed = { idx, x: p.x, z: p.z, locked: idx === 2, flowers: [], group: new THREE.Group() };
@@ -1146,12 +1146,12 @@ function buildStations() {
   const ip = { x: -6.2, z: pt.z };
   const crate = new THREE.Group(); crate.position.set(ip.x, TABLE_Y, ip.z); world.add(crate);
   crate.add(mk(G.box, dark, 1.9, 0.08, 1.5, 0, 0.04, 0));
-  for (const [sx, sz, wx, wz] of [[0, 0.75, 1.9, 0.07], [0, -0.75, 1.9, 0.07], [0.95, 0, 0.07, 1.5], [-0.95, 0, 0.07, 1.5]]) { crate.add(mk(G.box, WM, wx, 0.5, wz, sx, 0.28, sz)); }
+  for (const [sx, sz, wx, wz] of [[0, 0.75, 1.9, 0.07], [0, -0.75, 1.9, 0.07], [0.95, 0, 0.07, 1.5], [-0.95, 0, 0.07, 1.5]]) { crate.add(mk(G.box, WM, wx, 0.42, wz, sx, 0.24, sz)); }
   for (const sx of [-1, 1]) for (const sz of [-1, 1]) crate.add(mk(G.box, dark, 0.12, 0.55, 0.12, sx * 0.95, 0.28, sz * 0.75));
   shadowAll(crate, true, true);
   inputPile = new Stack(scene, (i, out) => {
     const cx = 2, cz = 3, per = cx * cz, l = Math.floor(i / per), r = i % per;
-    out.set(ip.x + ((r % cx) - 0.5) * 0.75, TABLE_Y + 0.2 + l * 0.2, ip.z + (Math.floor(r / cx) - 1) * 0.42);
+    out.set(ip.x + ((r % cx) - 0.5) * 0.78, TABLE_Y + 0.66 + l * 0.27, ip.z + (Math.floor(r / cx) - 1) * 0.46);
   }, CFG.inputCap);
   const s1 = makeBoard('ÇİÇEKLER', 1.5, 0.45, 'wood'); s1.position.set(ip.x, TABLE_Y + 1.3, ip.z - 0.9); s1.rotation.x = -0.15; world.add(s1);
   // ---- output tray
@@ -1191,9 +1191,9 @@ function buildStations() {
   const ms = makeBoard('PARA', 1.1, 0.4, 'wood'); ms.position.set(mp.x, 1.9, mp.z - 1.2); ms.rotation.x = -0.15; ms.scale.setScalar(0.9); world.add(ms);
   moneyPile = new Stack(scene, (i, out) => {
     const cx = 3, cz = 4, per = cx * cz, l = Math.floor(i / per), r = i % per;
-    out.set(mp.x + ((r % cx) - 1) * 0.9, 0.9 + l * 0.12, mp.z + (Math.floor(r / cx) - 1.5) * 0.52);
+    out.set(mp.x + ((r % cx) - 1) * 0.98, 0.9 + l * 0.14, mp.z + (Math.floor(r / cx) - 1.5) * 0.6);
   }, CFG.moneyCap);
-  moneyPile.extra = 0;
+  moneyPile.extra = 0; moneyPile.jitter = 0.07;
   // counter shelf (tezgah rafı): upright products on the counter top
   shelfB = new Stack(scene, (i, out) => { const r = i % 6; out.set(ct.x - 1.35 + (r % 3) * 0.62, 1.55, ct.z + (Math.floor(r / 3) - 0.5) * 0.62); }, 6); shelfB.pend = 0;
   shelfP = new Stack(scene, (i, out) => { const r = i % 6; out.set(ct.x + 0.55 + (r % 3) * 0.62, 1.55, ct.z + (Math.floor(r / 3) - 0.5) * 0.62); }, 6); shelfP.pend = 0;
@@ -1235,7 +1235,7 @@ function buildSera() {
   for (const sx of [-5.7, -1.9, 1.9, 5.7]) for (const sz of [-7.4, 1.4]) ad(gh, mk(G.box, white, 0.14, 3.3, 0.14), 28.5 + sx, 1.65, sz);
   for (const sz of [-7.4, 1.4]) { ad(gh, mk(G.box, white, 11.5, 0.12, 0.14), 28.5, 3.25, sz); ad(gh, mk(G.box, white, 11.5, 0.1, 0.14), 28.5, 0.06, sz); }
   ad(gh, mk(G.box, white, 0.14, 0.14, 8.9), 34.2, 3.25, -3); ad(gh, mk(G.box, white, 0.14, 3.3, 0.14), 22.8, 1.65, -7.4); ad(gh, mk(G.box, white, 0.14, 3.3, 0.14), 22.8, 1.65, 1.4); ad(gh, mk(G.box, white, 0.14, 0.14, 8.9), 22.8, 3.25, -3);
-  const rf1 = mk(G.box, glass, 11.4, 0.08, 4.8, 0, 0, 0); rf1.rotation.x = 0.42; ad(gh, rf1, 28.5, 3.95, -5.2); const rf2 = mk(G.box, glass, 11.4, 0.08, 4.8, 0, 0, 0); rf2.rotation.x = -0.42; ad(gh, rf2, 28.5, 3.95, -0.8);
+  const rf1 = mk(G.box, glass, 11.4, 0.08, 4.8, 0, 0, 0); rf1.rotation.x = 0.42; ad(gh, rf1, 28.5, 3.95, -5.2); const rf2 = mk(G.box, glass, 11.4, 0.08, 4.8, 0, 0, 0); rf2.rotation.x = -0.42; ad(gh, rf2, 28.5, 3.95, -0.8); 
   ad(gh, mk(G.box, white, 11.5, 0.14, 0.14), 28.5, 4.75, -3);
   const soil = rbox(6.6, 0.3, 5.4, 0.12, mat(0x4a2a14)); soil.receiveShadow = true; ad(gh, soil, 28.5, 0.15, -3);
   const bed = { idx: 3, x: 28.5, z: -3, locked: true, nohelp: true, flowers: [], group: new THREE.Group() };
@@ -1259,9 +1259,9 @@ function buildSera() {
   // crate
   const crate = new THREE.Group(); ad(pw, crate, 38.2, TABLE_Y, -3);
   crate.add(mk(G.box, dark, 1.8, 0.08, 1.5, 0, 0.04, 0));
-  for (const [sx, sz, wx, wz] of [[0, 0.75, 1.8, 0.07], [0, -0.75, 1.8, 0.07], [0.9, 0, 0.07, 1.5], [-0.9, 0, 0.07, 1.5]]) crate.add(mk(G.box, woodMt, wx, 0.5, wz, sx, 0.28, sz));
+  for (const [sx, sz, wx, wz] of [[0, 0.75, 1.8, 0.07], [0, -0.75, 1.8, 0.07], [0.9, 0, 0.07, 1.5], [-0.9, 0, 0.07, 1.5]]) crate.add(mk(G.box, woodMt, wx, 0.42, wz, sx, 0.24, sz));
   shadowAll(crate, true, true);
-  potInput = new Stack(scene, (i, out) => { const cx = 2, cz = 3, per = 6, l = Math.floor(i / per), r = i % per; out.set(38.2 + ((r % cx) - 0.5) * 0.75, TABLE_Y + 0.2 + l * 0.2, -3 + (Math.floor(r / cx) - 1) * 0.42); }, CFG.inputCap); potInput.pend = 0;
+  potInput = new Stack(scene, (i, out) => { const cx = 2, cz = 3, per = 6, l = Math.floor(i / per), r = i % per; out.set(38.2 + ((r % cx) - 0.5) * 0.78, TABLE_Y + 0.66 + l * 0.27, -3 + (Math.floor(r / cx) - 1) * 0.46); }, CFG.inputCap); potInput.pend = 0;
   // machine area
   const mg = new THREE.Group(); ad(pw, mg, potM.x, TABLE_Y, potM.z); potM.group = mg;
   mg.add(mk(G.box, mat(0x6b4a2a), 0.7, 0.5, 0.45, -0.6, 0.25, -0.2)); mg.add(mk(G.cyl, mat(0x2f7bff), 0.2, 0.3, 0.2, 0.55, 0.15, -0.2)); mg.add(mk(G.torus, mat(0x2f7bff), 0.14, 0.14, 0.14, 0.77, 0.25, -0.2));
@@ -1385,7 +1385,7 @@ function buildVan() {
   shadowAll(vg, true, false);
   VAN.hud = makeSprite(256, 100, () => {}, 4.6, 1.8, false); VAN.hud.position.set(0, 4.6, 0); vg.add(VAN.hud);
   vanLoad = new Stack(scene, (i, out) => { out.set(19.55 + (i % 2) * 0.8, 0.5, 24 + (Math.floor(i / 2) - 1.5) * 0.85); }, 8); vanLoad.pend = 0;
-  vanPile = new Stack(scene, (i, out) => { const per = 12, l = Math.floor(i / per), r = i % per; out.set(16.2 + ((r % 3) - 1) * 0.9, 0.12 + l * 0.12, 19.6 + (Math.floor(r / 3) - 1.5) * 0.52); }, 60); vanPile.extra = 0;
+  vanPile = new Stack(scene, (i, out) => { const per = 12, l = Math.floor(i / per), r = i % per; out.set(16.2 + ((r % 3) - 1) * 0.98, 0.14 + l * 0.14, 19.6 + (Math.floor(r / 3) - 1.5) * 0.6); }, 60); vanPile.extra = 0; vanPile.jitter = 0.07;
   const plate = rbox(3.1, 0.08, 2.5, 0.04, mat(0x9ee59a)); ad(rd, plate, 16.2, 0.06, 19.6);
   const lamp = (x, z) => { const g = new THREE.Group(); g.add(mk(G.cyl, mat(0x2d3a45), 0.09, 3.2, 0.09, 0, 1.6, 0)); g.add(mk(G.sph, new THREE.MeshBasicMaterial({ color: lc(0xffe9a8) }), 0.26, 0.3, 0.26, 0, 3.3, 0)); ad(rd, g, x, 0, z); }; lamp(13.2, 21); lamp(23.4, 29);
   VAN.group.position.set(VAN.x, 0, VAN.z); vg.rotation.y = VAN.yaw;
@@ -1691,7 +1691,7 @@ function spawnCarrier(instant) {
   if (carrier) return;
   const c = makeChar({ shirt: 0xff7a00, pants: 0x2f3542, hair: 0x2a1a10, hairStyle: 'short', hat: 'cap', hatColor: 0xff7a00, skin: 0xc68863, shoe: 0xffffff });
   c.group.position.set(5.0, 0, 3.4); scene.add(c.group); carrier = c; c.state = 'idle'; c.cd = 0;
-  attachBackStack(c, () => 4 + 2 * S.lv.carCap); popInWorker(c, instant);
+  attachBackStack(c, () => 6 + 4 * S.lv.carCap); popInWorker(c, instant);
 }
 const outSources = () => [outputPile].concat(potOutput ? [potOutput] : []);
 const srcOf = t => t === 'pot' ? potOutput : outputPile;
@@ -1719,8 +1719,13 @@ function updateCarrier(dt, t) {
     if (h.cd <= 0) {
       const src = h.dest === 'van' ? (outSources().find(q => q.length > 0)) : srcOf(h.ptype);
       const room = (h.dest === 'van' ? vanFree() : shelfFree(h.ptype)) - load;
-      if (src && src.length > 0 && load < h.capFn() && room > 0) { const it = src.takeLast(); it.mesh.getWorldPosition(_w); scene.add(it.mesh); it.mesh.position.copy(_w); if (posable(it.mesh)) bouquetPose(it.mesh, false); sendToBack(h, it.mesh, it.type, 1.4); h.cd = 0.14; }
-      else if (h.incoming === 0) h.state = h.stack.length > 0 ? 'toShelf' : 'idle';
+      if (src && src.length > 0 && load < h.capFn() && room > 0) { h.waitT = 0; const it = src.takeLast(); it.mesh.getWorldPosition(_w); scene.add(it.mesh); it.mesh.position.copy(_w); if (posable(it.mesh)) bouquetPose(it.mesh, false); sendToBack(h, it.mesh, it.type, 1.4); h.cd = 0.14; }
+      else if (h.incoming === 0) {
+        const producing = (h.ptype === 'pot' ? (potM.working || potInput.length > 0) : (machine.working || inputPile.length > 0)) || h.dest === 'van' && (machine.working || potM.working);
+        h.waitT = (h.waitT || 0) + dt;
+        if (h.stack.length === 0) h.state = 'idle';
+        else if (load >= h.capFn() || room <= 0 || !producing || h.waitT > 2.2) { h.state = 'toShelf'; h.waitT = 0; }
+      }
     }
   } else if (h.state === 'toShelf') { if (h.dest === 'van') { tx = 21.6; tz = 24; } else { tx = 8.9; tz = -1.1; } if (Math.hypot(tx - gp.x, tz - gp.z) < 0.4) { h.state = 'unload'; h.cd = 0.1; } }
   else if (h.state === 'unload') {
@@ -1823,7 +1828,7 @@ function removeCustomer(i) {
    ===================================================================== */
 function harvest(f, who) {
   const item = makeFlowerItem(f.ci, f.type); item.position.set(f.x, 0.6, f.z); scene.add(item);
-  f.t = 0; f.pop = 0.18; f.claimed = false; f.full = false; f.ss = 0.001; f.bs = 0.001;
+  f.gt = f.type === 'orchid' ? 18 : 10; f.t = 0; f.pop = 0.18; f.claimed = false; f.full = false; f.ss = 0.001; f.bs = 0.001;
   petals(f.x, 0.8, f.z, colsFor(f.type)[f.ci % colsFor(f.type).length]);
   sendToBack(who, item, f.type === 'orchid' ? 'orchid' : 'flower', 1.6);
   if (who === P) { stats.harvested++; sfx('pick'); }
@@ -1942,6 +1947,7 @@ function purchase(u) {
   ring(P.group.position.x, P.group.position.z, 0x7dff7a, 3); sparkles(P.group.position.x, 0.6, P.group.position.z, 12, 0x9dffb0, 0.5); vib(18);
   popText(u.x, 2.6, u.z, '+ ' + UPG[key].name + '!', '#7dff7a');
   applyUpgrade(key, false);
+  if (key === 'carCap' && carrier) { const cp = carrier.group.position; popText(cp.x, 4.2, cp.z, 'Kapasite ' + (6 + 4 * S.lv.carCap), '#9dffb0'); sparkles(cp.x, 1.5, cp.z, 12, 0x9dffb0, 0.6); ring(cp.x, cp.z, 0x9dffb0, 3); }
   if (S.lv[key] >= u.max()) { u.done = true; u.group.visible = false; } else u.redraw();
   writeSave();
 }
@@ -2237,7 +2243,7 @@ window.__game = {
   tp(x, z) { P.group.position.set(x, 0, z); P.vel.set(0, 0, 0); camInit = false; },
   sim(sec) { const n = Math.round(sec * 30); for (let i = 0; i < n; i++) update(1 / 30); },
   render() { renderer.render(scene, camera); },
-  get scene() { return scene; }, get calls() { return renderer.info.render.calls; }, get tris() { return renderer.info.render.triangles; }, tutStep: () => S.tut, forceVip() { custCount = 5; }, zoom(v) { camMul = v; }
+  get scene() { return scene; }, fill(name, n) { const M = { input: [inputPile, () => makeFlowerItem(0, 'tulip'), 'flower'], output: [outputPile, () => makeBouquetItem(undefined, true), 'bouquet'], potIn: [potInput, () => makeFlowerItem(0, 'orchid'), 'orchid'], potOut: [potOutput, () => makePotItem(true), 'pot'], shelfB: [shelfB, () => makeBouquetItem(undefined, true), 'bouquet'], shelfP: [shelfP, () => makePotItem(true), 'pot'], vanLoad: [vanLoad, () => makeBouquetItem(undefined, true), 'bouquet'], money: [moneyPile, makeBill, 'bill'], vanMoney: [vanPile, makeBill, 'bill'] }[name]; const st = M[0]; while (st.length) rm(st.items.pop().mesh); fillStack(st, n, M[1], M[2]); }, get calls() { return renderer.info.render.calls; }, get tris() { return renderer.info.render.triangles; }, tutStep: () => S.tut, forceVip() { custCount = 5; }, zoom(v) { camMul = v; }
 };
 
 let last = performance.now();
