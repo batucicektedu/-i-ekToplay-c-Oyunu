@@ -40,6 +40,6 @@ Kilitli bölgeler gri zemin + çit + "KİLİTLİ" tabelası ve önünde fiyat pa
 
 
 ## Güncel sayılar (denge turu)
-- Çarpan 1.5; bazlar: Kapasite 70, Hız 100, Paketleme 130 (7 seviye); Kasiyer/Taşıyıcı/Kapasite/Bahçıvan hızı 300/300/350/400 (7 seviye).
+- Çarpan 1.5; bazlar: Kapasite 70, Hız 100, Paketleme 130 (7 seviye); Kasiyer/Taşıyıcı/Kapasite/Bahçıvan hızı 300/300/350/400 (7 seviye). Sırt kapasitesi: taban 25, Kapasite seviyesi başına +10 (en çok 95); seviyeden türetilir, kayıtta saklanmaz.
 - Düz fiyatlar: Kasiyer 150, Taşıyıcı 450, Yardımcı 450, Yeni Bahçe 300, Sera 1800, Minibüs 6000.
 - Müşteri doğma 2.0 sn (kuyruk<3 iken 0.8), Kasiyer hızı seviyesi başına ×0.88. Saksı süresi sabit 1.4 sn. Minibüs ödemesi ×2. Pad'de ödeme öncesi 0.5 sn bekleme.

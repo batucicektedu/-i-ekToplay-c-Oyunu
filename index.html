@@ -98,7 +98,7 @@ if (typeof THREE === 'undefined') { document.getElementById('msg').style.display
 const CFG = {
   yaw: 0.45, tilt: 52 * Math.PI / 180, fov: 45,
   baseSpeed: 5.6, speedStep: 0.15,
-  capBase: 10, capStep: 5,
+  capBase: 25, capStep: 10,
   growTime: 4, billValue: 5,
   packBase: 1.0, packMul: 0.75,
   transferEvery: 0.08,
@@ -2333,6 +2333,7 @@ buildAmbient(); setupPost(); onResize();
 window.__game = {
   S, stats, P: () => P, queue, beds, machine, inputPile, outputPile, moneyPile, get shelf() { return shelfB; }, get shelfP() { return shelfP; }, get potInput() { return potInput; }, get potOutput() { return potOutput; }, get zone2() { return zone2; }, get zone3() { return zone3; }, VAN, get vanLoad() { return vanLoad; }, get vanPile() { return vanPile; }, get cashier() { return cashier; }, get carrier() { return carrier; }, upPads, zones, customers, CFG, POS,
   helper: () => helper,
+  carry(n) { while (P.stack.length) P.stack.items.pop(); for (let i = 0; i < n; i++) P.stack.add(makeFlowerItem(0, "tulip"), "flower"); },
   tp(x, z) { P.group.position.set(x, 0, z); P.vel.set(0, 0, 0); camInit = false; },
   sim(sec) { const n = Math.round(sec * 30); for (let i = 0; i < n; i++) update(1 / 30); },
   render() { if (composer) composer.render(0); else renderer.render(scene, camera); },
