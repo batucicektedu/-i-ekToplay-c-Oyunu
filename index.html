@@ -133,6 +133,7 @@ function angDiff(a, b) { let d = (b - a) % TAU; if (d > Math.PI) d -= TAU; if (d
 const easeOutBack = t => { const c = 1.70158; t = clamp(t, 0, 1); return 1 + (c + 1) * Math.pow(t - 1, 3) + c * Math.pow(t - 1, 2); };
 function rm(o) { if (o && o.parent) o.parent.remove(o); }
 
+let fountainWater = null, clouds = [], butterflies = [];
 let LOADED_X = null, carpet1 = null, carpet2 = null;
 const S = { money: 0, lv: { cap: 0, speed: 0, pack: 0, bed: 0, helper: 0, cashier: 0, carrier: 0, cashSpd: 0, carSpd: 0, carCap: 0, helpSpd: 0, sera: 0, van: 0 }, tut: 0 };
 let saveDirty = false, saveTimer = 0;
@@ -218,7 +219,7 @@ function setupPost() {
     const rt = new THREE.WebGLRenderTarget(4, 4, { minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter, format: THREE.RGBAFormat, type: gl2 ? THREE.HalfFloatType : THREE.UnsignedByteType });
     composer = new THREE.EffectComposer(renderer, rt);
     composer.addPass(new THREE.RenderPass(scene, camera));
-    bloomPass = new THREE.UnrealBloomPass(new THREE.Vector2(256, 256), 0.32, 0.6, 0.93); composer.addPass(bloomPass);
+    bloomPass = new THREE.UnrealBloomPass(new THREE.Vector2(256, 256), 0.28, 0.55, 0.97); composer.addPass(bloomPass);
     const Grade = { uniforms: { tDiffuse: { value: null }, sat: { value: 1.14 }, contrast: { value: 1.07 }, tint: { value: new THREE.Vector3(1.035, 1.0, 0.95) }, vig: { value: 0.3 } },
       vertexShader: 'varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',
       fragmentShader: 'uniform sampler2D tDiffuse;uniform float sat;uniform float contrast;uniform vec3 tint;uniform float vig;varying vec2 vUv;void main(){vec3 col=texture2D(tDiffuse,vUv).rgb*tint;float l=dot(col,vec3(.2126,.7152,.0722));col=mix(vec3(l),col,sat);col=max((col-.18)*contrast+.18,0.);col=pow(col,vec3(1./2.2));vec2 d=(vUv-.5)*vec2(1.,1.1);col*=1.-vig*smoothstep(.32,.92,length(d));gl_FragColor=vec4(col,1.);}' };
@@ -1536,6 +1537,18 @@ function buildDecor() {
   // lamp posts
   const lamp = (x, z) => { const g = new THREE.Group(); g.position.set(x, 0, z); g.add(mk(G.cyl, mat(0x2d3a45), 0.09, 3.2, 0.09, 0, 1.6, 0)); g.add(mk(G.cyl, mat(0x2d3a45), 0.2, 0.15, 0.2, 0, 0.08, 0)); g.add(mk(G.sph, new THREE.MeshBasicMaterial({ color: lc(0xffe9a8) }), 0.26, 0.3, 0.26, 0, 3.3, 0)); g.traverse(m => { if (m.isMesh) m.castShadow = true; }); world.add(g); };
   [[-9.3, -5.2], [16.2, -5.2], [-9.3, 12], [7.9, 12.0], [12.1, 12.0], [16.2, 12]].forEach(a => lamp(a[0], a[1]));
+  // plaza fountain
+  if (HQ) {
+    const fx = 4.8, fz = 3.4, fg = new THREE.Group(); fg.position.set(fx, 0, fz);
+    const stone = LM({ color: lc(0xa9a396), roughness: 0.7 }), stone2 = LM({ color: lc(0x8d8678), roughness: 0.7 });
+    const basin = new THREE.Mesh(new THREE.CylinderGeometry(1.5, 1.6, 0.5, 24, 1, true), stone2); basin.position.y = 0.25; basin.castShadow = true; basin.receiveShadow = true; fg.add(basin);
+    const rim = new THREE.Mesh(new THREE.TorusGeometry(1.5, 0.12, 8, 28), stone2); rim.rotation.x = Math.PI / 2; rim.position.y = 0.52; fg.add(rim);
+    const water = new THREE.Mesh(new THREE.CircleGeometry(1.42, 28), new THREE.MeshStandardMaterial({ color: lc(0x3fb6ff), roughness: 0.1, metalness: 0.1, transparent: true, opacity: 0.9, emissive: lc(0x0a5aa0), emissiveIntensity: 0.4 })); water.rotation.x = -Math.PI / 2; water.position.y = 0.4; { const fl = new THREE.Mesh(new THREE.CircleGeometry(1.5, 24), stone2); fl.rotation.x = -Math.PI / 2; fl.position.y = 0.05; fg.add(fl); } basin.material = stone2.clone(); basin.material.side = THREE.DoubleSide; fg.add(water); fountainWater = water;
+    const col = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.3, 0.9, 12), stone); col.position.y = 0.85; col.castShadow = true; fg.add(col);
+    const bowl = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.3, 0.2, 18), stone); bowl.position.y = 1.35; bowl.castShadow = true; fg.add(bowl);
+    const jet = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.1, 0.8, 8), new THREE.MeshBasicMaterial({ color: lc(0xbfe9ff), transparent: true, opacity: 0.8 })); jet.position.y = 1.8; fg.add(jet);
+    fg.userData.dyn = true; world.add(fg); addCollider(fx - 1.6, fx + 1.6, fz - 1.6, fz + 1.6);
+  }
   // benches
   const bench = (x, z, ry) => { const g = new THREE.Group(); g.position.set(x, 0, z); g.rotation.y = ry; g.add(mk(G.box, woodM(), 2.0, 0.1, 0.6, 0, 0.5, 0)); g.add(mk(G.box, woodM(), 2.0, 0.5, 0.08, 0, 0.85, -0.28)); for (const sx of [-0.85, 0.85]) g.add(mk(G.box, mat(0x2d3a45), 0.08, 0.5, 0.5, sx, 0.25, 0)); g.traverse(m => { if (m.isMesh) m.castShadow = true; }); world.add(g); };
   bench(15.0, 6.2, -Math.PI / 2); bench(-1.5, 11.6, Math.PI);
@@ -1748,7 +1761,7 @@ function updateCarrier(dt, t) {
   h.cd -= dt;
   const outSpot = ty => ty === 'pot' ? [POS.potOut.x, POS.potOut.z + 0.3] : [POS.outPad.x, POS.outPad.z + 0.3];
   if (h.state === 'idle') {
-    tx = 6.0; tz = 3.0;
+    tx = 7.5; tz = 4.6;
     const pt = carrierPick(load);
     if (pt) { h.dest = 'shelf'; h.ptype = pt; h.state = 'toOut'; }
     else if (outSources().some(q => q.length > 0) && vanFree() - load > 0) { h.dest = 'van'; h.ptype = outputPile.length > 0 ? 'bouquet' : 'pot'; h.state = 'toOut'; }
@@ -2196,7 +2209,7 @@ function update(dt) {
   updateZoneActions(dt);
   updateUpgrades(dt);
   updatePacking(dt, T);
-  updateHelper(dt, T); updateCashier(dt, T); updateCarrier(dt, T); updatePotting(dt, T); updateSera(dt); updateVan(dt, T);
+  updateHelper(dt, T); updateCashier(dt, T); updateCarrier(dt, T); updatePotting(dt, T); updateSera(dt); updateVan(dt, T); updateAmbient(dt, T);
   // customers spawning
   spawnT -= dt;
   if (queue.length < 3 && spawnT > CFG.spawnShortEvery) spawnT = CFG.spawnShortEvery;
@@ -2255,6 +2268,30 @@ function finalizeWorld() {
   groups.forEach(g => mergeStatic(g, true));
   mergeStatic(world, true);
 }
+function buildAmbient() {
+  if (!HQ) return;
+  const cm = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.0, depthWrite: false });
+  // cloud shadows drifting over the ground
+  const sm = new THREE.MeshBasicMaterial({ color: 0x0a2a10, transparent: true, opacity: 0.1, depthWrite: false });
+  for (let i = 0; i < 5; i++) { const m = new THREE.Mesh(new THREE.CircleGeometry(1, 16), sm); m.rotation.x = -Math.PI / 2; m.scale.set(rand(6, 11), rand(4, 7), 1); m.position.set(rand(-40, 50), 0.07, rand(-25, 40)); m.renderOrder = 1; scene.add(m); clouds.push({ m, v: rand(0.6, 1.2) }); }
+  // butterflies
+  const wg = new THREE.PlaneGeometry(0.4, 0.3); wg.translate(0.2, 0, 0);
+  const cols = [0xffd23f, 0xff7eb6, 0xffffff, 0xff9a3c, 0x9fd0ff];
+  for (let i = 0; i < 9; i++) {
+    const g = new THREE.Group(), mt = new THREE.MeshBasicMaterial({ color: lc(cols[i % cols.length]), side: THREE.DoubleSide });
+    const w1 = new THREE.Mesh(wg, mt), w2 = new THREE.Mesh(wg, mt); w2.scale.x = -1; g.add(w1, w2); g.userData = { w1, w2 };
+    scene.add(g); butterflies.push({ g, cx: rand(-18, 20), cz: rand(-8, 14), r: rand(1.5, 4), sp: rand(0.4, 0.9), ph: rand(0, 6), h: rand(1.2, 2.6) });
+  }
+}
+function updateAmbient(dt, t) {
+  if (!HQ) return;
+  for (const c of clouds) { c.m.position.x += c.v * dt; c.m.position.z += c.v * 0.3 * dt; if (c.m.position.x > 60) c.m.position.x = -50; if (c.m.position.z > 50) c.m.position.z = -30; }
+  for (const b of butterflies) {
+    const a = t * b.sp + b.ph; b.g.position.set(b.cx + Math.cos(a) * b.r + Math.sin(a * 2.3) * 0.6, b.h + Math.sin(a * 3.1) * 0.35, b.cz + Math.sin(a * 0.9) * b.r);
+    b.g.rotation.y = -a; const f = Math.sin(t * 22 + b.ph) * 0.9; b.g.userData.w1.rotation.z = f; b.g.userData.w2.rotation.z = -f; b.g.rotation.x = 0.3;
+  }
+  if (fountainWater) { fountainWater.material.emissiveIntensity = 0.35 + 0.12 * Math.sin(t * 3); }
+}
 /* =====================================================================
    15. INIT
    ===================================================================== */
@@ -2280,7 +2317,7 @@ if (S.lv.carrier > 0) spawnCarrier(true);
 for (const k in upPads) { const u = upPads[k]; if (S.lv[k] >= u.max()) { u.done = true; u.group.visible = false; } else { u.group.visible = padVisible(u); u.redraw(); } }
 restoreExtras(LOADED_X); for (const k in upPads) if (!upPads[k].done) upPads[k].redraw();
 for (let i = 0; i < 3; i++) { spawnCustomer(CFG.queueZ0 + i * CFG.queueGap); const c = customers[customers.length - 1]; c.group.position.x = CFG.queueX; c.yaw = 0; c.group.rotation.y = Math.PI; c.yaw = Math.PI; c.atSlot = true; }
-setupPost(); onResize();
+buildAmbient(); setupPost(); onResize();
 
 window.__game = {
   S, stats, P: () => P, queue, beds, machine, inputPile, outputPile, moneyPile, get shelf() { return shelfB; }, get shelfP() { return shelfP; }, get potInput() { return potInput; }, get potOutput() { return potOutput; }, get zone2() { return zone2; }, get zone3() { return zone3; }, VAN, get vanLoad() { return vanLoad; }, get vanPile() { return vanPile; }, get cashier() { return cashier; }, get carrier() { return carrier; }, upPads, zones, customers, CFG, POS,
