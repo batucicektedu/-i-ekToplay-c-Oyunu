@@ -1289,7 +1289,7 @@ function buildSeraZones() {
 }
 function unlockSera(instant) {
   zone2.locked = false; const bed = zone2.bed; bed.locked = false;
-  bed.flowers.forEach(f => { f.t = instant ? rand(0, f.gt) : 0; });
+  bed.flowers.forEach(f => { f.vis = true; f.t = instant ? rand(0, f.gt) : 0; });
   potZone.group.visible = potOutZone.group.visible = true;
   if (instant) { zone2.lockedGroup.visible = false; zone2.groups.forEach(g => { g[0].visible = true; g[0].scale.setScalar(1); }); return; }
   zone2.popT = 0; zone2.popFlags = []; zone2.lockedGroup.dropping = 0;
