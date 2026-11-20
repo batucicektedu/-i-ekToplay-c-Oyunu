@@ -630,11 +630,11 @@ function mergeStatic(root) {
 }
 const vcMat = new THREE.MeshLambertMaterial({ vertexColors: true });
 const vcMat2 = new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide });
-const GREEN = 0x127a4a, GREEN2 = 0x1fae62;
-const STEM_H = 0.54;
+const GREEN = 0x0f5f3a, GREEN2 = 0x1b7a4a;
+const STEM_H = 0.32;
 /* bloom parts: origin at stem top, growing along +y */
 function tulipBloom(c) {
-  if (LOD === 2) { const Q = [part(G.sph6, GREEN, 0, 0.01, 0, 0.045, 0.04, 0.045)]; for (let k = 0; k < 3; k++) Q.push(petal(shade(c, k % 2 ? 0.05 : -0.1), 0.04, 0.18, k * 2.094 + 0.3, 0.15, 0.045, 0.19, 0.09)); return Q; }
+  if (LOD === 2) { const Q = [part(G.sph6, GREEN, 0, 0.01, 0, 0.045, 0.04, 0.045)]; for (let k = 0; k < 3; k++) Q.push(petal(shade(c, k % 2 ? 0.08 : -0.08), 0.055, 0.17, k * 2.094 + 0.3, -0.12, 0.05, 0.19, 0.115)); Q.push(part(G.sph6, shade(c, 0.28), 0, 0.3, 0, 0.05, 0.03, 0.05)); return Q; }
   const P_ = [part(G.sph6, GREEN, 0, 0.01, 0, 0.045, 0.04, 0.045)];
   for (let k = 0; k < 3; k++) {
     P_.push(petal(shade(c, -0.12), 0.048, 0.17, k * 2.094 + 0.3, 0.2, 0.03, 0.17, 0.075));
@@ -644,7 +644,7 @@ function tulipBloom(c) {
   return P_;
 }
 function roseBloom(c) {
-  if (LOD === 2) { const Q = [part(G.sph6, GREEN, 0, 0.0, 0, 0.06, 0.04, 0.06), part(G.sph6, shade(c, -0.2), 0, 0.09, 0, 0.1, 0.09, 0.1)]; for (let k = 0; k < 4; k++) Q.push(petal(shade(c, 0.1), 0.09, 0.09, k * 1.57 + 0.4, -0.1, 0.03, 0.08, 0.09)); return Q; }
+  if (LOD === 2) { const Q = [part(G.sph6, GREEN, 0, 0.0, 0, 0.06, 0.04, 0.06), part(G.sph6, shade(c, -0.2), 0, 0.09, 0, 0.1, 0.09, 0.1)]; for (let k = 0; k < 4; k++) Q.push(petal(shade(c, 0.1), 0.09, 0.09, k * 1.57 + 0.4, -0.15, 0.03, 0.085, 0.11)); for (let k = 0; k < 3; k++) Q.push(petal(shade(c, 0.25), 0.14, 0.07, k * 2.094 + 1.1, -0.5, 0.025, 0.07, 0.1)); return Q; }
   const P_ = [part(G.sph6, GREEN, 0, 0.0, 0, 0.06, 0.04, 0.06), part(G.sph6, shade(c, -0.35), 0, 0.09, 0, 0.055, 0.07, 0.055)];
   for (let k = 0; k < 5; k++) P_.push(petal(shade(c, -0.18), 0.04, 0.11, k * 1.2566 + 0.2, 0.35, 0.02, 0.075, 0.065));
   for (let k = 0; k < 6; k++) P_.push(petal(c, 0.082, 0.1, k * 1.047 + 0.6, 0.1, 0.022, 0.085, 0.08));
@@ -652,13 +652,13 @@ function roseBloom(c) {
   return P_;
 }
 function leafParts(type) {
-  const P_ = [part(G.cyl, GREEN, 0, STEM_H / 2, 0, 0.022, STEM_H, 0.022)];
+  const P_ = [part(G.cyl, GREEN, 0, STEM_H / 2, 0, 0.016, STEM_H, 0.016)];
   if (type === 'orchid') {
-    for (let k = 0; k < 3; k++) { const th = k * 2.1 + 0.3; P_.push(petal(0x0f7a45, 0.05, 0.12, th, -1.05, 0.012, 0.2, 0.07)); }
+    for (let k = 0; k < 3; k++) { const th = k * 2.1 + 0.3; P_.push(petal(0x0f5f3a, 0.04, 0.07, th, -1.05, 0.012, 0.13, 0.05)); }
   } else if (type === 'tulip') {
-    for (let k = 0; k < 2; k++) { const th = k * Math.PI + 0.4; P_.push(petal(GREEN2, 0.045, 0.2, th, -0.3, 0.012, 0.22, 0.07)); P_.push(petal(GREEN, 0.15, 0.4, th, -0.75, 0.012, 0.13, 0.06)); }
+    for (let k = 0; k < 2; k++) { const th = k * Math.PI + 0.4; P_.push(petal(GREEN2, 0.035, 0.12, th, -0.3, 0.012, 0.14, 0.055)); P_.push(petal(GREEN, 0.1, 0.24, th, -0.75, 0.012, 0.08, 0.05)); }
   } else {
-    for (let k = 0; k < 2; k++) { const th = k * Math.PI + 1.0; for (let j = 0; j < 3; j++) P_.push(petal(GREEN2, 0.07 + 0.01 * j, 0.2 + 0.1 * k + 0.03 * j, th + (j - 1) * 0.5, -0.9, 0.012, 0.07, 0.05)); }
+    for (let k = 0; k < 2; k++) { const th = k * Math.PI + 1.0; for (let j = 0; j < 3; j++) P_.push(petal(GREEN2, 0.05 + 0.01 * j, 0.12 + 0.06 * k + 0.02 * j, th + (j - 1) * 0.5, -0.9, 0.012, 0.05, 0.04)); }
     P_.push(part(G.sph6, 0x2e7d32, 0.025, 0.12, 0, 0.012, 0.025, 0.012), part(G.sph6, 0x2e7d32, -0.025, 0.3, 0, 0.012, 0.025, 0.012));
   }
   return P_;
@@ -689,8 +689,8 @@ function itemGeoRaw(type, ci) {
   const c = colsFor(type)[ci % colsFor(type).length], parts = [], W = new THREE.Matrix4();
   for (let f = 0; f < 3; f++) {
     const yy = [0, 0.07, -0.02][f], zz = (f - 1) * 0.1, ang = (f - 1) * 0.16;
-    const fw = new THREE.Matrix4().makeTranslation(-0.3, yy, zz).multiply(new THREE.Matrix4().makeRotationY(ang)).multiply(new THREE.Matrix4().makeRotationZ(-Math.PI / 2));
-    const sub = [part(G.cyl8, GREEN, 0, 0.3, 0, 0.02, 0.62, 0.02)].concat(bloomParts(type, c).map(q => { const m = new THREE.Matrix4().makeTranslation(0, 0.6, 0).multiply(new THREE.Matrix4().makeScale(0.8, 0.8, 0.8)).multiply(q.m); return { g: q.g, c: q.c, m }; }));
+    const fw = new THREE.Matrix4().makeTranslation(-0.25, yy, zz).multiply(new THREE.Matrix4().makeRotationY(ang)).multiply(new THREE.Matrix4().makeRotationZ(-Math.PI / 2));
+    const sub = [part(G.cyl8, GREEN, 0, 0.2, 0, 0.016, 0.4, 0.016)].concat(bloomParts(type, c).map(q => { const m = new THREE.Matrix4().makeTranslation(0, 0.4, 0).multiply(new THREE.Matrix4().makeScale(1.35, 1.35, 1.35)).multiply(q.m); return { g: q.g, c: q.c, m }; }));
     for (const q of sub) { const m = fw.clone().multiply(q.m); parts.push({ g: q.g, c: q.c, m }); }
     parts.push({ g: G.sph6, c: GREEN2, m: fw.clone().multiply(new THREE.Matrix4().compose(new THREE.Vector3(0.1, 0.2, 0.02), new THREE.Quaternion().setFromEuler(new THREE.Euler(0, 0, 0.3)), new THREE.Vector3(0.012, 0.14, 0.05))) });
   }
@@ -723,7 +723,7 @@ function bouquetGeoRaw(v, up) {
   const bl = [[0, 0, 'rose', 1, 0], [0.2, 0.3, 'tulip', 0, 1], [0.2, 1.55, 'rose', 4, 2], [0.2, 2.8, 'tulip', 2, 3], [0.2, 4.05, 'rose', 3, 4], [0.2, 5.3, 'tulip', 1, 0]];
   for (const b of bl) {
     const r = b[0], th = b[1];
-    const bm = new THREE.Matrix4().makeTranslation(r * Math.cos(th), 0.46 + (r ? 0 : 0.06), r * Math.sin(th)).multiply(new THREE.Matrix4().makeRotationY(-th)).multiply(new THREE.Matrix4().makeRotationZ(r ? -0.5 : 0)).multiply(new THREE.Matrix4().makeScale(0.68, 0.68, 0.68));
+    const bm = new THREE.Matrix4().makeTranslation(r * Math.cos(th), 0.46 + (r ? 0 : 0.06), r * Math.sin(th)).multiply(new THREE.Matrix4().makeRotationY(-th)).multiply(new THREE.Matrix4().makeRotationZ(r ? -0.5 : 0)).multiply(new THREE.Matrix4().makeScale(1.05, 1.05, 1.05));
     const c = FLOWER_COLS[b[3] % FLOWER_COLS.length];
     for (const q of (b[2] === 'tulip' ? tulipBloom : roseBloom)(c)) P_.push({ g: q.g, c: q.c, m: bm.clone().multiply(q.m) });
   }
@@ -1001,7 +1001,7 @@ function writeFlower(f) {
   if (!f.vis) { _fM.makeScale(0, 0, 0); f.sm.setMatrixAt(f.si, _fM); f.bm.setMatrixAt(f.bi, _fM); return; }
   _fe.set(f.rx, 0, f.rz); _fq.setFromEuler(_fe); const k = f.gs * 1.5; _fB.compose(_fp.set(f.x, f.y, f.z), _fq, _fs.set(k, k, k));
   _fM.copy(_fB).multiply(_fS.makeScale(1, f.ss, 1)); f.sm.setMatrixAt(f.si, _fM);
-  _fM.copy(_fB).multiply(_fT.makeTranslation(0, STEM_H * f.ss, 0)).multiply(_fS.makeScale(f.bs, f.bs, f.bs)); f.bm.setMatrixAt(f.bi, _fM);
+  const bk = f.bs * (f.type === 'orchid' ? 1.9 : 1.75); _fM.copy(_fB).multiply(_fT.makeTranslation(0, STEM_H * f.ss, 0)).multiply(_fS.makeScale(bk, bk, bk)); f.bm.setMatrixAt(f.bi, _fM);
 }
 function growFlower(f) {
   const p = clamp(f.t / f.gt, 0, 1);
