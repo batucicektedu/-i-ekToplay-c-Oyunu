@@ -28,3 +28,8 @@ Oyun birden çok bölümden oluşur. Her bölüm ayrı bir HTML sayfası, kendi 
 - CLAUDE.md'deki kayıt uyumluluğu kuralları her bölüm için geçerli (SAVE_VER, migrateSave, tmp/bak yazma, tests/saves fixture'ları).
 - Bölüm 2/3, Bölüm 1 motorunun (index.html) kopyasından türetilir; içerik değişir, motor/altyapı (karakter, sırt yığını, pad, istasyon, müşteri kuyruğu, işçi talep sistemi, bekçi, otobüs, traktör evrimi, kamera kuyruğu, kalite ayarı, PWA) aynı kalır.
 - Her bölüm baştan playable-reklam hızında başlar ve sadedir; 2–3 saatlik içerik; ortadan sonra oyuncu yönetici olur (her zincir işçi/makineyle otomatikleşebilir, +1 Eleman, hız, kapasite).
+
+## İş sırası (öncelik)
+1. Bölüm 2 Sahil: oynanabilir sürümü hemen yayınla, sonra küçük test edilmiş adımlarla bölgeleri tamamla.
+2. Bölüm 3 Hayvan Çiftliği (at çiftliği vitrin bölge, oyuncu ata binebilir) – Sahil yayından sonra başlar.
+3. Bölüm 1: Çardak süsünün pasta görünümü, otobüsün meydan ürünlerini taşıması (isteğe bağlı).
