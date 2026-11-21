@@ -72,3 +72,32 @@ Müşteri istekleri en yeni ürünlere doğru ağırlıklı (bouquet 3, diğerle
 
 ## Performans (Düşük/Yüksek)
 Statik dünya `mergeStatic`, tarlalar `InstancedMesh`. Çizim çağrısı kare başına ~140-340 (Düşük 170-240), ~200-250k üçgen; tüm bölgeler açıkken bile aynı aralıkta.
+
+
+## C2 – Kozmetik, mekan seviyeleri, güzellik, gün-gece (60–180 dk uzun kuyruk para çıkışı)
+Kaynak: index.html bölüm "17. C2". Hepsi `S.lv` dışında yeni kayıt alanlarına yazılır: `S.tier`, `S.decor`, `S.cos`, `S.dn` (kayıt `ver` 3; eski kayıtlar varsayılanla yüklenir, hiçbir şey azalmaz).
+
+**Görünürlük / ritim.** Tüm C2 pad'leri ilk genişleme (Lavanta) alındıktan sonra (~9:30) görünür; istasyon/bölge açıksa kendi pad'i çıkar. Pad: tam fiyat gerekir (kısmi ödeme yok), üzerinde 0.45 sn durunca öder, aynı pad'e tekrar basmak için çıkıp girmek gerekir. **Önce ana hedef:** oyuncu şu anki hedef pad'ini satın alabiliyorsa kozmetik pad'ler beklemede (kırmızı fiyat), böylece ilerleme yavaşlamaz. Pad'ler oyuncuya 26 birimden uzaktaysa gizlenir.
+
+**1. Mekan Seviyeleri (Ahşap -> Boyalı Dükkan -> Lüks Butik).** 9 istasyon, her biri 2 satın alma; kademe başına +%25 (Boyalı +%25, Lüks toplam +%50).
+| İstasyon | Bonus | Boyalı | Lüks |
+|---|---|---|---|
+| Paketleme Atölyesi | paketleme hızı | 6.000 | 24.000 |
+| Çiçekçi dükkanı | müşteri ödemesi | 8.000 | 32.000 |
+| Saksı Atölyesi | saksılama hızı | 10.000 | 40.000 |
+| Minibüs bayi | minibüs kazancı | 12.000 | 48.000 |
+| Kese | üretim hızı | 16.000 | 64.000 |
+| Parfüm | üretim hızı | 22.000 | 88.000 |
+| Kafe | çay fiyatı | 30.000 | 120.000 |
+| Düğün | sipariş ödülü | 40.000 | 160.000 |
+| Şehir | satış fiyatı | 50.000 | 200.000 |
+Toplam 194K (Boyalı) + 776K (Lüks) = 970K. Görünüm: Boyalı = yeni renkli tente + kıvrımlı saçak, bayrak girlandı, ışık dizisi, çiçek kutuları, saksılar, boyalı tabela, damalı zemin; Lüks = bordo/krem çift tente + altın detaylar, mermer sütunlar, avizeler, asma sepetler, altın çerçeveli koyu tabela, "AÇIK" neon, mermer zemin. Her kademe tek seferde birleştirilmiş (`mergeStatic`) gruptur; eski tente/tabela gizlenir, önceki kademe atılır (bellek sızıntısı yok). Yapım animasyonu: iskele pop, toz, konfeti, havai fişek, banner.
+
+**2. Dekorasyon + Güzellik Puanı.** 28 sabit yuva (meydan/güney park 8, sera 3, minibüs 2, Lavanta 3, Parfüm 2, Kafe 3, Düğün 3, Ayçiçeği 2, Şehir 2); soluk hayalet önizleme + pad. 9 süs: çiçek kemeri 12 puan (10K), fener 3 (1.5K), heykel 14 (14K), havuz 10 (8K), bank 4 (2.2K), kelebek bahçesi 9 (6.5K), çiçekli çit 5 (3.2K), şekilli çalı 7 (4.5K; tavşan/kuğu/spiral), çardak 18 (20K). Fiyat bölgeye göre çarpılır (meydan x1, sera/minibüs x1.2, Lavanta/Parfüm x1.5, Kafe/Düğün x2, Ayçiçeği/Şehir x2.5). Toplam 311.6K, 246 puan.
+Eşikler (HUD'da çiçek rozeti + çubuk; satın alırken geçilirse kutlama: banner, havai fişek, konfeti): 25 müşteri gelişi +%10; 60 bahşiş şansı %25->%45 ve tutar x1.5; 110 VIP şansı +%6; 170 müşteri gelişi +%25 toplam; 215 "Çiçek Cenneti" VIP +%12, bahşiş şansı %60, tutar x2.
+
+**3. Kozmetik (Gardırop).** Ayarlar menüsü veya HUD askı düğmesi. Saf görsel: şapka (hasır/şapkasız ücretsiz; kasket 1.5K, bere 2.5K, güneş şapkası 4K, çiçek tacı 6K, ressam bereti 9K, silindir 14K), kıyafet (klasik ücretsiz; 2K, 3.5K, 5K elbise, 8K, 25K altın), çalışan üniforması (6K, 12K, 20K, 45K; tüm işçiler/gardiyanlar/garson/şube kasiyeri), meydan zemini (taş ücretsiz, tuğla 8K, mozaik 30K, mermer 60K; plaza + güney yol + kuzey cadde). Toplam ~262K. Karakter parçaları `reskin()` ile değiştirilir (yığın/bekleme durumu korunur).
+
+**4. Gün-gece.** 360 sn döngü (gün %40, akşam %10, geçiş, gece %24+). Saat `S.dn`'de saklanır, sadece Lavanta açıldıktan sonra ilerler (ilk dakikalar hep gündüz). Hemisfer/güneş/dolgu rengi-şiddeti, gökyüzü gradyanı, sis, (Yüksek) bloom + renk tonu anahtar karelerle karıştırılır; geceyi bile okunaklı tutmak için ambiyans düşürülmez (hemi 0.52, ay 0.46). Fener topları ve ışık dizileri `LAMPM/GLOWM` paylaşımlı malzemesiyle parlar (Yüksek: bloom), yere tek `InstancedMesh` toplamsal ışık havuzları, Yüksek modda 46 ateşböceği (Points). Düşük mod: bloom/ateşböceği yok, sadece ışık tonu + parlayan malzeme + ışık havuzları. Ayarlardan "Gece: Açık/Kapalı".
+
+**Performans (390x844, geç oyun, tüm bölgeler açık).** Çizim çağrısı/kare (Yüksek / Düşük): C2 öğesi yokken meydan 392 / 350; 9 istasyon Lüks + 28 süs + gece ile meydan 475 / 428, geniş bakış 660 / 606. Kademe başına ~17 çağrı (görünürse), süs başına ~2.5, gece ~+3 (havuz + ateşböcekleri).

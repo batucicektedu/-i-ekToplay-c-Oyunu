@@ -5,7 +5,7 @@ Hedef: ilk 6 dk playable-reklam hızı ve 60 dk içerik korunur; 60–180 dk ara
 ## C1 – Hata düzeltme (öncelik)
 - Bahçıvan/işçi takılması: kök neden + her işçi için bekçi (10 sn ilerleme yoksa sıfırla), yüklemede geçici durumları temizle (eski kayıtlar kendini onarır).
 
-## C2 – Kozmetik ve mekan seviyeleri (eski bölgeleri güzelleştirme)
+## C2 – Kozmetik ve mekan seviyeleri (eski bölgeleri güzelleştirme) – TAMAMLANDI (bkz. DESIGN.md)
 - **Mekan Seviyeleri:** her istasyonun 3 görsel kademesi (Ahşap Tezgah → Boyalı Dükkan → Lüks Butik). Her kademe görünümü değiştirir (tente, ışıklar, tabelalar, saksılar, zemin) ve +%25 hız/fiyat verir.
 - **Dekorasyon:** bölgelerde önceden belirlenmiş yuvalara satın alınan süsler (çiçek kemeri, fener, heykel, havuz, bank, kelebek bahçesi, çiçekli çit). Her süs **Güzellik Puanı** verir.
 - **Güzellik Puanı:** müşteri gelme hızı ve VIP oranını artırır; eşiklerde kutlama.

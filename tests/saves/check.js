@@ -25,16 +25,20 @@ async function open(b, pre, arg) {
     const fx = JSON.parse(fs.readFileSync(path.join(__dirname, f), 'utf8')), sv = fx.value; console.log(f);
     const { page, errs } = await open(b, ([k, v]) => { localStorage.clear(); localStorage.setItem(k, v); window.__resetting = true; }, [KEY, JSON.stringify(sv)]).catch(e => ({ page: null, errs: [String(e)] }));
     if (!page) { ok(false, 'açılamadı ' + errs); continue; }
-    const r = await page.evaluate(() => { const g = __game; const z = id => g.EXTZ[id] && !g.EXTZ[id].locked; return { money: g.S.money, lv: JSON.parse(JSON.stringify(g.S.lv)), helper: !!g.helper(), cashier: !!g.cashier, carrier: !!g.carrier, z2: g.zone2 && !g.zone2.locked, z3: g.zone3 && !g.zone3.locked, ext: { lav: z('lav'), parf: z('parf'), cafe: z('cafe'), wed: z('wed'), sunf: z('sunf'), city: z('city') }, gard: g.GARD.length, tractor: !!g.tractor() }; });
+    const r = await page.evaluate(() => { const g = __game; const z = id => g.EXTZ[id] && !g.EXTZ[id].locked; return { money: g.S.money, lv: JSON.parse(JSON.stringify(g.S.lv)), helper: !!g.helper(), cashier: !!g.cashier, carrier: !!g.carrier, z2: g.zone2 && !g.zone2.locked, z3: g.zone3 && !g.zone3.locked, ext: { lav: z('lav'), parf: z('parf'), cafe: z('cafe'), wed: z('wed'), sunf: z('sunf'), city: z('city') }, gard: g.GARD.length, tractor: !!g.tractor(), tier: JSON.parse(JSON.stringify(g.S.tier)), decor: Object.keys(g.S.decor).sort().join(), cos: JSON.stringify(g.S.cos), dn: g.S.dn }; });
     ok(r.money >= sv.money, `para ${r.money} < ${sv.money}`);
     for (const k in sv.lv) ok(r.lv[k] >= Math.min(sv.lv[k], 99) || r.lv[k] === sv.lv[k], `seviye ${k}: ${r.lv[k]} != ${sv.lv[k]}`);
     ok(!sv.lv.helper || r.helper, 'yardımcı yok'); ok(!sv.lv.cashier || r.cashier, 'kasiyer yok'); ok(!sv.lv.carrier || r.carrier, 'taşıyıcı yok');
     ok(!sv.lv.sera || r.z2, 'sera kilitli'); ok(!sv.lv.van || r.z3, 'van bölgesi kilitli');
     for (const k of ['lav', 'parf', 'cafe', 'wed', 'sunf', 'city']) ok(!(sv.lv[k] > 0) || r.ext[k], k + ' bölgesi kilitli');
     ok(!sv.lv.lavW || r.gard >= 1, 'lavanta bahçıvanı yok'); ok(!sv.lv.sunW || r.tractor, 'traktör yok');
+    if (sv.tier) { for (const k in sv.tier) ok(r.tier[k] >= sv.tier[k], 'tier ' + k + ': ' + r.tier[k] + ' < ' + sv.tier[k]); }
+    if (sv.decor) ok(Object.keys(sv.decor).sort().join() === r.decor, 'decor listesi değişti'); if (sv.cos) ok(JSON.stringify(sv.cos) === r.cos, 'kozmetik değişti: ' + r.cos); if (sv.dn) ok(r.dn >= sv.dn - 0.01, 'gün-gece saati geri gitti');
     await page.evaluate(() => __game.sim(60)); await page.waitForTimeout(100);
-    const after = await page.evaluate(k => { const o = JSON.parse(localStorage.getItem(k)); return { money: o.money, ver: o.ver, lv: o.lv }; }, KEY);
-    ok(after.money >= sv.money && after.ver >= 2, 'yeniden yazılan kayıt eksik'); for (const k in sv.lv) ok(after.lv[k] === sv.lv[k] || after.lv[k] > sv.lv[k], 'yazılan seviye ' + k);
+    const after = await page.evaluate(k => { const o = JSON.parse(localStorage.getItem(k)); return { money: o.money, ver: o.ver, lv: o.lv, tier: o.tier, decor: o.decor, cos: o.cos }; }, KEY);
+    ok(after.money >= sv.money && after.ver >= 2, 'yeniden yazılan kayıt eksik');
+    ok(!!after.tier && !!after.decor && !!after.cos, 'yeni alanlar (tier/decor/cos) yazılmadı');
+    if (sv.tier) for (const k in sv.tier) ok(after.tier[k] >= sv.tier[k], 'yazılan tier ' + k); if (sv.decor) for (const k in sv.decor) ok(after.decor[k], 'yazılan decor ' + k); if (sv.cos) ok(JSON.stringify(after.cos) === JSON.stringify(sv.cos), 'yazılan kozmetik'); for (const k in sv.lv) ok(after.lv[k] === sv.lv[k] || after.lv[k] > sv.lv[k], 'yazılan seviye ' + k);
     ok(errs.length === 0, 'konsol hatası: ' + errs.slice(0, 2).join(' | ')); await page.context().close();
   }
   // Bozuk ana kayıt + yedek: yedekten yüklenmeli
