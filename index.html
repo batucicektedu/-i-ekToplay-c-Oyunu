@@ -194,16 +194,17 @@ function rm(o) { if (o && o.parent) o.parent.remove(o); }
 let fountainWater = null, clouds = [], butterflies = [];
 let LOADED_X = null, carpet1 = null, carpet2 = null;
 const MAIN_UNLOCKS = { bed: 1, helper: 1, cashier: 1, carrier: 1, sera: 1, van: 1 };
-const S = { money: 0, lv: { cap: 0, speed: 0, pack: 0, bed: 0, helper: 0, cashier: 0, carrier: 0, cashSpd: 0, carSpd: 0, carCap: 0, helpSpd: 0, sera: 0, van: 0, lav: 0, lavW: 0, keseSpd: 0, parf: 0, parfW: 0, parfSpd: 0, cafe: 0, cafeW: 0, teaSpd: 0, wed: 0, wedBonus: 0, sunf: 0, sunW: 0, sbqSpd: 0, city: 0, cityW: 0, citySpd: 0, stars: 0 }, tut: 0 };
+const S = { money: 0, lv: { cap: 0, speed: 0, pack: 0, bed: 0, helper: 0, cashier: 0, carrier: 0, cashSpd: 0, carSpd: 0, carCap: 0, helpSpd: 0, sera: 0, van: 0, lav: 0, lavW: 0, keseSpd: 0, parf: 0, parfW: 0, parfSpd: 0, cafe: 0, cafeW: 0, teaSpd: 0, wed: 0, wedBonus: 0, sunf: 0, sunW: 0, sbqSpd: 0, city: 0, cityW: 0, citySpd: 0, stars: 0 }, tut: 0, tier: { pack: 0, flo: 0, pot: 0, van: 0, kese: 0, parf: 0, tea: 0, wed: 0, city: 0 }, decor: {}, cos: { hat: 'straw', fit: 0, uni: 0, floor: 0, own: [] }, dn: 0 };
 let saveDirty = false, saveTimer = 0;
 let introDone = false, curGoal = null, curGoalIdx = -1, lastGoalIdx = -2;
-const SAVE_VER = 2, BAK_KEY = SAVE_KEY + '_bak', TMP_KEY = SAVE_KEY + '_tmp';
+const SAVE_VER = 3, BAK_KEY = SAVE_KEY + '_bak', TMP_KEY = SAVE_KEY + '_tmp';
 let SAVE_BLOCKED = false; // okuma bozuk/başarısızsa eski kaydın üzerine yazma
 function readSaveKey(k) { try { const r = localStorage.getItem(k); if (r === null) return { none: true }; const o = JSON.parse(r); return o && typeof o === 'object' && !Array.isArray(o) ? { o, raw: r } : { bad: true, raw: r }; } catch (e) { return { bad: true }; } }
 const hasProgress = o => !!o && (+o.money > 0 || (o.lv && Object.keys(o.lv).some(k => +o.lv[k] > 0)) || +o.tut > 0);
 function migrateSave(s) { // ver alanı yoksa 1 sayılır; sadece alan ekler, hiçbir şeyi silmez
   if (!s.lv || typeof s.lv !== 'object') s.lv = {};
   const v = Math.floor(+s.ver) || 1; if (v < 2) { /* v1 -> v2: geçici işçi durumları artık kaydedilmez/yok sayılır */ }
+  if (v < 3) { /* v2 -> v3: tier, decor, cos, dn alanları eklendi; eksikse yüklemede varsayılanla dolar */ }
   s.ver = SAVE_VER; return s;
 }
 (function loadSave() {
@@ -217,7 +218,12 @@ function migrateSave(s) { // ver alanı yoksa 1 sayılır; sadece alan ekler, hi
       s = migrateSave(s);
       const m = Math.floor(+s.money); S.money = isFinite(m) ? Math.max(0, m) : 0;
       for (const k in S.lv) { const v = Math.floor(+(s.lv && s.lv[k])); S.lv[k] = clamp(isFinite(v) ? v : 0, 0, UPG[k] ? UPG[k].costs.length : 7); }
-      S.tut = clamp(Math.floor(+s.tut) || 0, 0, 12); LOADED_X = s.x && typeof s.x === 'object' ? s.x : null;
+      S.tut = clamp(Math.floor(+s.tut) || 0, 0, 12);
+      if (s.tier && typeof s.tier === 'object') for (const k in S.tier) S.tier[k] = clamp(Math.floor(+s.tier[k]) || 0, 0, 2);
+      if (s.decor && typeof s.decor === 'object') for (const k in s.decor) if (s.decor[k]) S.decor[k] = 1;
+      if (s.cos && typeof s.cos === 'object') { const c = s.cos; if (typeof c.hat === 'string') S.cos.hat = c.hat.slice(0, 20); for (const k of ['fit', 'uni', 'floor']) S.cos[k] = clamp(Math.floor(+c[k]) || 0, 0, 20); if (Array.isArray(c.own)) S.cos.own = c.own.filter(q => typeof q === 'string').map(q => q.slice(0, 24)).slice(0, 200); }
+      S.dn = isFinite(+s.dn) ? Math.max(0, +s.dn) : 0;
+      LOADED_X = s.x && typeof s.x === 'object' ? s.x : null;
     }
   } catch (e) { SAVE_BLOCKED = true; }
 })();
@@ -282,6 +288,8 @@ renderer.outputEncoding = THREE.sRGBEncoding;
 renderer.toneMapping = THREE.NoToneMapping;
 const lc = h => new THREE.Color(h).convertSRGBToLinear();
 function LM(o) { if (!HQ) return new THREE.MeshLambertMaterial(o); return new THREE.MeshStandardMaterial(Object.assign({ roughness: 0.78, metalness: 0, envMapIntensity: 0.3 }, o)); }
+const STREF = {}, FLOORM = [], GLOWS = [];
+const LAMPM = new THREE.MeshBasicMaterial({ color: lc(0xffe9a8) });
 const scene = new THREE.Scene();
 (function () {
   const c = document.createElement('canvas'); c.width = 4; c.height = 256; const x = c.getContext('2d');
@@ -964,7 +972,7 @@ function makeChar(o) {
   // legs
   const mkLeg = sx => { const p = new THREE.Group(); p.position.set(sx * 0.14, 0.5, 0); p.add(mk(G.cylC, skirt ? skin : pants, 0.1, 0.42, 0.1, 0, -0.21, 0)); p.add(mk(G.sphC, shoe, 0.125, 0.085, 0.18, 0, -0.43, 0.04)); g.add(p); return p; };
   const mkArm = sx => { const p = new THREE.Group(); p.position.set(sx * 0.34, 1.1, 0); p.add(mk(G.cylC, shirt, 0.075, 0.36, 0.075, 0, -0.17, 0)); p.add(mk(G.sphC, skin, 0.085, 0.085, 0.085, 0, -0.38, 0)); body.add(p); return p; };
-  const c = { group: g, body, head, legL: mkLeg(-1), legR: mkLeg(1), armL: mkArm(-1), armR: mkArm(1), phase: rand(0, 6), yaw: 0, moving: 0,
+  const c = { opts: o, group: g, body, head, legL: mkLeg(-1), legR: mkLeg(1), armL: mkArm(-1), armR: mkArm(1), phase: rand(0, 6), yaw: 0, moving: 0,
     vel: new THREE.Vector3(), swayX: 0, swayZ: 0, incoming: 0, stack: null, anchor: new THREE.Group() };
   g.add(c.anchor);
   g.scale.setScalar(CHAR_S);
@@ -1043,6 +1051,7 @@ function buildGround() {
   edged(-10.9, -9, -11, 11); edged(-17.3, -10.7, -5.3, -2.7); edged(-17.3, -10.7, 2.7, 5.3); edged(-17.3, -10.7, -13, -10.7);
   // plaza
   const cm = LM({ map: cobbleTex() });
+  FLOORM.push({ m: cm, rep: [14, 9.5], k: 0 });
   const plaza = new THREE.Mesh(G.plane, cm); plaza.rotation.x = -Math.PI / 2; plaza.scale.set(25.7, 17.7, 1); plaza.position.set(3.65, 0.02, 3.35); plaza.receiveShadow = true; world.add(plaza);
   // curbs
   const curbM = mat(0xf1e4c3);
@@ -1050,7 +1059,7 @@ function buildGround() {
     const w = x1 - x0, d = z1 - z0; const m = rbox(w, 0.2, d, 0.09, curbM); m.position.set((x0 + x1) / 2, 0.08, (z0 + z1) / 2); m.receiveShadow = true; world.add(m);
   };
   const cobM = LM({ map: cobbleTex() });
-  { const m = new THREE.Mesh(G.plane, cobM); m.rotation.x = -Math.PI / 2; m.scale.set(3.2, 34, 1); m.position.set(10, 0.02, 29); m.receiveShadow = true; world.add(m); cobM.map.repeat.set(14 * 3.2 / 25.7, 9.5 * 34 / 17.7);
+  { const m = new THREE.Mesh(G.plane, cobM); m.rotation.x = -Math.PI / 2; m.scale.set(3.2, 34, 1); m.position.set(10, 0.02, 29); m.receiveShadow = true; world.add(m); cobM.map.repeat.set(14 * 3.2 / 25.7, 9.5 * 34 / 17.7); FLOORM.push({ m: cobM, rep: [14 * 3.2 / 25.7, 9.5 * 34 / 17.7], k: 0 });
     for (const sx of [-1, 1]) { const cu = rbox(0.25, 0.2, 34, 0.09, curbM); cu.position.set(10 + sx * 1.7, 0.08, 29); world.add(cu); } }
   curb(-9.35, 16.65, -5.65, -5.4); curb(-9.35, -9.1, -5.65, 12.35); curb(16.4, 16.65, -5.65, 12.35);
   curb(-9.35, 8.3, 12.1, 12.35); curb(11.7, 16.65, 12.1, 12.35);
@@ -1262,7 +1271,7 @@ function buildStations() {
   const roof = new THREE.Mesh(new THREE.BoxGeometry(bw + 0.8, 0.14, 2.4), LM({ map: awningTex('#0aa89a', '#ffffff') }));
   roof.material.map.repeat.set(2, 1); roof.material.map.wrapS = THREE.RepeatWrapping;
   roof.position.set(bcx, 4.15, -3.95); roof.rotation.x = -0.1; roof.castShadow = true; world.add(roof);
-  const sgn = makeBoard('PAKETLEME', 4.6, 1.0, 'wood'); sgn.position.set(bcx, 5.05, -2.95); sgn.rotation.x = -0.25; world.add(sgn);
+  const sgn = makeBoard('PAKETLEME', 4.6, 1.0, 'wood'); sgn.position.set(bcx, 5.05, -2.95); sgn.rotation.x = -0.25; world.add(sgn); roof.userData.dyn = sgn.userData.dyn = true; STREF.pack = [roof, sgn];
   // ---- machine / wrapping area
   const mg = new THREE.Group(); mg.position.set(machine.x, TABLE_Y, machine.z); world.add(mg); machine.group = mg;
   mg.add(mk(G.box, mat(0xe0a868), 1.5, 0.03, 1.0, 0, 0.02, 0.15));
@@ -1316,7 +1325,7 @@ function buildStations() {
   const aw = new THREE.Mesh(new THREE.BoxGeometry(5.4, 0.12, 2.3), LM({ map: awningTex('#e8142e', '#ffffff') }));
   aw.position.set(ct.x, 3.15, ct.z - 0.3); aw.rotation.x = -0.12; aw.castShadow = true; world.add(aw);
   for (const sx of [-1, 1]) { const po = mk(G.cyl, mat(0xffffff), 0.08, 3.1, 0.08, ct.x + sx * 2.6, 1.55, ct.z + 0.8); po.castShadow = true; world.add(po); }
-  const cs = makeBoard('ÇİÇEKÇİ', 3.4, 0.9, 'chalk'); cs.position.set(ct.x, 4.2, ct.z - 0.55); cs.rotation.x = -0.25; world.add(cs);
+  const cs = makeBoard('ÇİÇEKÇİ', 3.4, 0.9, 'chalk'); cs.position.set(ct.x, 4.2, ct.z - 0.55); cs.rotation.x = -0.25; world.add(cs); aw.userData.dyn = cs.userData.dyn = true; STREF.flo = [aw, cs];
   addCollider(ct.x - 2.7, ct.x + 2.7, ct.z - 1.2, ct.z + 0.95);
   // queue stanchions with rope along the street side
   const stan = (x, z) => { const g = new THREE.Group(); g.position.set(x, 0, z); g.add(mk(G.cyl, mat(0xc9a227), 0.2, 0.05, 0.2, 0, 0.03, 0)); g.add(mk(G.cyl, mat(0xe8c64a), 0.05, 0.95, 0.05, 0, 0.5, 0)); g.add(mk(G.sph, mat(0xe8c64a), 0.1, 0.1, 0.1, 0, 1.0, 0)); g.traverse(m => { if (m.isMesh) m.castShadow = true; }); world.add(g); };
@@ -1393,7 +1402,7 @@ function buildSera() {
   for (let i = 0; i < 4; i++) { const pm = new THREE.Mesh(potGeo(true), vcMat2); pm.scale.setScalar(0.5); ad(pw, pm, 38.1 + i * 1.5, 1.54, -4.8); }
   for (const px of [37.0, 44.0]) ad(pw, mk(G.cyl, white, 0.1, 4.2, 0.1), px, 2.1, -4.5);
   const aw = new THREE.Mesh(new THREE.BoxGeometry(7.8, 0.14, 2.4), LM({ map: awningTex('#a64dff', '#ffffff') })); aw.material.map.repeat.set(2, 1); aw.material.map.wrapS = THREE.RepeatWrapping; aw.rotation.x = -0.1; aw.castShadow = true; ad(pw, aw, 40.5, 4.15, -4.2);
-  const ps = makeBoard('SAKSI ATÖLYESİ', 5.4, 1.0, 'wood'); ps.rotation.x = -0.25; ad(pw, ps, 40.5, 5.05, -3.2);
+  const ps = makeBoard('SAKSI ATÖLYESİ', 5.4, 1.0, 'wood'); ps.rotation.x = -0.25; ad(pw, ps, 40.5, 5.05, -3.2); aw.userData.dyn = ps.userData.dyn = true; STREF.pot = [aw, ps];
   // crate
   const crate = new THREE.Group(); ad(pw, crate, 38.2, TABLE_Y, -3);
   crate.add(mk(G.box, dark, 1.8, 0.08, 1.5, 0, 0.04, 0));
@@ -1417,7 +1426,7 @@ function buildSera() {
   const dc = pivotGroup(33, 8); dc.visible = false; world.add(dc); zone2.groups.push([dc, 0.7]);
   const tree = (x, z, sc) => { const t = new THREE.Group(); t.add(mk(G.cyl, mat(0x8a5a36), 0.35 * sc, 1.6 * sc, 0.35 * sc, 0, 0.8 * sc, 0)); t.add(mk(G.sphT, mat(0x1f8f3a), 1.5 * sc, 1.35 * sc, 1.5 * sc, 0, 2.3 * sc, 0)); t.add(mk(G.sphT, mat(0x2fae4a), 1.1 * sc, 1.0 * sc, 1.1 * sc, 0.35 * sc, 3.1 * sc, 0)); shadowAll(t, true, false); ad(dc, t, x, 0, z); };
   tree(43.5, 9.5, 1.2); tree(24, 10, 1.1); tree(43.5, -10, 1.2); tree(36, 10.5, 1.0);
-  const lamp = (x, z) => { const g = new THREE.Group(); g.add(mk(G.cyl, mat(0x2d3a45), 0.09, 3.2, 0.09, 0, 1.6, 0)); g.add(mk(G.sph, new THREE.MeshBasicMaterial({ color: lc(0xffe9a8) }), 0.26, 0.3, 0.26, 0, 3.3, 0)); ad(dc, g, x, 0, z); };
+  const lamp = (x, z) => { GLOWS.push([x, z, 3.4]); const g = new THREE.Group(); g.add(mk(G.cyl, mat(0x2d3a45), 0.09, 3.2, 0.09, 0, 1.6, 0)); g.add(mk(G.sph, LAMPM, 0.26, 0.3, 0.26, 0, 3.3, 0)); ad(dc, g, x, 0, z); };
   lamp(21.8, -1); lamp(21.8, 5.5);
 }
 function buildSeraZones() {
@@ -1449,7 +1458,7 @@ function updateSera(dt) {
 }
 function updatePotting(dt, t) {
   if (!zone2 || zone2.locked || zone2.popT !== undefined && zone2.popT < 1.5) return;
-  const m = potM, interval = CFG.packBase * 1.4;
+  const m = potM, interval = CFG.packBase * 1.4 / tierMul('pot');
   if (!m.working && potInput.length > 0 && potOutput.length + m.pendingOut < 8) {
     const it = potInput.takeLast('orchid'); fly(it.mesh, out => { out.set(m.x, TABLE_Y + 1.5, m.z); return 0; }, 0.15, 0.6, () => { rm(it.mesh); sfx('pack'); });
     m.working = true; m.timer = 0;
@@ -1525,7 +1534,7 @@ function buildVan() {
   vanLoad = new Stack(scene, (i, out) => { out.set(19.55 + (i % 2) * 0.8, 0.5, 24 + (Math.floor(i / 2) - 1.5) * 0.85); }, 8); vanLoad.pend = 0;
   vanPile = new Stack(scene, (i, out) => { const per = 12, l = Math.floor(i / per), r = i % per; out.set(16.2 + ((r % 3) - 1) * 0.98, 0.14 + l * 0.14, 19.6 + (Math.floor(r / 3) - 1.5) * 0.6); }, 60); vanPile.extra = 0; vanPile.jitter = 0.07;
   const plate = rbox(3.1, 0.08, 2.5, 0.04, mat(0x9ee59a)); ad(rd, plate, 16.2, 0.06, 19.6);
-  const lamp = (x, z) => { const g = new THREE.Group(); g.add(mk(G.cyl, mat(0x2d3a45), 0.09, 3.2, 0.09, 0, 1.6, 0)); g.add(mk(G.sph, new THREE.MeshBasicMaterial({ color: lc(0xffe9a8) }), 0.26, 0.3, 0.26, 0, 3.3, 0)); ad(rd, g, x, 0, z); }; lamp(13.2, 21); lamp(23.4, 29);
+  const lamp = (x, z) => { GLOWS.push([x, z, 3.4]); const g = new THREE.Group(); g.add(mk(G.cyl, mat(0x2d3a45), 0.09, 3.2, 0.09, 0, 1.6, 0)); g.add(mk(G.sph, LAMPM, 0.26, 0.3, 0.26, 0, 3.3, 0)); ad(rd, g, x, 0, z); }; lamp(13.2, 21); lamp(23.4, 29);
   VAN.group.position.set(VAN.x, 0, VAN.z); vg.rotation.y = VAN.yaw;
   vanHud();
 }
@@ -1545,7 +1554,7 @@ function vanHud() {
 }
 function toVan(it, who) {
   if (posable(it.mesh)) bouquetPose(it.mesh, true);
-  const idx = vanLoad.length + vanLoad.pend; vanLoad.pend++; VAN.sum += Math.round((PRICE[it.type] || 10) * priceMul());
+  const idx = vanLoad.length + vanLoad.pend; vanLoad.pend++; VAN.sum += Math.round((PRICE[it.type] || 10) * priceMul() * tierMul('van'));
   fly(it.mesh, out => { vanLoad.slotFn(Math.min(idx, 7), out); return 0; }, 0.22, 1.5, () => { vanLoad.pend--; vanLoad.add(it.mesh, it.type); sfx('drop'); vanHud(); });
   if (who === P) stats.delivered = (stats.delivered || 0) + 1;
 }
@@ -1633,7 +1642,7 @@ function buildDecor() {
   sh.add(mk(G.box, mat(0x6b3e1d), 0.9, 1.4, 0.06, 0, 0.7, 1.22));
   sh.traverse(m => { if (m.isMesh) m.castShadow = true; }); world.add(sh); addCollider(1.6, 4.8, -10.7, -8.1);
   // lamp posts
-  const lamp = (x, z) => { const g = new THREE.Group(); g.position.set(x, 0, z); g.add(mk(G.cyl, mat(0x2d3a45), 0.09, 3.2, 0.09, 0, 1.6, 0)); g.add(mk(G.cyl, mat(0x2d3a45), 0.2, 0.15, 0.2, 0, 0.08, 0)); g.add(mk(G.sph, new THREE.MeshBasicMaterial({ color: lc(0xffe9a8) }), 0.26, 0.3, 0.26, 0, 3.3, 0)); g.traverse(m => { if (m.isMesh) m.castShadow = true; }); world.add(g); };
+  const lamp = (x, z) => { GLOWS.push([x, z, 3.4]); const g = new THREE.Group(); g.position.set(x, 0, z); g.add(mk(G.cyl, mat(0x2d3a45), 0.09, 3.2, 0.09, 0, 1.6, 0)); g.add(mk(G.cyl, mat(0x2d3a45), 0.2, 0.15, 0.2, 0, 0.08, 0)); g.add(mk(G.sph, LAMPM, 0.26, 0.3, 0.26, 0, 3.3, 0)); g.traverse(m => { if (m.isMesh) m.castShadow = true; }); world.add(g); };
   [[-9.3, -5.2], [16.2, -5.2], [-9.3, 12], [7.9, 12.0], [12.1, 12.0], [16.2, 12]].forEach(a => lamp(a[0], a[1]));
   // plaza fountain
   if (HQ) {
@@ -1914,7 +1923,7 @@ function leaveSad(c) {
   c.state = 'leaving'; setBubble(c, 'sad'); c.hideBubble = 1.4; c.path = [[12.4, -0.3], [12.4, 12.5], [10, 18], [10, 40]]; sfx('drop');
 }
 function spawnCustomer(z) {
-  const fem = Math.random() < 0.5, sh = pick(SHIRTS); custCount++; const vip = custCount % 6 === 0;
+  const fem = Math.random() < 0.5, sh = pick(SHIRTS); custCount++; const vip = custCount % 6 === 0 || Math.random() < BF.vip;
   const c = makeChar(vip ? { shirt: 0xff1fa0, pants: 0x6a2be8, hair: pick(HAIRS), skin: pick(SKINS), hairStyle: fem ? 'long' : 'short', crown: true, shoe: 0xffc21a } : { shirt: sh, pants: pick([0x3b4a6b, 0x5b4636, 0x2f6f5f, 0x444444]), hair: pick(HAIRS), skin: pick(SKINS), dress: fem && Math.random() < 0.6 ? pick(SHIRTS) : 0,
     hairStyle: fem ? pick(['bob', 'long', 'ponytail', 'bun']) : pick(['short', 'spiky', 'short']), hat: !fem && Math.random() < 0.3 ? 'cap' : null, hatColor: pick([0xff5a6e, 0x4d96ff, 0xffd23f]), shoe: pick([0x3a2a22, 0xffffff, 0xd8412f]) });
   c.group.position.set(CFG.queueX + rand(-0.4, 0.4), 0, z); c.yaw = Math.PI; c.group.rotation.y = Math.PI;
@@ -1933,11 +1942,11 @@ function finishCustomer(c) {
   const qi = queue.indexOf(c); if (qi >= 0) queue.splice(qi, 1);
   c.state = 'leaving'; setBubble(c, 'happy'); c.hideBubble = 1.2; stats.sold++; stats['s_' + c.prod] = (stats['s_' + c.prod] || 0) + c.want; sfx('happy');
   c.path = [[12.4, -0.3], [12.4, 12.5], [10, 18], [10, 40]];
-  const gp = c.group.position, total = Math.round(c.want * PRICE[c.prod] * (c.vip ? 3 : 1) * priceMul()), n = clamp(Math.round(total / CFG.billValue), 1, 10), bv = total / n;
+  const gp = c.group.position, total = Math.round(c.want * PRICE[c.prod] * (c.vip ? 3 : 1) * priceMul() * tierMul('flo')), n = clamp(Math.round(total / CFG.billValue), 1, 10), bv = total / n;
   hearts(gp.x, 3.4, gp.z, 5); coins(gp.x, 2.2, gp.z, 8); popText(gp.x, 4.2, gp.z, '+' + fmt(total), '#6dff6a'); vib(8);
   for (let k = 0; k < n; k++) later(0.15 + k * Math.min(0.16, 0.8 / n), () => spawnBill(c, bv));
   if (c.vip) { confetti(gp.x, 2.5, gp.z, 40); sparkles(gp.x, 2, gp.z, 12, 0xffe36a, 0.6); popText(gp.x, 5.0, gp.z, 'VIP x3!', '#ffd400'); ring(gp.x, gp.z, 0xffc21a, 5); sfx('up'); vib(20); }
-  else if (Math.random() < 0.25) { const tip = Math.max(15, Math.round(total * 0.2)); later(0.9, () => { popText(gp.x, 3.4, gp.z, 'Bahşiş +' + fmt(tip), '#ffd400'); coins(gp.x, 2.4, gp.z, 5); const tn = clamp(Math.round(tip / CFG.billValue), 1, 4); for (let k = 0; k < tn; k++) spawnBill(c, tip / tn); }); }
+  else if (Math.random() < BF.tipP) { const tip = Math.max(15, Math.round(total * 0.2 * BF.tipM)); later(0.9, () => { popText(gp.x, 3.4, gp.z, 'Bahşiş +' + fmt(tip), '#ffd400'); coins(gp.x, 2.4, gp.z, 5); const tn = clamp(Math.round(tip / CFG.billValue), 1, 4); for (let k = 0; k < tn; k++) spawnBill(c, tip / tn); }); }
 }
 function spawnBill(c, v) {
   const b = makeBill(); b.userData.v = v || CFG.billValue; b.position.set(c.group.position.x, 1.8, c.group.position.z); scene.add(b);
@@ -2059,7 +2068,7 @@ const MONEY_MS = [100, 400, 1000, 2500, 6000, 15000, 40000]; let moneyMs = 0;
 function addMoney(v) { S.money += v; stats.earned += v; gainAcc += v; saveDirty = true; if (moneyMs < MONEY_MS.length && stats.earned >= MONEY_MS[moneyMs]) { moneyMs++; if (introDone) praise(pick(PRAISE)); } }
 
 function updatePacking(dt, t) {
-  const m = machine, interval = packInterval();
+  const m = machine, interval = packInterval() / tierMul('pack');
   if (!m.working && inputPile.length > 0 && outputPile.length + m.pendingOut < CFG.outputCap) {
     const it = inputPile.takeLast('flower');
     fly(it.mesh, out => { out.set(m.x, TABLE_Y + 1.5, m.z); return 0; }, 0.15, 0.6, () => { rm(it.mesh); sfx('pack'); });
@@ -2379,7 +2388,7 @@ function movePlayer(dt) {
   P.vel.x = damp(P.vel.x, tvx, 14, dt); P.vel.z = damp(P.vel.z, tvz, 14, dt);
   const gp = P.group.position; gp.x += P.vel.x * dt; gp.z += P.vel.z * dt;
   const B = CFG.bounds, north = gp.z < -11.5, anyExt = EXTLIST.some(q => !q.locked);
-  gp.x = clamp(gp.x, north ? -25 : B.x0, Math.max(north ? 34 : 0, zone2 && !zone2.locked ? 44.5 : B.x1, zone3 && !zone3.locked ? 24.2 : 0)); if (zone3 && !zone3.locked) B.z1 = 31.5; else B.z1 = 16;
+  gp.x = clamp(gp.x, north ? -25 : B.x0, Math.max(north ? 34 : 0, zone2 && !zone2.locked ? 44.5 : B.x1, zone3 && !zone3.locked ? 24.2 : 0)); if (zone3 && !zone3.locked) B.z1 = 31.5; else B.z1 = cosOn() ? 21 : 16;
   gp.z = clamp(gp.z, (anyExt || (gp.x > 1.5 && gp.x < 9.3)) ? -92 : B.z0, B.z1);
   const r = 0.45;
   for (const c of colliders) {
@@ -2459,11 +2468,11 @@ function update(dt) {
   updateZoneActions(dt);
   updateGoalState(); updateUpgrades(dt); updateExpansion(dt, T);
   updatePacking(dt, T);
-  updateHelper(dt, T); updateCashier(dt, T); updateCarrier(dt, T); updatePotting(dt, T); updateSera(dt); updateVan(dt, T); updateAmbient(dt, T);
+  updateHelper(dt, T); updateCashier(dt, T); updateCarrier(dt, T); updatePotting(dt, T); updateSera(dt); updateVan(dt, T); updateAmbient(dt, T); updateC2(dt, T);
   // customers spawning
   spawnT -= dt;
   if (queue.length < 3 && spawnT > CFG.spawnShortEvery) spawnT = CFG.spawnShortEvery;
-  if (spawnT <= 0 && queue.length < CFG.queueMax) { spawnCustomer(26); spawnT = (queue.length < 3 ? CFG.spawnShortEvery : CFG.spawnEvery) * Math.pow(0.88, S.lv.cashSpd); }
+  if (spawnT <= 0 && queue.length < CFG.queueMax) { spawnCustomer(26); spawnT = (queue.length < 3 ? CFG.spawnShortEvery : CFG.spawnEvery) * Math.pow(0.88, S.lv.cashSpd) / BF.spawn; }
   updateCustomers(dt, T);
   P.stack.update(dt, T); inputPile.update(dt, T); outputPile.update(dt, T); moneyPile.update(dt, T); shelfB.update(dt, T); shelfP.update(dt, T); potInput.update(dt, T); potOutput.update(dt, T); vanLoad.update(dt, T); vanPile.update(dt, T);
   updateFlights(dt); updateLater(dt); updateParticles(dt); updatePopTexts(dt); updateCollectText(dt);
@@ -2683,7 +2692,7 @@ function buildStation(z, g, o) {
   const wall = rbox(11, 2.5, 0.18, 0.05, WM); ad(g, wall, o.x, 1.25, o.z - 2.2); wall.castShadow = true;
   for (const px of [o.x - 5.4, o.x + 5.4]) ad(g, mk(G.cyl, white, 0.1, 4.2, 0.1), px, 2.1, o.z - 2.0);
   const aw = new THREE.Mesh(new THREE.BoxGeometry(11.8, 0.14, 2.6), LM({ map: awningTex(o.awn, '#ffffff') })); aw.material.map.repeat.set(2, 1); aw.material.map.wrapS = THREE.RepeatWrapping; aw.rotation.x = -0.1; aw.castShadow = true; ad(g, aw, o.x, 4.15, o.z - 1.2);
-  const sg = makeBoard(o.name, 5.6, 1.0, 'wood'); sg.rotation.x = -0.25; ad(g, sg, o.x, 5.05, o.z - 0.2);
+  const sg = makeBoard(o.name, 5.6, 1.0, 'wood'); sg.rotation.x = -0.25; ad(g, sg, o.x, 5.05, o.z - 0.2); aw.userData.dyn = sg.userData.dyn = true; STREF[o.id] = [aw, sg];
   o.inputs.forEach((inp, i) => {
     const cx = fx(-4.4 + i * 3.0), crate = new THREE.Group(); ad(g, crate, cx, TABLE_Y, o.z);
     crate.add(mk(G.box, dark, 1.9, 0.08, 1.5, 0, 0.04, 0));
@@ -2715,7 +2724,7 @@ function drawStationSign(st, i) {
 }
 function updateStation(st, dt, t) {
   const z = st.zone; if (z.locked || (z.popT !== undefined && z.popT < 1.5)) return;
-  const o = st.o, interval = o.base * Math.pow(0.78, S.lv[o.id + 'Spd'] || 0);
+  const o = st.o, interval = o.base * Math.pow(0.78, S.lv[o.id + 'Spd'] || 0) / (o.id === 'kese' || o.id === 'parf' ? tierMul(o.id) : 1);
   for (let i = 0; i < st.ins.length; i++) drawStationSign(st, i);
   if (!st.working && st.out.length + st.pendingOut < 16) {
     let take = null;
@@ -2795,11 +2804,11 @@ function extPad(key, name, costs, x, z, icon, vis) { UPG[key] = { name, costs };
 const unlockedZ = id => EXTZ[id] && !EXTZ[id].locked;
 function slab(z, g, col) { /* zemin: çim kalsın (derinlik çakışması yok) */ }
 function decorTree(g, x, z, sc) { const t = new THREE.Group(); t.add(mk(G.cyl, mat(0x8a5a36), 0.35 * sc, 1.6 * sc, 0.35 * sc, 0, 0.8 * sc, 0)); t.add(mk(G.sphT, mat(0x2fae4a), 1.4 * sc, 1.3 * sc, 1.4 * sc, 0, 2.3 * sc, 0)); shadowAll(t, true, false); ad(g, t, x, 0, z); }
-function lamp(g, x, z) { const o = new THREE.Group(); o.add(mk(G.cyl, mat(0x2d3a45), 0.09, 3.2, 0.09, 0, 1.6, 0)); o.add(mk(G.sph, new THREE.MeshBasicMaterial({ color: lc(0xffe9a8) }), 0.26, 0.3, 0.26, 0, 3.3, 0)); if (g.userData.px === undefined) { o.position.set(x, 0, z); g.add(o); } else ad(g, o, x, 0, z); }
+function lamp(g, x, z) { GLOWS.push([x, z, 3.4]); const o = new THREE.Group(); o.add(mk(G.cyl, mat(0x2d3a45), 0.09, 3.2, 0.09, 0, 1.6, 0)); o.add(mk(G.sph, LAMPM, 0.26, 0.3, 0.26, 0, 3.3, 0)); if (g.userData.px === undefined) { o.position.set(x, 0, z); g.add(o); } else ad(g, o, x, 0, z); }
 let cafe = null, wed = null, city = null, tractor = null;
 function buildExpansion() {
   // sokak
-  { const m = new THREE.Mesh(G.plane, LM({ map: cobbleTex(), polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 })); m.rotation.x = -Math.PI / 2; m.scale.set(3.6, 82, 1); m.position.set(5.4, 0.02, -52); m.receiveShadow = true; world.add(m); m.material.map.repeat.set(3.6 * 14 / 25.7, 82 * 9.5 / 17.7);
+  { const m = new THREE.Mesh(G.plane, LM({ map: cobbleTex(), polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 })); m.rotation.x = -Math.PI / 2; m.scale.set(3.6, 82, 1); m.position.set(5.4, 0.02, -52); m.receiveShadow = true; world.add(m); m.material.map.repeat.set(3.6 * 14 / 25.7, 82 * 9.5 / 17.7); FLOORM.push({ m: m.material, rep: [3.6 * 14 / 25.7, 82 * 9.5 / 17.7], k: 0 });
     for (const sx of [3.6, 7.2]) { const cu = rbox(0.25, 0.2, 82, 0.09, mat(0xf1e4c3)); cu.position.set(sx, 0.08, -52); world.add(cu); }
     for (let zz = -20; zz > -92; zz -= 12) { lamp(world, 3.2, zz); lamp(world, 7.6, zz - 6); } }
   addCollider(-20.6, 1.6, -12.6, -11.8); addCollider(9.2, 20.6, -12.6, -11.8);
@@ -2879,7 +2888,7 @@ function buildExpansion() {
     const cb = rbox(5.4, 1.1, 1.5, 0.3, blue); ad(g1, cb, cx, 0.55, cz); const ct = rbox(5.5, 0.14, 1.8, 0.06, cw); ad(g1, ct, cx, 1.14, cz); addCollider(cx - 2.8, cx + 2.8, cz - 0.9, cz + 0.9);
     const bk = rbox(6.4, 3.2, 0.22, 0.05, mat(0xfff0d6)); ad(g1, bk, cx, 1.6, cz - 1.5); const awn = new THREE.Mesh(new THREE.BoxGeometry(6.6, 0.12, 2.6), LM({ map: awningTex('#2f7bff', '#ffffff') })); awn.material.map.repeat.set(3, 1); awn.material.map.wrapS = THREE.RepeatWrapping; awn.rotation.x = -0.12; ad(g1, awn, cx, 3.4, cz - 0.4);
     for (const sx of [-1, 1]) ad(g1, mk(G.cyl, mat(0xffffff), 0.08, 3.3, 0.08), cx + sx * 3.1, 1.65, cz + 0.9);
-    const sg = makeBoard('ŞEHİR ÇİÇEKÇİSİ', 5.2, 1.0, 'chalk'); sg.rotation.x = -0.25; ad(g1, sg, cx, 4.6, cz - 0.6);
+    const sg = makeBoard('ŞEHİR ÇİÇEKÇİSİ', 5.2, 1.0, 'chalk'); sg.rotation.x = -0.25; ad(g1, sg, cx, 4.6, cz - 0.6); awn.userData.dyn = sg.userData.dyn = true; STREF.city = [awn, sg];
     const st = new Stack(scene, (k, out) => { const r = k % 8, l = Math.floor(k / 8); out.set(cx - 2.0 + (r % 4) * 1.0, 1.25 + l * 0.6, cz + (Math.floor(r / 4) - 0.5) * 0.7); }, 16); st.pend = 0; EXTSTACKS.push(st);
     city = { z, stock: st, queue: [], t: 4, zone: new Zone({ x: 27.5, z: -78.4, w: 3.4, d: 3.0, color: '#2f7bff', draw: drawZoneIcon(iconShop, 0.55) }), cashier: null, cx, cz };
     city.zone.group.visible = false; z.onShow = () => { city.zone.group.visible = true; };
@@ -2918,7 +2927,7 @@ function updateGuest(c, dt, t, i) {
   const gp = c.group.position; let tx = null, tz = null, spd = 4.6, mv = 0;
   if (c.state === 'walk') { tx = c.seat[0]; tz = c.seat[1]; if (Math.hypot(tx - gp.x, tz - gp.z) < 0.25) { c.state = 'wait'; setBubble(c, 'want'); c.bubble.position.y = 3.2; } }
   else if (c.state === 'wait') { tx = null; faceChar(c, c.table.x - gp.x, c.table.z - gp.z, dt); c.wait += dt; if (c.wait > 60) { c.state = 'leave'; c.table.guest = null; setBubble(c, 'sad'); c.hideBubble = 1.2; } }
-  else if (c.state === 'drink') { c.drink -= dt; faceChar(c, c.table.x - gp.x, c.table.z - gp.z, dt); if (c.drink <= 0) { const total = Math.round(PRICE.tea * (c.vip ? 3 : 1) * priceMul()), tip = Math.random() < 0.5 ? Math.round(total * 0.5) : 0; payDirect(gp.x, gp.z, total + tip, tip ? 'Bahşiş!' : ''); stats.cafeServed = (stats.cafeServed || 0) + 1; c.state = 'leave'; c.table.guest = null; sfx('happy'); hearts(gp.x, 3.4, gp.z, 4); if (c.held) { rm(c.held); c.held = null; } if (c.vip) confetti(gp.x, 2.5, gp.z, 30); } }
+  else if (c.state === 'drink') { c.drink -= dt; faceChar(c, c.table.x - gp.x, c.table.z - gp.z, dt); if (c.drink <= 0) { const total = Math.round(PRICE.tea * (c.vip ? 3 : 1) * priceMul() * tierMul('tea')), tip = Math.random() < 0.5 ? Math.round(total * 0.5) : 0; payDirect(gp.x, gp.z, total + tip, tip ? 'Bahşiş!' : ''); stats.cafeServed = (stats.cafeServed || 0) + 1; c.state = 'leave'; c.table.guest = null; sfx('happy'); hearts(gp.x, 3.4, gp.z, 4); if (c.held) { rm(c.held); c.held = null; } if (c.vip) confetti(gp.x, 2.5, gp.z, 30); } }
   if (c.state === 'leave') { if (c.hideBubble > 0) { c.hideBubble -= dt; if (c.hideBubble <= 0 && c.bubble) c.bubble.visible = false; } tx = 5.4; tz = -40.4; spd = 5.2; if (Math.hypot(tx - gp.x, tz - gp.z) < 0.5) { const ci = cafe.guests.indexOf(c); if (ci >= 0) { cafe.guests.splice(ci, 1); rm(c.group); if (c.bubble) { c.bubble.material.map.dispose(); c.bubble.material.dispose(); } } return true; } }
   if (tx !== null) { const dx = tx - gp.x, dz = tz - gp.z, d = Math.hypot(dx, dz); if (d > 0.02) { const s2 = Math.min(d, spd * dt); gp.x += dx / d * s2; gp.z += dz / d * s2; c.vel.set(dx / d * spd, 0, dz / d * spd); mv = 1; faceChar(c, dx, dz, dt); } } else c.vel.set(0, 0, 0);
   animChar(c, dt, mv, t); return false;
@@ -2944,7 +2953,7 @@ function makeOrder() {
   const k = wed.done, it = {}; it.bouquet = 12 + 4 * k;
   if (S.lv.sera > 0) it.pot = 6 + 2 * k; if (unlockedZ('parf')) it.perfume = 2 + k; if (unlockedZ('lav')) it.sachet = 6 + 2 * k; if (unlockedZ('sunf')) it.sbq = 3 + k;
   let val = 0; for (const t in it) val += it[t] * PRICE[t];
-  wed.ord = { need: it, got: {}, time: 480, reward: Math.round(val * 14 * priceMul() * (1 + 0.15 * (S.lv.wedBonus || 0))) }; wed.state = 'active'; wed.sig = '';
+  wed.ord = { need: it, got: {}, time: 480, reward: Math.round(val * 14 * priceMul() * tierMul('wed') * (1 + 0.15 * (S.lv.wedBonus || 0))) }; wed.state = 'active'; wed.sig = '';
   praise('Yeni düğün siparişi!', true);
 }
 function updateWedding(dt, t) {
@@ -2996,7 +3005,7 @@ function updateCity(dt, t) {
   const present = city.zone.inside; city.sv = (city.sv || 0) - dt;
   for (let i = city.queue.length - 1; i >= 0; i--) {
     const c = city.queue[i], gp = c.group.position; let tx = null, tz = null, spd = 4.8, mv = 0;
-    if (c.state === 'cq') { const qi = city.queue.indexOf(c); tx = city.cx; tz = city.cz + 2.2 + qi * 1.5; if (Math.hypot(tx - gp.x, tz - gp.z) < 0.3) { tx = null; faceChar(c, 0, -1, dt); if (qi === 0 && !c.bubble) setBubble(c, 'want'); if (qi === 0 && c._s !== c.want - c.got) { c._s = c.want - c.got; setBubble(c, 'want'); } if (qi === 0 && city.sv <= 0 && (present || city.cashier) && c.pending === 0) { const it = city.stock.takeLast(c.prod); if (it) { c.pending++; city.sv = city.cashier && !present ? 0.55 * Math.pow(0.85, S.lv.citySpd || 0) : 0.15; fly(it.mesh, out => { out.set(c.group.position.x, 1.2, c.group.position.z - 0.4); return 0; }, 0.22, 1.2, () => { rm(it.mesh); c.pending--; c.got++; c._s = -1; sfx('drop'); if (c.got >= c.want) { const total = Math.round(c.want * PRICE[c.prod] * 1.5 * priceMul()); payDirect(gp.x, gp.z, total, ''); stats.citySold = (stats.citySold || 0) + 1; hearts(gp.x, 3.4, gp.z, 4); sfx('happy'); c.state = 'cl'; city.queue.splice(city.queue.indexOf(c), 1); setBubble(c, 'happy'); c.hideBubble = 1.0; city.out = city.out || []; city.out.push(c); } }); } } } }
+    if (c.state === 'cq') { const qi = city.queue.indexOf(c); tx = city.cx; tz = city.cz + 2.2 + qi * 1.5; if (Math.hypot(tx - gp.x, tz - gp.z) < 0.3) { tx = null; faceChar(c, 0, -1, dt); if (qi === 0 && !c.bubble) setBubble(c, 'want'); if (qi === 0 && c._s !== c.want - c.got) { c._s = c.want - c.got; setBubble(c, 'want'); } if (qi === 0 && city.sv <= 0 && (present || city.cashier) && c.pending === 0) { const it = city.stock.takeLast(c.prod); if (it) { c.pending++; city.sv = city.cashier && !present ? 0.55 * Math.pow(0.85, S.lv.citySpd || 0) : 0.15; fly(it.mesh, out => { out.set(c.group.position.x, 1.2, c.group.position.z - 0.4); return 0; }, 0.22, 1.2, () => { rm(it.mesh); c.pending--; c.got++; c._s = -1; sfx('drop'); if (c.got >= c.want) { const total = Math.round(c.want * PRICE[c.prod] * 1.5 * priceMul() * tierMul('city')); payDirect(gp.x, gp.z, total, ''); stats.citySold = (stats.citySold || 0) + 1; hearts(gp.x, 3.4, gp.z, 4); sfx('happy'); c.state = 'cl'; city.queue.splice(city.queue.indexOf(c), 1); setBubble(c, 'happy'); c.hideBubble = 1.0; city.out = city.out || []; city.out.push(c); } }); } } } }
     if (c.state === 'cq' && !c.pending && c.wait !== undefined) { c.wait += dt; if (c.wait > 90 && c.got === 0 && city.queue[0] !== c) { /* sabırsız */ } }
     if (tx !== null) { const dx = tx - gp.x, dz = tz - gp.z, d = Math.hypot(dx, dz); if (d > 0.02) { const s2 = Math.min(d, spd * dt); gp.x += dx / d * s2; gp.z += dz / d * s2; c.vel.set(dx / d * spd, 0, dz / d * spd); mv = 1; faceChar(c, dx, dz, dt); } } else c.vel.set(0, 0, 0);
     animChar(c, dt, mv, t);
@@ -3031,6 +3040,262 @@ GOALS.push(
 GOALS.forEach((g, i) => { if (GFIRST[g.key] === undefined) GFIRST[g.key] = i; });
 Object.assign(MAIN_UNLOCKS, { lav: 1, parf: 1, cafe: 1, wed: 1, sunf: 1, city: 1, lavW: 1, parfW: 1, cafeW: 1, sunW: 1, cityW: 1, stars: 1 });
 
+/*C2-BEGIN*/
+/* =====================================================================
+   17. C2 – MEKAN SEVİYELERİ / DEKORASYON / KOZMETİK / GÜN-GECE
+   ===================================================================== */
+const cosOn = () => introDone && S.lv.lav > 0;
+const tierMul = id => 1 + 0.25 * ((S.tier && S.tier[id]) || 0);
+const BF = { spawn: 1, vip: 0, tipP: 0.25, tipM: 1 };
+const NIGHT = { k: 0 };
+const GLOWM = new THREE.MeshBasicMaterial({ color: lc(0xffe9a8) });
+const NEONM = new THREE.MeshBasicMaterial({ color: 0xffffff });
+G.cone3 = new THREE.ConeGeometry(1, 1, 3);
+const hexs = h => '#' + ('000000' + h.toString(16)).slice(-6);
+function rng(seed) { return () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+/* hedef (ana hedef listesi) önce: oyuncu hedefi satın alabiliyorsa kozmetik pad'leri bekler */
+function cosGate() { if (!curGoal) return true; const u = upPads[curGoal.key]; if (!u || u.done || !u.group.visible) return true; const c = u.cost(); return !(c > 0) || S.money + u.paid < c; }
+const CPADS = [];
+function padCard(ctx, w, p, d) {
+  const aff = S.money >= d.cost, col = p.color;
+  ctx.fillStyle = 'rgba(22,28,64,.96)'; ctx.strokeStyle = aff ? '#7dff7a' : col; ctx.lineWidth = w * 0.045; rrect(ctx, w * 0.04, w * 0.04, w * 0.92, w * 0.92, w * 0.14); ctx.fill(); ctx.stroke();
+  if (d.badge) { ctx.fillStyle = col; rrect(ctx, w * 0.08, w * 0.08, w * 0.3, w * 0.13, w * 0.065); ctx.fill(); otext(ctx, d.badge, w * 0.23, w * 0.145, w * 0.095, '#fff', 'rgba(0,0,0,.4)', w * 0.02); }
+  ctx.fillStyle = 'rgba(255,255,255,.14)'; ctx.beginPath(); ctx.arc(w / 2, w * 0.37, w * 0.22, 0, TAU); ctx.fill(); d.icon(ctx, w / 2, w * 0.37, w * 0.4);
+  otext(ctx, d.title, w / 2, w * 0.645, d.title.length > 13 ? w * 0.09 : w * 0.105, '#fff', '#05071a');
+  if (d.sub) otext(ctx, d.sub, w / 2, w * 0.75, w * 0.066, '#ffd23f', '#05071a', w * 0.014);
+  iconBill(ctx, w * 0.27, w * 0.875, w * 0.13); otext(ctx, fmt(d.cost), w * 0.62, w * 0.875, String(fmt(d.cost)).length > 4 ? w * 0.13 : w * 0.16, aff ? '#6dff6a' : '#ff8a8a', '#0c1a0c');
+}
+class CPad extends Zone {
+  constructor(o) {
+    super({ x: o.x, z: o.z, w: o.w || 3.0, color: o.color || '#ff7ab0', res: o.res || 256, labelSize: (o.w || 3.0) * 0.96, draw: null });
+    this.o = o; this.group.visible = false; this.shown = false; this.pop = 0; this.sig = ''; this.hold = 0; this.cool = 0; this.locked = true;
+    this.fill = new THREE.Mesh(new THREE.CircleGeometry(0.5, 20), new THREE.MeshBasicMaterial({ color: 0x7dff7a, transparent: true, opacity: 0.5, depthWrite: false, fog: false }));
+    this.fill.visible = false; this.fill.rotation.x = -Math.PI / 2; this.fill.position.y = 0.008; this.fill.renderOrder = 2; this.fill.scale.setScalar(0.001); this.group.add(this.fill);
+    this.drawIcon = (ctx, w) => o.draw(ctx, w, this); CPADS.push(this);
+  }
+  update(dt, t, px, pz) {
+    const o = this.o, vis = !!o.vis();
+    if (vis && !this.shown) { this.shown = true; this.pop = 0.5; this.sig = ''; }
+    if (!vis && this.shown) { this.shown = false; }
+    const near = vis && Math.abs(px - this.x) < 26 && Math.abs(pz - this.z) < 26;
+    if (near !== this.group.visible) { this.group.visible = near; if (near) this.sig = ''; }
+    if (!this.group.visible) { this.inside = false; this.hold = 0; return; }
+    const cost = o.cost(), aff = S.money >= cost, gate = cosGate(), sig = cost + '|' + (aff ? 1 : 0) + '|' + (o.sigx ? o.sigx() : '');
+    if (sig !== this.sig) { this.sig = sig; this.redraw(); }
+    this.locked = !(aff && gate); super.update(dt, t, px, pz);
+    if (this.pop > 0) { this.pop -= dt; const k = 1 - Math.max(0, this.pop) / 0.5, a = Math.sin(k * Math.PI * 3) * (1 - k) * 0.3; this.group.scale.set(1 + a, 1, 1 - a * 0.8); if (this.pop <= 0) this.group.scale.set(1, 1, 1); }
+    this.cool -= dt;
+    if (!this.inside) this.exit = false;
+    if (this.inside && !this.locked && this.cool <= 0 && !this.exit) { this.hold += dt; this.fill.visible = true; this.fill.scale.setScalar(this.w * clamp(this.hold / 0.45, 0, 1) * 0.95); if (this.hold >= 0.45) this.buy(); }
+    else { this.hold = Math.max(0, this.hold - dt * 3); this.fill.visible = this.hold > 0.01; this.fill.scale.setScalar(Math.max(0.001, this.w * clamp(this.hold / 0.45, 0, 1) * 0.95)); }
+  }
+  buy() {
+    const o = this.o, c = o.cost(); if (S.money < c) return; S.money -= c; saveDirty = true; this.hold = 0; this.cool = 0.8; this.exit = true; this.fill.scale.setScalar(0.001);
+    for (let i = 0; i < 6; i++) { const b = makeBill(); b.position.set(P.group.position.x + rand(-0.3, 0.3), 1.5, P.group.position.z + rand(-0.3, 0.3)); scene.add(b); const ox = rand(-0.6, 0.6), oz = rand(-0.6, 0.6); later(i * 0.04, () => fly(b, out => { out.set(this.x + ox, 0.5, this.z + oz); return 0; }, 0.3, 2.2, () => rm(b))); }
+    sfx('up'); confetti(this.x, 1.2, this.z, 36); ring(this.x, this.z, 0xffc21a, 4.5); vib(15);
+    o.buy(this); writeSave();
+  }
+}
+function disposeObj(o) { if (!o) return; o.traverse(c => { if (c.isMesh && c.userData.merged && c.geometry) c.geometry.dispose(); if (c.isMesh && c.material && c.material.userData && c.material.userData.own) { if (c.material.map) c.material.map.dispose(); c.material.dispose(); } }); rm(o); }
+
+/* ---------- ortak dokular ---------- */
+const _ct = {};
+function cached(k, fn) { return _ct[k] || (_ct[k] = fn()); }
+function stripeTex(c1, c2, n) { return cached('st' + c1 + c2 + n, () => { const c = cv(128, 32), x = c.getContext('2d'); for (let i = 0; i < 8; i++) { x.fillStyle = i % 2 ? c2 : c1; x.fillRect(i * 16, 0, 16, 32); } const t = canvasTex(c); t.wrapS = THREE.RepeatWrapping; t.repeat.set(n || 2, 1); return t; }); }
+function valTex(c1, c2, trim) { return cached('va' + c1 + c2 + trim, () => { const c = cv(256, 64), x = c.getContext('2d'); for (let i = 0; i < 8; i++) { x.fillStyle = i % 2 ? c2 : c1; x.beginPath(); x.moveTo(i * 32, 0); x.lineTo(i * 32 + 32, 0); x.lineTo(i * 32 + 32, 32); x.arc(i * 32 + 16, 32, 16, 0, Math.PI); x.closePath(); x.fill(); if (trim) { x.strokeStyle = trim; x.lineWidth = 4; x.beginPath(); x.arc(i * 32 + 16, 32, 14, 0, Math.PI); x.stroke(); } } if (trim) { x.fillStyle = trim; x.fillRect(0, 0, 256, 6); } return canvasTex(c); }); }
+function tileTex(c1, c2, n) { return cached('ti' + c1 + c2 + n, () => { const c = cv(128, 128), x = c.getContext('2d'); const k = 128 / (n || 2); for (let i = 0; i < (n || 2); i++) for (let j = 0; j < (n || 2); j++) { x.fillStyle = (i + j) % 2 ? c2 : c1; x.fillRect(i * k, j * k, k, k); } x.strokeStyle = 'rgba(0,0,0,.14)'; x.lineWidth = 2; for (let i = 0; i <= (n || 2); i++) { x.beginPath(); x.moveTo(i * k, 0); x.lineTo(i * k, 128); x.moveTo(0, i * k); x.lineTo(128, i * k); x.stroke(); } const t = canvasTex(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; return t; }); }
+function tierSign(text, w, h, acc, lux) {
+  const px = 640, py = Math.round(640 * h / w), c = cv(px, py), x = c.getContext('2d'), as = hexs(acc);
+  if (!lux) {
+    const g = x.createLinearGradient(0, 0, 0, py); g.addColorStop(0, hexs(shade(acc, 0.22))); g.addColorStop(1, hexs(shade(acc, -0.12))); x.fillStyle = g; rrect(x, 0, 0, px, py, py * 0.2); x.fill();
+    x.strokeStyle = '#fff6dc'; x.lineWidth = py * 0.06; rrect(x, py * 0.1, py * 0.1, px - py * 0.2, py - py * 0.2, py * 0.14); x.stroke();
+    x.setLineDash([py * 0.05, py * 0.09]); x.strokeStyle = 'rgba(255,255,255,.55)'; x.lineWidth = py * 0.03; rrect(x, py * 0.2, py * 0.2, px - py * 0.4, py - py * 0.4, py * 0.08); x.stroke(); x.setLineDash([]);
+    otext(x, text, px / 2, py / 2 + 3, Math.min(py * 0.4, px * 0.7 / Math.max(6, text.length) * 1.7), '#fff8e6', hexs(shade(acc, -0.55)), py * 0.09);
+    iconFlower(x, py * 0.55, py / 2, py * 0.42, '#ffd23f'); iconFlower(x, px - py * 0.55, py / 2, py * 0.42, '#ff9ec4');
+  } else {
+    const g = x.createLinearGradient(0, 0, 0, py); g.addColorStop(0, '#1d2250'); g.addColorStop(1, '#0c0f2a'); x.fillStyle = g; rrect(x, 0, 0, px, py, py * 0.16); x.fill();
+    x.strokeStyle = '#ffd23f'; x.lineWidth = py * 0.06; rrect(x, py * 0.07, py * 0.07, px - py * 0.14, py - py * 0.14, py * 0.12); x.stroke(); x.lineWidth = py * 0.02; rrect(x, py * 0.17, py * 0.17, px - py * 0.34, py - py * 0.34, py * 0.07); x.stroke();
+    const dia = (cx, cy, r) => { x.fillStyle = '#ffd23f'; x.beginPath(); x.moveTo(cx, cy - r); x.lineTo(cx + r * 0.7, cy); x.lineTo(cx, cy + r); x.lineTo(cx - r * 0.7, cy); x.closePath(); x.fill(); x.fillStyle = 'rgba(255,255,255,.55)'; x.beginPath(); x.moveTo(cx, cy - r); x.lineTo(cx + r * 0.7, cy); x.lineTo(cx, cy); x.closePath(); x.fill(); };
+    dia(py * 0.55, py / 2, py * 0.26); dia(px - py * 0.55, py / 2, py * 0.26);
+    otext(x, text, px / 2, py / 2 + 3, Math.min(py * 0.4, px * 0.66 / Math.max(6, text.length) * 1.7), '#ffe27a', '#4a2a00', py * 0.07);
+  }
+  const m = LM({ map: canvasTex(c) }); m.userData.own = true;
+  const g = new THREE.Group(), fr = rbox(w + 0.3, h + 0.3, 0.16, 0.06, mat(lux ? 0xf0c040 : 0xfff3d6)); fr.castShadow = true; g.add(fr);
+  const face = new THREE.Mesh(G.plane, m); face.scale.set(w, h, 1); face.position.z = 0.09; g.add(face); return g;
+}
+
+/* ---------- Mekan tanımları ---------- */
+const TD = [], TDM = {}, TK = {};
+function tdef(o) { TD.push(o); TDM[o.id] = o; }
+const GOLD = 0xf0c040, CREAM = 0xfff3d6;
+tdef({ id: 'pack', short: 'Atölye', word: 'hız', title: 'PAKETLEME', ico: iconPack, acc: 0xff7a59, awn: ['#ff7a59', '#fff3d6'], cost: [6000, 24000], pad: [-2.4, 1.0], un: () => true,
+  cx: -2.2, cz: -3.0, W: 11.6, rf: { y: 4.15, z: -3.95, d: 2.4, w: 12.2, rx: -0.1 }, sg: { y: 5.05, z: -2.95, w: 4.6, h: 1.0 }, posts: [[-7.8, -4.2, 4.2], [3.4, -4.2, 4.2]], foot: [-8, 3.6, -5, -1.1], floor: [-8, 3.6, -1.15, 3.2], fz: -0.8, boxes: [-4.6, -0.2], pots: [[-8.4, -0.6], [3.9, -0.6]] });
+tdef({ id: 'flo', short: 'Çiçekçi', word: 'fiyat', title: 'ÇİÇEKÇİ', ico: iconBouquet, acc: 0x1c9ad6, awn: ['#1c9ad6', '#ffffff'], cost: [8000, 32000], pad: [15.0, 2.4], un: () => true,
+  cx: 10, cz: -3.4, W: 5.4, rf: { y: 3.15, z: -3.7, d: 2.3, w: 5.4, rx: -0.12 }, sg: { y: 4.2, z: -3.95, w: 3.4, h: 0.9 }, posts: [[7.4, -2.6, 3.1], [12.6, -2.6, 3.1]], foot: [7.2, 12.8, -4.7, -2.2], floor: [7.2, 12.8, -2.3, 0.4], fz: -2.2, boxes: [7.55, 12.45], pots: [[6.6, -2.0], [13.4, -2.0]] });
+tdef({ id: 'pot', short: 'Saksı', word: 'hız', title: 'SAKSI ATÖLYESİ', ico: iconPot, acc: 0xff9a3c, awn: ['#ff9a3c', '#fff3d6'], cost: [10000, 40000], pad: [40.4, 3.4], un: () => zone2 && !zone2.locked,
+  cx: 40.5, cz: -3.0, W: 7.8, rf: { y: 4.15, z: -4.2, d: 2.4, w: 7.8, rx: -0.1 }, sg: { y: 5.05, z: -3.2, w: 5.4, h: 1.0 }, posts: [[37, -4.5, 4.2], [44, -4.5, 4.2]], foot: [36.8, 44.2, -5.1, -1.1], floor: [36.8, 44.2, -1.2, 3.0], fz: -0.8, boxes: [39.4, 41.6], pots: [[36.4, -0.6], [44.6, -0.6]] });
+tdef({ id: 'van', short: 'Minibüs', word: 'kazanç', title: 'TESLİMAT', ico: iconVan, acc: 0xff6b4a, awn: ['#ff6b4a', '#fff3d6'], cost: [12000, 48000], pad: [19.5, 29.6], un: () => zone3 && !zone3.locked, kind: 'van', ty: 0.037,
+  cx: 22.6, cz: 24, W: 3.4, foot: [20.9, 24.3, 21.3, 26.7], floor: [20.9, 24.3, 21.3, 26.7] });
+const GEN = (id, short, word, title, ico, acc, awn, cost, pad, un, cx, cz, extra) => tdef(Object.assign({ id, short, word, title, ico, acc, awn, cost, pad, un, cx, cz, W: 11.0, rf: { y: 4.15, z: cz - 1.2, d: 2.6, w: 11.8, rx: -0.1 }, sg: { y: 5.05, z: cz - 0.2, w: 5.6, h: 1.0 }, posts: [[cx - 5.4, cz - 2.0, 4.2], [cx + 5.4, cz - 2.0, 4.2]], foot: [cx - 5.6, cx + 5.6, cz - 2.3, cz + 1.1], floor: [cx - 5.6, cx + 5.6, cz + 1.2, cz + 4.4], fz: cz + 1.4, boxes: [cx - 2.0, cx + 2.2], pots: [[cx - 6.2, cz + 1.2], [cx + 6.2, cz + 1.2]] }, extra || {}));
+GEN('kese', 'Kese', 'hız', 'KESE ATÖLYESİ', iconSachet, 0x2fb872, ['#2fb872', '#ffffff'], [16000, 64000], [-6.0, -21.5], () => unlockedZ('lav'), -6.2, -28.5);
+GEN('parf', 'Parfüm', 'hız', 'PARFÜM ATÖLYESİ', iconPerfume, 0x7a5cff, ['#7a5cff', '#ffffff'], [22000, 88000], [22.0, -19.4], () => unlockedZ('parf'), 20.5, -26);
+GEN('tea', 'Kafe', 'fiyat', 'ÇİÇEK KAFE', iconCafe, 0x2fb6a8, ['#2fb6a8', '#ffffff'], [30000, 120000], [-3.2, -42.8], () => unlockedZ('cafe'), -6.2, -49, { patio: true });
+tdef({ id: 'wed', short: 'Düğün', word: 'ödül', title: 'DÜĞÜN', ico: iconWedding, acc: 0xff3d7f, awn: ['#ff7ab0', '#ffffff'], cost: [40000, 160000], pad: [28.5, -44.5], un: () => unlockedZ('wed'), kind: 'wed',
+  cx: 21, cz: -54, W: 9, foot: [16.6, 25.4, -62, -46], floor: [17.3, 24.7, -61, -47], floors: [[17.2, 19.2, -61.2, -46.8], [22.8, 24.8, -61.2, -46.8]] });
+tdef({ id: 'city', short: 'Şehir', word: 'fiyat', title: 'ŞEHİR ÇİÇEKÇİSİ', ico: iconShop, acc: 0xffb020, awn: ['#ffb020', '#ffffff'], cost: [50000, 200000], pad: [26.5, -72.5], un: () => unlockedZ('city'),
+  cx: 21, cz: -81, W: 6.6, rf: { y: 3.4, z: -81.4, d: 2.6, w: 6.6, rx: -0.12 }, sg: { y: 4.6, z: -81.6, w: 5.2, h: 1.0 }, posts: [[17.9, -80.1, 3.3], [24.1, -80.1, 3.3]], foot: [17.6, 24.4, -82.7, -79.9], floor: [17.4, 24.6, -79.9, -75.2], fz: -79.6, boxes: [18.4, 23.6], pots: [[16.8, -79.0], [25.2, -79.0]] });
+
+function flowerBits(add, cx, cy, cz, n, r, rnd, cols) {
+  for (let i = 0; i < n; i++) { const a = rnd() * TAU, d = Math.sqrt(rnd()) * r; add(mk(G.sphT, mat(cols[(rnd() * cols.length) | 0]), 0.1, 0.1, 0.1, cx + Math.cos(a) * d, cy + rnd() * 0.12, cz + Math.sin(a) * d * 0.55)); }
+}
+const FCOLS = [0xff3d7f, 0xffd23f, 0xffffff, 0xff7ab0, 0xc77dff, 0xff8a3c];
+function buildTierKit(d, tier) {
+  const lux = tier === 2, px = d.cx, pz = d.cz, kit = pivotGroup(px, pz), rnd = rng(d.id.charCodeAt(0) * 131 + tier);
+  const A = (o, x, y, z) => { o.position.set(x - px, y, z - pz); kit.add(o); return o; };
+  const acc = d.acc, accM = mat(acc), goldM = mat(GOLD), creamM = mat(CREAM), dkM = mat(0x2d3a45), wireM = mat(0x2a2a2a);
+  const Mx = (m, c) => { m.castShadow = c !== false; return m; };
+  const bulb = (x, y, z, r) => A(mk(G.sphT, GLOWM, r, r, r, 0, 0, 0), x, y, z);
+  const wire = (x0, y0, z0, x1, y1, z1) => { const len = Math.hypot(x1 - x0, y1 - y0, z1 - z0), o = mk(G.box, wireM, len, 0.03, 0.03, 0, 0, 0); o.position.set((x0 + x1) / 2 - px, (y0 + y1) / 2, (z0 + z1) / 2 - pz); o.rotation.set(0, -Math.atan2(z1 - z0, x1 - x0), Math.asin((y1 - y0) / len), 'YZX'); kit.add(o); };
+  const string = (x0, y0, z0, x1, y1, z1, sag, n) => { let lx, ly, lz; for (let i = 0; i <= n; i++) { const t = i / n, x = lerp(x0, x1, t), z = lerp(z0, z1, t), y = lerp(y0, y1, t) - Math.sin(t * Math.PI) * sag; if (i > 0) wire(lx, ly, lz, x, y, z); if (i > 0 && i < n && (HQ || i % 2 === 0)) bulb(x, y - 0.1, z, 0.1); lx = x; ly = y; lz = z; } };
+  const col = (x, z, h) => { const r = lux ? 0.2 : 0.16; A(mk(G.cylC, lux ? mat(0xffffff) : accM, r, h, r, 0, 0, 0), x, h / 2, z); A(mk(G.box, lux ? goldM : creamM, r * 2.6, 0.18, r * 2.6, 0, 0, 0), x, 0.09, z); A(mk(G.box, lux ? goldM : creamM, r * 2.6, 0.16, r * 2.6, 0, 0, 0), x, h - 0.08, z); if (lux) for (const yy of [0.9, h - 0.9]) A(mk(G.cylC, goldM, r * 1.2, 0.1, r * 1.2, 0, 0, 0), x, yy, z); };
+  const fbox = (x, z, w, c) => { A(mk(G.box, mat(c), w, 0.36, 0.5, 0, 0, 0), x, 0.18, z); A(mk(G.box, mat(0x4a2a14), w - 0.1, 0.04, 0.4, 0, 0, 0), x, 0.37, z); A(mk(G.box, goldM, w + 0.04, 0.05, 0.54, 0, 0, 0), x, 0.36, z); for (let i = 0; i < Math.round(w * 3); i++) { const fx = x + (rnd() - 0.5) * (w - 0.2), fz2 = z + (rnd() - 0.5) * 0.3; A(mk(G.sphT, mat(0x2fae4a), 0.13, 0.12, 0.13, 0, 0, 0), fx, 0.45, fz2); A(mk(G.sphT, mat(FCOLS[(rnd() * 6) | 0]), 0.1, 0.1, 0.1, 0, 0, 0), fx, 0.6 + rnd() * 0.1, fz2); } };
+  const planter = (x, z) => { if (lux) { A(mk(G.cyl, goldM, 0.36, 0.55, 0.36, 0, 0, 0), x, 0.28, z); A(mk(G.cyl, goldM, 0.42, 0.08, 0.42, 0, 0, 0), x, 0.58, z); A(mk(G.cyl, mat(0x7a5a30), 0.05, 0.7, 0.05, 0, 0, 0), x, 0.95, z); A(mk(G.sphT, mat(0x1f8f3a), 0.5, 0.5, 0.5, 0, 0, 0), x, 1.5, z); A(mk(G.sphT, mat(0x2fae4a), 0.34, 0.34, 0.34, 0, 0, 0), x, 2.0, z); } else { A(mk(G.cyl, mat(0xc8643c), 0.34, 0.5, 0.34, 0, 0, 0), x, 0.25, z); A(mk(G.cyl, mat(0xd9784c), 0.4, 0.08, 0.4, 0, 0, 0), x, 0.52, z); A(mk(G.sphT, mat(0x2fae4a), 0.46, 0.4, 0.46, 0, 0, 0), x, 0.85, z); for (let i = 0; i < 5; i++) { const a = i / 5 * TAU; A(mk(G.sphT, mat(FCOLS[i % 6]), 0.11, 0.11, 0.11, 0, 0, 0), x + Math.cos(a) * 0.34, 0.9 + (i % 2) * 0.12, z + Math.sin(a) * 0.3); } } };
+  const ty = d.ty || 0.03, fz0 = d.floors || [d.floor];
+  for (const fl of fz0) { // zemin kaplaması
+    const fw = fl[1] - fl[0], fd = fl[3] - fl[2], pop = d.kind === 'van' ? { polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 } : {};
+    const tm = LM(Object.assign({ map: lux ? tileTex('#ece6da', '#8d98b0', 4) : tileTex(hexs(shade(acc, 0.12)), '#f6e2b8', 4) }, pop)); tm.map = tm.map.clone(); tm.map.needsUpdate = true; tm.map.repeat.set(fw / 3.2, fd / 3.2); tm.userData.own = true;
+    for (const [bx, bz, bw, bd] of [[(fl[0] + fl[1]) / 2, fl[2] + 0.07, fw, 0.14], [(fl[0] + fl[1]) / 2, fl[3] - 0.07, fw, 0.14], [fl[0] + 0.07, (fl[2] + fl[3]) / 2, 0.14, fd], [fl[1] - 0.07, (fl[2] + fl[3]) / 2, 0.14, fd]]) { const bm = new THREE.Mesh(G.plane, LM(Object.assign({ color: lc(lux ? GOLD : acc) }, pop))); bm.rotation.x = -Math.PI / 2; bm.scale.set(bw, bd, 1); bm.receiveShadow = true; A(bm, bx, ty + 0.002, bz); }
+    const f = new THREE.Mesh(G.plane, tm); f.rotation.x = -Math.PI / 2; f.scale.set(fw, fd, 1); f.receiveShadow = true; A(f, (fl[0] + fl[1]) / 2, ty, (fl[2] + fl[3]) / 2); f.renderOrder = 1;
+  }
+  if (d.kind === 'van') return vanKit(d, tier, A, { acc, accM, goldM, creamM, dkM, lux, col, fbox, planter, string, bulb, rnd, wire }, kit);
+  if (d.kind === 'wed') return wedKit(d, tier, A, { acc, accM, goldM, creamM, dkM, lux, col, fbox, planter, string, bulb, rnd, wire }, kit);
+  // tente
+  const rf = d.rf, aw = new THREE.Mesh(new THREE.BoxGeometry(rf.w + 0.2, 0.16, rf.d), LM({ map: stripeTex(lux ? '#7a1230' : d.awn[0], lux ? '#fff1d0' : d.awn[1], Math.round(rf.w / 4.4)) })); aw.castShadow = true; aw.rotation.x = rf.rx; A(aw, d.cx, rf.y + 0.02, rf.z);
+  const zf = rf.z + Math.cos(rf.rx) * rf.d / 2, yf = rf.y - Math.sin(rf.rx) * rf.d / 2 + 0.02;
+  { const vm = LM({ map: lux ? valTex('#7a1230', '#fff1d0', '#f0c040') : valTex(d.awn[0], d.awn[1], null), alphaTest: 0.5, side: THREE.DoubleSide }); const v = new THREE.Mesh(G.plane, vm); v.scale.set(rf.w + 0.2, 0.62, 1); vm.map.wrapS = THREE.RepeatWrapping; vm.map.repeat.set(Math.round(rf.w / 2) / 1, 1); v.castShadow = false; A(v, d.cx, yf - 0.3, zf + 0.02); }
+  if (lux) { A(mk(G.box, goldM, rf.w + 0.3, 0.14, 0.14, 0, 0, 0), d.cx, yf + 0.04, zf + 0.04); const up = new THREE.Mesh(new THREE.BoxGeometry(rf.w * 0.55, 0.14, rf.d * 0.7), LM({ map: stripeTex('#7a1230', '#fff1d0', 2) })); up.castShadow = true; up.rotation.x = rf.rx; A(up, d.cx, rf.y + 0.6, rf.z - 0.05); A(mk(G.sphT, goldM, 0.22, 0.22, 0.22, 0, 0, 0), d.cx, rf.y + 1.0, rf.z - 0.05); for (const sx of [-1, 1]) A(mk(G.cone, goldM, 0.16, 0.5, 0.16, 0, 0, 0), d.cx + sx * (rf.w / 2 + 0.1), rf.y + 0.35, rf.z); }
+  // sütun / direkler
+  for (const [x, z, h] of d.posts) col(x, z, h);
+  // tabela
+  { const sg = d.sg, sb = tierSign(d.title, sg.w, sg.h, acc, lux); sb.rotation.x = -0.25; A(sb, d.cx, sg.y, sg.z); for (const sx of [-1, 1]) A(mk(G.box, lux ? goldM : creamM, 0.1, 1.0, 0.1, 0, 0, 0), d.cx + sx * (sg.w / 2 - 0.2), sg.y - 0.55, sg.z - 0.3); }
+  // ışık dizileri
+  { const xl = d.cx - rf.w / 2 - 0.05, xr = d.cx + rf.w / 2 + 0.05, yy = yf - 0.5, n = Math.round(rf.w * (lux ? 1.6 : 1.1)); string(xl, yy, zf + 0.1, xr, yy, zf + 0.1, 0.35, n); if (lux) string(xl, yy - 0.5, zf + 0.1, xr, yy - 0.5, zf + 0.1, 0.55, Math.round(n * 0.8)); }
+  if (!lux) { const xl = d.cx - rf.w / 2, xr = d.cx + rf.w / 2, n = Math.round(rf.w / 0.7), pc = [acc, 0xfff3d6, 0xffd23f, 0xff7ab0]; for (let i = 0; i <= n; i++) { const t = i / n, x = lerp(xl, xr, t), y = yf - 1.0 - Math.sin(t * Math.PI) * 0.0 - 0.18 * Math.sin(t * Math.PI * 6) * 0; const f = mk(G.cone3, mat(pc[i % 4]), 0.2, 0.34, 0.03, 0, 0, 0); f.rotation.x = Math.PI; A(f, x, y, zf + 0.12); } }
+  // avize (lüks)
+  if (lux) for (const t of [0.22, 0.5, 0.78]) { const cx2 = d.cx + (t - 0.5) * rf.w * 0.8, cz2 = rf.z - 0.1; A(mk(G.cyl, goldM, 0.025, 0.7, 0.025, 0, 0, 0), cx2, rf.y - 0.4, cz2); A(mk(G.sphT, goldM, 0.3, 0.2, 0.3, 0, 0, 0), cx2, rf.y - 0.85, cz2); A(mk(G.sphT, GLOWM, 0.2, 0.2, 0.2, 0, 0, 0), cx2, rf.y - 1.05, cz2); for (let i = 0; i < 6; i++) { const a = i / 6 * TAU; A(mk(G.sphT, mat(0xdff4ff), 0.05, 0.1, 0.05, 0, 0, 0), cx2 + Math.cos(a) * 0.3, rf.y - 1.05, cz2 + Math.sin(a) * 0.3); } }
+  // sarkan sepetler (lüks) / çiçek kutuları
+  if (lux) for (let i = 0; i < 4; i++) { const hx = d.cx + (i - 1.5) * rf.w * 0.27; A(mk(G.cyl, wireM, 0.015, 0.6, 0.015, 0, 0, 0), hx, yf - 0.62, zf + 0.15); A(mk(G.sphT, mat(0x2fae4a), 0.28, 0.22, 0.28, 0, 0, 0), hx, yf - 1.05, zf + 0.15); for (let k = 0; k < 6; k++) A(mk(G.sphT, mat(FCOLS[k]), 0.1, 0.1, 0.1, 0, 0, 0), hx + (rnd() - 0.5) * 0.4, yf - 0.95 + rnd() * 0.12, zf + 0.15 + (rnd() - 0.5) * 0.3); }
+  for (const bx of d.boxes) fbox(bx, d.fz, lux ? 1.4 : 1.2, lux ? 0x7a1230 : acc);
+  for (const [x, z] of d.pots) planter(x, z);
+  extraProps(d, tier, A, { acc, goldM, creamM, accM, lux, rnd, string, bulb, wire, col, planter, fbox });
+  // neon tabela (lüks)
+  if (lux) { const nt = cv(256, 96), nx = nt.getContext('2d'); nx.fillStyle = '#12142e'; rrect(nx, 0, 0, 256, 96, 20); nx.fill(); nx.strokeStyle = '#ff4fa0'; nx.lineWidth = 7; nx.shadowColor = '#ff4fa0'; nx.shadowBlur = 14; rrect(nx, 10, 10, 236, 76, 16); nx.stroke(); nx.fillStyle = '#ff9ad0'; nx.font = '900 54px Arial'; nx.textAlign = 'center'; nx.textBaseline = 'middle'; nx.fillText('AÇIK', 128, 52); const nm = NEONM.clone(); nm.map = canvasTex(nt); nm.userData.own = true; nm.userData.neon = true; NEONS.push(nm); const nb = new THREE.Mesh(G.plane, nm); nb.scale.set(1.5, 0.56, 1); A(nb, d.cx + d.W / 2 - 1.2, yf - 1.4, zf + 0.2); }
+  mergeStatic(kit, true); return kit;
+}
+const NEONS = [];
+function extraProps(d, tier, A, H) {
+  const { lux, goldM, creamM, accM, rnd } = H, id = d.id, fr = d.foot, mx = (fr[0] + fr[1]) / 2;
+  const crate = (x, z, c) => A(mk(G.box, mat(c || 0xc9965a), 0.7, 0.4, 0.5, 0, 0, 0), x, 0.2, z);
+  const barrel = (x, z) => { A(mk(G.cyl, mat(0x8a5a30), 0.34, 0.7, 0.34, 0, 0, 0), x, 0.35, z); A(mk(G.cyl, mat(0x444), 0.35, 0.06, 0.35, 0, 0, 0), x, 0.22, z); A(mk(G.cyl, mat(0x444), 0.35, 0.06, 0.35, 0, 0, 0), x, 0.5, z); };
+  const aframe = (x, z, col2) => { for (const s of [-1, 1]) { const b = mk(G.box, mat(lux ? 0x2a2a3a : 0x7a5a30), 0.62, 1.0, 0.06, 0, 0, 0); b.rotation.x = s * 0.25; A(b, x, 0.5, z + s * 0.2); } A(mk(G.box, mat(0x26382f), 0.5, 0.7, 0.02, 0, 0, 0), x, 0.55, z + 0.31).rotation.x = -0.25; A(mk(G.box, mat(col2), 0.36, 0.06, 0.03, 0, 0, 0), x, 0.72, z + 0.34); };
+  if (id === 'pack') { for (let i = 0; i < 3; i++) A(mk(G.cyl, mat([0xff9ec4, 0xffd23f, 0x9fe0c0][i]), 0.2, 0.7, 0.2, 0, 0, 0), -9.2 + i * 0.45, 0.35, -2.6); A(mk(G.box, goldM, 1.0, 0.7, 0.7, 0, 0, 0), 4.6, 0.35, -2.4); A(mk(G.box, mat(0xff4f93), 1.04, 0.1, 0.74, 0, 0, 0), 4.6, 0.72, -2.4); A(mk(G.box, goldM, 0.12, 0.74, 0.8, 0, 0, 0), 4.6, 0.37, -2.4); aframe(-0.8, 0.3, 0xff9ec4); }
+  else if (id === 'flo') { crate(6.4, -1.2); crate(6.4, -1.2).position.y = 0.6; for (let i = 0; i < 3; i++) A(mk(G.sphT, mat(FCOLS[i]), 0.14, 0.14, 0.14, 0, 0, 0), 6.4 + (i - 1) * 0.2, 0.85, -1.2); barrel(13.8, -1.4); aframe(13.4, 0.0, 0xffd23f); }
+  else if (id === 'pot') { for (let i = 0; i < 4; i++) A(mk(G.cyl, mat([0xc8643c, 0xf8f4ee, 0x2f7bff, 0xff9ec4][i]), 0.22 + (i % 2) * 0.05, 0.4 + i * 0.06, 0.22 + (i % 2) * 0.05, 0, 0, 0), 35.4 + (i % 2) * 0.5, 0.25 + (i >> 1) * 0.5, -0.4 + (i >> 1) * 0.05); A(mk(G.sphT, mat(0xd94c3a), 0.18, 0.2, 0.18, 0, 0, 0), 45.2, 0.35, -0.4); A(mk(G.cone, mat(0x2f7bff), 0.17, 0.22, 0.17, 0, 0, 0), 45.2, 0.68, -0.4); aframe(41.4, 0.4, 0xa64dff); if (lux) { A(mk(G.sphT, mat(0xf8f4ee), 0.5, 0.7, 0.5, 0, 0, 0), 35.0, 0.95, 1.4); A(mk(G.cyl, goldM, 0.5, 0.1, 0.5, 0, 0, 0), 35.0, 0.25, 1.4); } }
+  else if (id === 'kese') { for (let i = 0; i < 5; i++) { A(mk(G.sphT, mat([0xb07cf0, 0x8f5be0, 0xc9a0ff][i % 3]), 0.3, 0.38, 0.3, 0, 0, 0), -9.4 + i * 0.5, 0.55, -26.0); A(mk(G.box, mat(0xffffff), 0.12, 0.04, 0.12, 0, 0, 0), -9.4 + i * 0.5, 0.95, -26.0); } aframe(-1.8, -26.6, 0xc9a0ff); }
+  else if (id === 'parf') { A(mk(G.box, mat(lux ? 0xffd0e4 : 0xffe9f2), 1.0, 0.8, 1.0, 0, 0, 0), 27.6, 0.4, -24.6); A(mk(G.sphT, mat(0xff6fa5), 0.45, 0.55, 0.45, 0, 0, 0), 27.6, 1.25, -24.6); A(mk(G.cyl, goldM, 0.14, 0.3, 0.14, 0, 0, 0), 27.6, 1.8, -24.6); A(mk(G.sphT, goldM, 0.2, 0.2, 0.2, 0, 0, 0), 27.6, 2.0, -24.6); aframe(14.0, -24.0, 0xff9ec4); }
+  else if (id === 'tea') { A(mk(G.sphT, mat(0xfff3d6), 0.4, 0.34, 0.4, 0, 0, 0), -12.0, 0.55, -46.6); A(mk(G.box, mat(0xfff3d6), 0.5, 0.04, 0.04, 0, 0, 0), -11.5, 0.6, -46.6); A(mk(G.cone, mat(0xff7a8a), 0.2, 0.2, 0.2, 0, 0, 0), -12.0, 0.9, -46.6); aframe(-0.2, -47.6, 0xff7a8a); if (d.patio) patioKit(d, tier, A, H); }
+  else if (id === 'city') { aframe(25.4, -78.4, 0x2f7bff); for (const sx of [-1, 1]) { A(mk(G.cyl, mat(0x2d3a45), 0.06, 2.4, 0.06, 0, 0, 0), 21 + sx * 3.9, 1.2, -80.2); A(mk(G.box, mat(0x2f7bff), 0.6, 0.9, 0.04, 0, 0, 0), 21 + sx * 3.9 + sx * 0.32, 2.0, -80.2); } }
+}
+function patioKit(d, tier, A, H) {
+  const { lux, goldM, string, bulb, wire } = H, pcs = [[-21.5, -63.5], [-6.5, -63.5], [-21.5, -53.5], [-6.5, -53.5]];
+  for (const [x, z] of pcs) { A(mk(G.cyl, mat(lux ? 0xfff3d6 : 0x8a5a30), 0.1, 3.6, 0.1, 0, 0, 0), x, 1.8, z); if (lux) A(mk(G.sphT, goldM, 0.16, 0.16, 0.16, 0, 0, 0), x, 3.7, z); }
+  string(-21.5, 3.5, -53.5, -6.5, 3.5, -53.5, 0.5, 14); string(-21.5, 3.5, -63.5, -6.5, 3.5, -63.5, 0.5, 14); string(-21.5, 3.5, -53.5, -21.5, 3.5, -63.5, 0.5, 8); string(-6.5, 3.5, -53.5, -6.5, 3.5, -63.5, 0.5, 8);
+  if (lux) { string(-14, 3.5, -53.5, -14, 3.5, -63.5, 0.6, 8); for (const [x, z] of [[-17.5, -58.5], [-10.5, -58.5]]) { A(mk(G.cyl, goldM, 0.025, 0.8, 0.025, 0, 0, 0), x, 3.1, z); A(mk(G.sphT, GLOWM, 0.22, 0.22, 0.22, 0, 0, 0), x, 2.6, z); } }
+  const tm = LM({ map: lux ? tileTex('#ece6da', '#8d98b0', 4) : tileTex('#f7c6d0', '#f2dfb4', 4) }); tm.map = tm.map.clone(); tm.map.needsUpdate = true; tm.map.repeat.set(15 / 2.4, 10 / 2.4); tm.userData.own = true;
+  const f = new THREE.Mesh(G.plane, tm); f.rotation.x = -Math.PI / 2; f.scale.set(15.6, 10.6, 1); f.receiveShadow = true; A(f, -14, 0.034, -58.5);
+}
+function vanKit(d, tier, A, H, kit) {
+  const { lux, goldM, creamM, accM, string, bulb, rnd, planter, wire, col } = H, ps = [[21.5, 21.7], [24.0, 21.7], [21.5, 26.3], [24.0, 26.3]];
+  for (const [x, z] of ps) col(x, z, 3.7);
+  for (const x of [21.5, 24.0]) A(mk(G.box, lux ? goldM : accM, 0.22, 0.2, 4.9, 0, 0, 0), x, 3.75, 24);
+  for (let i = 0; i < 7; i++) { const z = 21.7 + i * 0.77; A(mk(G.box, lux ? creamM : mat(0x8a5a30), 3.2, 0.12, 0.2, 0, 0, 0), 22.75, 3.9, z); }
+  for (let i = 0; i < 3; i++) { const sm = new THREE.Mesh(new THREE.BoxGeometry(3.0, 0.06, 0.7), LM({ map: stripeTex(lux ? '#7a1230' : '#0aa89a', lux ? '#fff1d0' : '#ffffff', 2) })); A(sm, 22.75, 3.98, 22.5 + i * 1.5); }
+  string(21.5, 3.5, 21.7, 24.0, 3.5, 21.7, 0.3, 6); string(21.5, 3.5, 26.3, 24.0, 3.5, 26.3, 0.3, 6); string(21.5, 3.5, 21.7, 21.5, 3.5, 26.3, 0.4, 9); string(24.0, 3.5, 21.7, 24.0, 3.5, 26.3, 0.4, 9);
+  if (lux) for (const z of [22.7, 25.3]) { A(mk(G.cyl, goldM, 0.025, 0.6, 0.025, 0, 0, 0), 22.75, 3.5, z); A(mk(G.sphT, goldM, 0.28, 0.18, 0.28, 0, 0, 0), 22.75, 3.1, z); A(mk(G.sphT, GLOWM, 0.18, 0.18, 0.18, 0, 0, 0), 22.75, 2.95, z); }
+  const sb = tierSign(d.title, 3.6, 0.8, d.acc, lux); sb.rotation.x = -0.2; A(sb, 22.75, 4.9, 26.3);
+  for (const [x, z] of [[20.9, 20.9], [24.6, 20.9], [20.9, 27.2], [24.8, 27.2]]) planter(x, z);
+  H.fbox(22.75, 27.3, 1.6, lux ? 0x7a1230 : d.acc);
+  mergeStatic(kit, true); return kit;
+}
+function wedKit(d, tier, A, H, kit) {
+  const { lux, goldM, creamM, accM, string, bulb, rnd, planter, wire, col } = H, zs = [-60, -54.5, -49];
+  for (const x of [16.9, 25.1]) for (const z of zs) { col(x, z, 3.6); for (let k = 0; k < 4; k++) A(mk(G.sphT, mat(FCOLS[(k + (x > 20 ? 1 : 0)) % 6]), 0.28, 0.26, 0.28, 0, 0, 0), x + (k % 2 - 0.5) * 0.3, 0.45 + k * 0.5, z); }
+  for (const x of [16.9, 25.1]) string(x, 3.4, zs[0], x, 3.4, zs[2], 0.5, 12);
+  for (const z of zs) string(16.9, 3.4, z, 25.1, 3.4, z, 0.7, 14);
+  if (lux) { for (const [x, z] of [[19.4, -57.2], [22.6, -57.2], [21, -51.8]]) { A(mk(G.cyl, goldM, 0.025, 0.9, 0.025, 0, 0, 0), x, 3.0, z); A(mk(G.sphT, goldM, 0.34, 0.22, 0.34, 0, 0, 0), x, 2.5, z); A(mk(G.sphT, GLOWM, 0.22, 0.22, 0.22, 0, 0, 0), x, 2.3, z); } for (const x of [16.9, 25.1]) for (const z of zs) { A(mk(G.cyl, goldM, 0.3, 0.1, 0.3, 0, 0, 0), x, 3.7, z); A(mk(G.sphT, mat(0xffd0e2), 0.3, 0.3, 0.3, 0, 0, 0), x, 3.95, z); } }
+  for (let i = 0; i < 34; i++) { const x = 21 + (rnd() - 0.5) * 2.8, z = -60 + rnd() * 12.5; A(mk(G.sphT, mat(rnd() < 0.5 ? 0xff9ec4 : 0xffffff), 0.1, 0.02, 0.07, 0, 0, 0), x, 0.07, z); }
+  for (const sx of [-1, 1]) for (const r of [0, 1, 2, 3]) A(mk(G.sphT, mat(lux ? 0xffd23f : 0xff7ab0), 0.16, 0.12, 0.16, 0, 0, 0), 21 + sx * 3.2, 1.0, -60 + r * 2.4 + 0.3);
+  for (const sx of [-1, 1]) { A(mk(G.sphT, mat(0xffffff), 0.5, 0.5, 0.5, 0, 0, 0), 21 + sx * 1.9, 0.5, -60.5); A(mk(G.sphT, mat(0xff7ab0), 0.36, 0.36, 0.36, 0, 0, 0), 21 + sx * 1.9, 1.0, -60.5); }
+  if (lux) { const tor = mk(G.torus, goldM, 1.6, 1.6, 0.5, 0, 0, 0); A(tor, 21, 6.4, -61.4); for (let i = 0; i < 14; i++) { const a = i / 14 * TAU; A(mk(G.sphT, GLOWM, 0.07, 0.07, 0.07, 0, 0, 0), 21 + Math.cos(a) * 1.6, 6.4 + Math.sin(a) * 1.6, -61.2); } }
+  const sb = tierSign('DÜĞÜN SALONU', 4.2, 0.9, d.acc, lux); sb.rotation.x = -0.2; A(sb, 21, 4.6, -45.6); for (const sx of [-1, 1]) col(21 + sx * 2.4, -45.8, 3.9);
+  planter(16.4, -45.2); planter(25.6, -45.2);
+  mergeStatic(kit, true); return kit;
+}
+/* ---------- uygulama + yapım animasyonu ---------- */
+function vanSkin(t) {
+  if (VAN.skin) { disposeObj(VAN.skin); VAN.skin = null; } if (t <= 0 || !VAN.group) return;
+  const g = new THREE.Group(), st = mat(t === 2 ? GOLD : 0xffffff);
+  for (const sx of [-1, 1]) { g.add(mk(G.box, st, 0.05, 0.18, 3.3, sx * 1.215, 1.2, -0.7)); g.add(mk(G.box, mat(t === 2 ? 0xffffff : 0xffd23f), 0.05, 0.07, 3.3, sx * 1.215, 1.02, -0.7)); }
+  for (let i = 0; i < 7; i++) { g.add(mk(G.sphT, mat(FCOLS[i % 6]), 0.22, 0.2, 0.22, (i % 2 ? 0.5 : -0.5), 3.12 + (i % 3) * 0.04, -1.6 + i * 0.35)); g.add(mk(G.sphT, mat(0x2fae4a), 0.2, 0.12, 0.2, (i % 2 ? 0.5 : -0.5), 3.02, -1.6 + i * 0.35)); }
+  if (t === 2) { g.add(mk(G.box, mat(GOLD), 2.2, 0.08, 0.08, 0, 3.1, 0.75)); g.add(mk(G.sphT, GLOWM, 0.14, 0.14, 0.14, 0, 3.25, 0.75)); }
+  shadowAll(g, true, false); VAN.group.add(g); VAN.skin = g;
+}
+function makeScaffold(d) {
+  const f = d.foot, g = new THREE.Group(), wm = mat(0xc9965a), pm = mat(0x8a5a30), tm = LM({ color: lc(0xf5f0e0), transparent: true, opacity: 0.78, side: THREE.DoubleSide, depthWrite: false }), h = 4.6, xs = [f[0], f[1]], zs = [f[2], f[3]];
+  for (const x of xs) for (const z of zs) g.add(mk(G.cyl, pm, 0.09, h, 0.09, x, h / 2, z));
+  for (const y of [1.5, 3.0, 4.5]) { for (const z of zs) g.add(mk(G.box, wm, f[1] - f[0], 0.1, 0.1, (f[0] + f[1]) / 2, y, z)); for (const x of xs) g.add(mk(G.box, wm, 0.1, 0.1, f[3] - f[2], x, y, (f[2] + f[3]) / 2)); }
+  g.add(mk(G.box, tm, f[1] - f[0], h * 0.8, 0.04, (f[0] + f[1]) / 2, h * 0.45, f[3] + 0.05));
+  shadowAll(g, true, false); g.scale.y = 0.001; world.add(g); return g;
+}
+const TIER_NAME = ['Ahşap Tezgah', 'Boyalı Dükkan', 'Lüks Butik'];
+function applyTier(id, instant) {
+  const d = TDM[id], t = S.tier[id], T0 = TK[id] || (TK[id] = {}), refs = STREF[id] || [];
+  if (T0.kit) { disposeObj(T0.kit); T0.kit = null; }
+  if (T0.anim) { disposeObj(T0.anim.scaf); T0.anim = null; }
+  if (t <= 0) { refs.forEach(o => { o.visible = true; }); if (d.kind === 'van') vanSkin(0); return; }
+  const kit = buildTierKit(d, t); world.add(kit); T0.kit = kit;
+  if (instant) { refs.forEach(o => { o.visible = false; }); if (d.kind === 'van') vanSkin(t); return; }
+  kit.visible = false; kit.scale.setScalar(0.001); T0.anim = { t: 0, hid: false, conf: false, next: 0, scaf: makeScaffold(d) };
+  sfx('pack'); panTo(d.cx, d.cz + 5, 0.9, 1.8);
+}
+function updateTiers(dt) {
+  for (const id in TK) {
+    const T0 = TK[id], a = T0.anim; if (!a) continue; const d = TDM[id], f = d.foot; a.t += dt;
+    if (a.scaf) a.scaf.scale.y = Math.max(0.001, easeOutBack(clamp(a.t / 0.35, 0, 1)));
+    a.next -= dt; if (a.next <= 0 && a.t < 1.1) { a.next = 0.07; dust(rand(f[0], f[1]), 0.2, rand(f[2], f[3]), 2, 0.9); if (a.t > 0.5) sparkles(rand(f[0], f[1]), rand(1, 4), rand(f[2], f[3]), 1, 0xfff2a0, 0.3); }
+    if (a.t > 0.5 && !a.hid) {
+      a.hid = true; (STREF[id] || []).forEach(o => { o.visible = false; }); if (d.kind === 'van') vanSkin(S.tier[id]);
+      disposeObj(a.scaf); a.scaf = null; T0.kit.visible = true; for (let i = 0; i < 12; i++) dust(rand(f[0], f[1]), 0.3, rand(f[2], f[3]), 2, 1.1);
+      sfx('up'); flash(); praise(TIER_NAME[S.tier[id]] + '!', true);
+    }
+    if (a.t > 0.5) { const k = clamp((a.t - 0.5) / 0.7, 0, 1); T0.kit.scale.setScalar(Math.max(0.001, easeOutBack(k))); if (a.t > 0.62 && !a.conf) { a.conf = true; confetti((f[0] + f[1]) / 2, 3, (f[2] + f[3]) / 2, 70); ring((f[0] + f[1]) / 2, (f[2] + f[3]) / 2, 0xffc21a, 9); for (let i = 0; i < 3; i++) later(i * 0.3, () => fireworks((f[0] + f[1]) / 2 + rand(-3, 3), (f[2] + f[3]) / 2 + rand(-2, 2))); } }
+    if (a.t > 1.3) { T0.kit.scale.setScalar(1); T0.anim = null; }
+  }
+}
+function buyTier(id) { if (S.tier[id] >= 2) return; S.tier[id]++; applyTier(id, false); saveDirty = true; stats.tiers = (stats.tiers || 0) + 1; }
+function initTiers() {
+  for (const d of TD) {
+    d.padObj = new CPad({ x: d.pad[0], z: d.pad[1], w: 3.3, res: 384, color: hexs(d.acc), cost: () => d.cost[Math.min(1, S.tier[d.id])], vis: () => cosOn() && d.un() && S.tier[d.id] < 2,
+      sigx: () => S.tier[d.id],
+      draw: (ctx, w, p) => padCard(ctx, w, p, { icon: d.ico, title: TIER_NAME[S.tier[d.id] + 1], sub: d.short + ' +%' + 25 * (S.tier[d.id] + 1) + ' ' + d.word, badge: (S.tier[d.id] + 2) + '/3', cost: d.cost[Math.min(1, S.tier[d.id])] }),
+      buy: () => buyTier(d.id) });
+    if (S.tier[d.id] > 0) applyTier(d.id, true);
+  }
+}
+function updateC2(dt, t) { updateTiers(dt); }
+function initC2() { initTiers(); }
+
+/*C2-END*/
 /* =====================================================================
    15. INIT
    ===================================================================== */
@@ -3058,13 +3323,16 @@ for (const k in EXTAPPLY) if (S.lv[k] > 0) EXTAPPLY[k](true);
 for (const k in upPads) { const u = upPads[k]; if (S.lv[k] >= u.max()) { u.done = true; u.group.visible = false; } else { u.group.visible = padVisible(u); u.redraw(); } }
 restoreExtras(LOADED_X); for (const k in upPads) if (!upPads[k].done) upPads[k].redraw();
 for (let i = 0; i < 3; i++) { spawnCustomer(CFG.queueZ0 + i * CFG.queueGap); const c = customers[customers.length - 1]; c.group.position.x = CFG.queueX; c.yaw = 0; c.group.rotation.y = Math.PI; c.yaw = Math.PI; c.atSlot = true; }
-buildAmbient(); setupPost(); onResize();
+initC2(); buildAmbient(); setupPost(); onResize();
 introDone = !(S.tut === 0 && S.money === 0 && !Object.keys(S.lv).some(k => S.lv[k] > 0));
 if (!introDone) introEl.style.display = 'block';
 curGoalIdx = goalIndex(); curGoal = curGoalIdx >= 0 ? GOALS[curGoalIdx] : null; lastGoalIdx = curGoalIdx; drawGoalIcon();
 for (const k in upPads) { const u = upPads[k]; if (!u.done) { u.group.visible = padVisible(u); } }
 
 window.__game = {
+  get camera() { return camera; },
+  measure() { renderer.info.reset(); if (composer) composer.render(0); else renderer.render(scene, camera); return { calls: renderer.info.render.calls, tris: renderer.info.render.triangles }; },
+  get c2() { return { TD, TDM, TK, applyTier, CPADS, S, cosGate, buyTier }; },
   path(tx, tz) { return findPath(P.group.position.x, P.group.position.z, tx, tz); }, colliders,
   EXTZ, STN, GARD, cafe: () => cafe, wed: () => wed, city: () => city, tractor: () => tractor, give(type, n) { for (let i = 0; i < n; i++) P.stack.add(['orchid', 'lav', 'sun', 'rosep', 'flower'].includes(type) ? makeFlowerItem(0, type === 'flower' ? 'tulip' : type) : makeItemOf(type), type); },
   bot(x, z) { BOT = (x || z) ? { x, z } : null; if (BOT) hideIntro(); }, hideIntro, objective() { objective(_obj); return Object.assign({}, _obj); }, get goal() { return curGoal; }, GOALS, UPG,
@@ -3087,7 +3355,7 @@ function fpsWatch(rawDt) {
 }
 function loop(now) {
   const rawDt = Math.max(0, (now - last) / 1000), dt = Math.min(0.05, rawDt); last = now; if (rawDt > 0 && !window.__noAuto) fpsWatch(rawDt);
-  update(dt); renderer.info.reset(); if (composer) composer.render(dt); else renderer.render(scene, camera); requestAnimationFrame(loop);
+  if (!window.__freeze) update(dt); renderer.info.reset(); if (composer) composer.render(dt); else renderer.render(scene, camera); requestAnimationFrame(loop);
 }
 requestAnimationFrame(loop);
 })();
