@@ -762,6 +762,7 @@ function mergeParts(parts, W) {
   out.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); out.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3)); out.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
   return out;
 }
+const PROPBOX = []; let PBON = false; const _pbb = new THREE.Box3();
 function mergeStatic(root, ao) {
   root.updateMatrixWorld(true);
   const inv = new THREE.Matrix4().copy(root.matrixWorld).invert(), buckets = new Map(), nm = new THREE.Matrix3(), v = new THREE.Vector3(), M = new THREE.Matrix4();
@@ -770,6 +771,7 @@ function mergeStatic(root, ao) {
       if (ch.userData.dyn || ch.isSprite || ch.isInstancedMesh || ch.isPoints) continue;
       if (ch.isMesh) {
         if (!ch.geometry || Array.isArray(ch.material) || !ch.geometry.attributes.position || ch.userData.keep) continue;
+        if (PBON) { const gg = ch.geometry; if (!gg.boundingBox) gg.computeBoundingBox(); _pbb.copy(gg.boundingBox).applyMatrix4(ch.matrixWorld); if (_pbb.max.y > 0.45 && _pbb.min.y < 1.2 && _pbb.max.x - _pbb.min.x < 30 && _pbb.max.z - _pbb.min.z < 30) PROPBOX.push([_pbb.min.x, _pbb.max.x, _pbb.min.z, _pbb.max.z]); }
         const g = ch.geometry, mt = ch.material, plain = (mt.isMeshLambertMaterial || (mt.isMeshStandardMaterial && mt.roughness === 0.78 && mt.metalness === 0)) && !mt.map && !mt.transparent && !mt.vertexColors && mt.side === THREE.FrontSide && !mt.emissiveMap;
         const tm = plain ? vcMat : mt, hasCol = plain || !!g.attributes.color, hasUv = !plain && !!g.attributes.uv;
         const key = tm.uuid + '|' + (ch.castShadow ? 1 : 0) + (ch.receiveShadow ? 1 : 0) + (hasUv ? 'u' : '') + (hasCol ? 'c' : '') + ch.renderOrder;
@@ -1756,7 +1758,7 @@ class Zone {
 }
 class UpgradePad extends Zone {
   constructor(key, x, z, icon, color) {
-    super({ x, z, w: 3.3, color: color || '#ffc21a', res: 384, labelSize: 3.05, draw: null });
+    super({ x, z, w: 4.2, color: color || '#ffc21a', res: 384, labelSize: 4.0, draw: null });
     this.key = key; this.icon = icon; this.locked = false; this.pause = 0; this.off = false; this.hold = 0; this.pop = 0; this.paid = 0; this.tick = 0; this.done = false; this.lastShown = -1;
     this.drawIcon = (ctx, w) => this.paint(ctx, w); this.redraw();
   }
@@ -1768,11 +1770,11 @@ class UpgradePad extends Zone {
     ctx.fillStyle = 'rgba(22,28,64,.96)'; ctx.strokeStyle = '#ffc21a'; ctx.lineWidth = 18; rrect(ctx, 14, 14, w - 28, w - 28, 54); ctx.fill(); ctx.stroke();
     if (mx > 1) { ctx.fillStyle = '#ffc21a'; rrect(ctx, 28, 28, 120, 58, 29); ctx.fill(); otext(ctx, lv + '/' + mx, 88, 58, 40, '#1b1b40', '#ffc21a', 0); }
     ctx.fillStyle = 'rgba(255,255,255,.14)'; ctx.beginPath(); ctx.arc(w / 2, 148, 88, 0, TAU); ctx.fill(); this.icon(ctx, w / 2, 146, 168);
-    otext(ctx, u.name, w / 2, 252, u.name.length > 15 ? 36 : u.name.length > 9 ? 44 : 54, '#fff', '#05071a');
+    otext(ctx, u.name, w / 2, 252, u.name.length > 15 ? 44 : u.name.length > 9 ? 54 : 64, '#fff', '#05071a');
     iconBill(ctx, 100, 321, 62);
     const rem = Math.max(0, this.cost() - this.paid);
-    otext(ctx, fmt(rem), 232, 321, String(fmt(rem)).length > 4 ? 56 : 68, '#6dff6a', '#0c1a0c');
-    if (this.locked) { ctx.fillStyle = 'rgba(10,30,20,.5)'; rrect(ctx, 14, 14, w - 28, w - 28, 54); ctx.fill(); ctx.fillStyle = '#2fd45a'; ctx.strokeStyle = '#fff'; ctx.lineWidth = 8; ctx.beginPath(); ctx.arc(w - 66, 66, 40, 0, TAU); ctx.fill(); ctx.stroke(); ctx.strokeStyle = '#fff'; ctx.lineWidth = 12; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.beginPath(); ctx.moveTo(w - 86, 68); ctx.lineTo(w - 70, 84); ctx.lineTo(w - 44, 50); ctx.stroke(); otext(ctx, u.name, w / 2, 252, u.name.length > 15 ? 36 : u.name.length > 9 ? 44 : 54, '#fff', '#05071a'); otext(ctx, 'Seviye ' + lv, w / 2, 316, 54, '#9dffb0', '#05071a'); }
+    otext(ctx, fmt(rem), 232, 321, String(fmt(rem)).length > 4 ? 64 : 78, '#6dff6a', '#0c1a0c');
+    if (this.locked) { ctx.fillStyle = 'rgba(10,30,20,.5)'; rrect(ctx, 14, 14, w - 28, w - 28, 54); ctx.fill(); ctx.fillStyle = '#2fd45a'; ctx.strokeStyle = '#fff'; ctx.lineWidth = 8; ctx.beginPath(); ctx.arc(w - 66, 66, 40, 0, TAU); ctx.fill(); ctx.stroke(); ctx.strokeStyle = '#fff'; ctx.lineWidth = 12; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.beginPath(); ctx.moveTo(w - 86, 68); ctx.lineTo(w - 70, 84); ctx.lineTo(w - 44, 50); ctx.stroke(); otext(ctx, u.name, w / 2, 252, u.name.length > 15 ? 44 : u.name.length > 9 ? 54 : 64, '#fff', '#05071a'); otext(ctx, 'Seviye ' + lv, w / 2, 316, 54, '#9dffb0', '#05071a'); }
   }
 }
 function drawZoneIcon(fn, scale) {
@@ -2154,16 +2156,27 @@ function updateGoalState() {
     drawGoalIcon(); goalEl.classList.remove('pulse'); void goalEl.offsetWidth; goalEl.classList.add('pulse');
   }
 }
+/* C4: aynı anda en çok ~4 pad: sıradaki hedef + para biriktirilen/yakında alınabilir olanlar */
+const HIREK = new Set(['helper', 'cashier', 'carrier', 'lavW', 'parfW', 'cafeW', 'sunW', 'cityW', 'beeW', 'bonW', 'portW']);
+const PADOK = new Set(); let padOkT = 0;
+function padOkRefresh(dt) {
+  padOkT -= dt; if (padOkT > 0) return; padOkT = 0.25; PADOK.clear();
+  const list = []; for (const k in upPads) { const u = upPads[k]; if (u.done || !padVisible(u)) continue; list.push(u); }
+  const goalU = curGoal ? upPads[curGoal.key] : null, score = u => { if (u === goalU) return -3; if (u.paid > 0 || u.inside) return -2; if (HIREK.has(u.key)) return -1.5; const c = u.cost(); return (S.money + u.paid >= c * 0.4) ? c / 1e9 : 9; };
+  list.sort((a, b) => score(a) - score(b)); let n = 0; for (const u of list) { const sc = score(u); if (sc >= 9 && u !== goalU) continue; if (n >= 4 && !(sc <= -2)) continue; PADOK.add(u); n++; }
+}
 function updateUpgrades(dt) {
+  padOkRefresh(dt);
   if (carpet1) { carpet1.visible = ['cap', 'speed', 'pack', 'helper', 'helpSpd'].some(k => upPads[k].shown); carpet2.visible = ['cashier', 'cashSpd', 'carrier', 'carSpd', 'carCap'].some(k => upPads[k].shown); }
   for (const key in upPads) {
     const u = upPads[key]; if (u.done) continue;
-    { const v = padVisible(u); if (v !== u.group.visible) { u.group.visible = v; if (v) { u.redraw(); u.group.scale.set(0.01, 1, 0.01); u.pop = 0.6; sfx('coin'); } } }
+    { const v = padVisible(u) && PADOK.has(u); if (v !== u.group.visible) { u.group.visible = v; if (v) { u.redraw(); u.group.scale.set(0.01, 1, 0.01); u.pop = 0.6; sfx('coin'); } } }
     if (u.pop > 0) { u.pop -= dt; const k = 1 - Math.max(0, u.pop) / 0.6, a = Math.sin(k * Math.PI * 3) * (1 - k) * 0.28; u.group.scale.set(1 + a, 1, 1 - a * 0.8); if (u.pop <= 0) u.group.scale.set(1, 1, 1); }
     if (u.locked) {
       u.pause -= dt; if (!u.inside) u.off = true;
       if (u.off && u.pause <= 0 && u.inside) { u.locked = false; u.hold = 0; u.redraw(); } else continue;
     }
+    if (u.inside && S.money <= 0 && !u.locked) { u.warn = (u.warn || 0) - dt; if (u.warn <= 0) { u.warn = 1.4; u.pop = 0.4; popText(u.x, 2.4, u.z, 'Yetersiz para: ' + fmt(Math.max(0, u.cost() - u.paid)), '#ff6b6b'); sfx('drop'); } }
     if (!u.inside || S.money <= 0) { u.hold = 0; continue; }
     u.hold += dt;
     u.tick -= dt; if (u.tick > 0) continue; u.tick = 0.03;
@@ -2247,7 +2260,13 @@ const hintEl = document.getElementById('hint'), hintT = document.getElementById(
 const menuEl = document.getElementById('menu'), mQ = document.getElementById('mQ');
 const qText = () => 'Grafik: ' + (HQ ? 'Yüksek' : 'Düşük');
 mQ.textContent = qText();
-document.getElementById('reset').addEventListener('click', () => { menuEl.style.display = 'flex'; });
+(function () { // Görevler / Koleksiyon / Gardırop: ayarlar menüsünde, açıldıkça görünür
+  const box = menuEl.querySelector('.mbox'), anchor = document.getElementById('mNight'), mk = (id, txt, bg, sh) => { const b = document.createElement('button'); b.id = id; b.textContent = txt; b.style.cssText = 'display:none;background:' + bg + ';box-shadow:0 4px 0 ' + sh; box.insertBefore(b, anchor); return b; };
+  const mq = mk('mQuest', 'Görevler', 'linear-gradient(#5aa8ff,#2f6fd0)', '#1a3f8a'), mb = mk('mBook', 'Koleksiyon Defteri', 'linear-gradient(#58d68d,#27ae60)', '#146b38');
+  mq.addEventListener('click', () => { menuEl.style.display = 'none'; document.getElementById('bQuest').click(); }); mb.addEventListener('click', () => { menuEl.style.display = 'none'; document.getElementById('bBook').click(); });
+  window.__menuSync = () => { mq.style.display = cosOn() ? 'block' : 'none'; const bb = document.getElementById('bBook'); mb.style.display = bb && bb.style.display === 'flex' ? 'block' : 'none'; document.getElementById('mWard').style.display = cosOn() ? 'block' : 'none'; };
+})();
+document.getElementById('reset').addEventListener('click', () => { window.__menuSync && window.__menuSync(); menuEl.style.display = 'flex'; });
 document.getElementById('mClose').addEventListener('click', () => { menuEl.style.display = 'none'; });
 mQ.addEventListener('click', () => { try { localStorage.setItem(QKEY, HQ ? 'low' : 'high'); } catch (e) {} writeSave(); location.reload(); });
 document.getElementById('mReset').addEventListener('click', () => {
@@ -2584,8 +2603,8 @@ function finalizeWorld() {
   const groups = [zone2.lockedGroup, zone3.lockedGroup].concat(zone2.groups.map(g => g[0]), zone3.groups.map(g => g[0]));
   EXTLIST.forEach(z => { groups.push(z.lockedGroup); z.groups.forEach(g => groups.push(g[0])); });
   groups.forEach(dyn);
-  groups.forEach(g => mergeStatic(g, true));
-  mergeStatic(world, true);
+  PBON = true; groups.forEach(g => mergeStatic(g, true));
+  mergeStatic(world, true); PBON = false;
 }
 function buildAmbient() {
   if (!HQ) return;
@@ -3102,7 +3121,8 @@ Object.assign(MAIN_UNLOCKS, { lav: 1, parf: 1, cafe: 1, wed: 1, sunf: 1, city: 1
 /* =====================================================================
    17. C2 – MEKAN SEVİYELERİ / DEKORASYON / KOZMETİK / GÜN-GECE
    ===================================================================== */
-const cosOn = () => introDone && S.lv.lav > 0;
+const legacyLate = () => S.lv.bee > 0 || (S.bx || 0) > 0 || Object.keys(S.decor).length > 0 || Object.keys(S.tier).some(k => S.tier[k] > 0) || (S.cos.own && S.cos.own.length > 0) || S.dn > 0.5;
+const cosOn = () => introDone && (S.lv.city > 0 || legacyLate()); // C2/C3 sistemleri 60 dk içeriği (Şehir Çiçekçisi) bitince açılır
 const tierMul = id => 1 + 0.25 * ((S.tier && S.tier[id]) || 0);
 const BF = { spawn: 1, vip: 0, tipP: 0.25, tipM: 1 };
 const NIGHT = { k: 0 };
@@ -3123,9 +3143,10 @@ function padCard(ctx, w, p, d) {
   if (d.sub) otext(ctx, d.sub, w / 2, w * 0.75, w * 0.066, '#ffd23f', '#05071a', w * 0.014);
   iconBill(ctx, w * 0.27, w * 0.875, w * 0.13); otext(ctx, fmt(d.cost), w * 0.62, w * 0.875, String(fmt(d.cost)).length > 4 ? w * 0.13 : w * 0.16, aff ? '#6dff6a' : '#ff8a8a', '#0c1a0c');
 }
+function cpadOK(c) { if (!cosGate()) return false; let n = 0; for (const k in upPads) if (upPads[k].group.visible) n++; if (n >= 3) return false; if (S.money < c.o.cost() * 0.4) return false; for (const q of CPADS) if (q !== c && q.group.visible && !q.o.dead) return false; return true; }
 class CPad extends Zone {
   constructor(o) {
-    super({ x: o.x, z: o.z, w: o.w || 3.0, color: o.color || '#ff7ab0', res: o.res || 256, labelSize: (o.w || 3.0) * 0.96, draw: null });
+    super({ x: o.x, z: o.z, w: (o.w || 3.0) * 1.45, color: o.color || '#ff7ab0', res: o.res || 256, labelSize: (o.w || 3.0) * 1.45 * 0.96, draw: null });
     this.o = o; this.group.visible = false; this.shown = false; this.pop = 0; this.sig = ''; this.hold = 0; this.cool = 0; this.locked = true;
     this.fill = new THREE.Mesh(new THREE.CircleGeometry(0.5, 20), new THREE.MeshBasicMaterial({ color: 0x7dff7a, transparent: true, opacity: 0.5, depthWrite: false, fog: false }));
     this.fill.visible = false; this.fill.rotation.x = -Math.PI / 2; this.fill.position.y = 0.008; this.fill.renderOrder = 2; this.fill.scale.setScalar(0.001); this.group.add(this.fill);
@@ -3135,7 +3156,7 @@ class CPad extends Zone {
     const o = this.o, vis = !!o.vis();
     if (vis && !this.shown) { this.shown = true; this.pop = 0.5; this.sig = ''; }
     if (!vis && this.shown) { this.shown = false; }
-    const near = vis && Math.abs(px - this.x) < 26 && Math.abs(pz - this.z) < 26;
+    const near = vis && !o.dead && Math.abs(px - this.x) < 26 && Math.abs(pz - this.z) < 26 && (this.inside || cpadOK(this));
     if (near !== this.group.visible) { this.group.visible = near; if (near) this.sig = ''; }
     if (!this.group.visible) { this.inside = false; this.hold = 0; return; }
     const cost = o.cost(), aff = S.money >= cost, gate = cosGate(), sig = cost + '|' + (aff ? 1 : 0) + '|' + (o.sigx ? o.sigx() : '');
@@ -3143,6 +3164,7 @@ class CPad extends Zone {
     this.locked = !(aff && gate); super.update(dt, t, px, pz);
     if (this.pop > 0) { this.pop -= dt; const k = 1 - Math.max(0, this.pop) / 0.5, a = Math.sin(k * Math.PI * 3) * (1 - k) * 0.3; this.group.scale.set(1 + a, 1, 1 - a * 0.8); if (this.pop <= 0) this.group.scale.set(1, 1, 1); }
     this.cool -= dt;
+    if (this.inside && this.locked && !(this.o.sigx)) { this.warn = (this.warn || 0) - dt; if (this.warn <= 0) { this.warn = 1.4; this.pop = 0.4; popText(this.x, 2.4, this.z, aff ? 'Önce ana hedef' : 'Yetersiz para: ' + fmt(Math.max(0, cost - S.money)), '#ff6b6b'); sfx('drop'); } }
     if (!this.inside) this.exit = false;
     if (this.inside && !this.locked && this.cool <= 0 && !this.exit) { this.hold += dt; this.fill.visible = true; this.fill.scale.setScalar(this.w * clamp(this.hold / 0.45, 0, 1) * 0.95); if (this.hold >= 0.45) this.buy(); }
     else { this.hold = Math.max(0, this.hold - dt * 3); this.fill.visible = this.hold > 0.01; this.fill.scale.setScalar(Math.max(0.001, this.w * clamp(this.hold / 0.45, 0, 1) * 0.95)); }
@@ -3468,7 +3490,7 @@ function beautyPts() { let n = S.bx || 0; for (const id in S.decor) { const s = 
 const beautyEl = document.getElementById('beauty'), beautyV = document.getElementById('beautyV'), beautyB = document.getElementById('beautyB');
 let _bsig = '', _wardBtn = null;
 function updateBeautyHUD() {
-  const pts = beautyPts(), show = cosOn() || pts > 0, sig = pts + '|' + show; if (sig === _bsig) return; _bsig = sig;
+  const pts = beautyPts(), show = false, sig = pts + '|' + show; if (sig === _bsig) return; _bsig = sig;
   _wardBtn = _wardBtn || document.getElementById('wardBtn'); beautyEl.style.display = show ? 'inline-flex' : 'none'; _wardBtn.style.display = show ? 'inline-flex' : 'none';
   let prev = 0; const nxt = BSTEPS.find(q => q.p > pts); for (const q of BSTEPS) if (pts >= q.p) prev = q.p;
   beautyV.textContent = pts; beautyB.style.width = (nxt ? clamp((pts - prev) / (nxt.p - prev), 0, 1) * 100 : 100) + '%';
@@ -3502,7 +3524,7 @@ function initDecor() {
   const gh = document.getElementById('beauty'); gh.addEventListener('click', () => { const pts = beautyPts(), nx = BSTEPS.find(q => q.p > pts); toast('Güzellik ' + pts + (nx ? ' • Sonraki ' + nx.p + ': ' + nx.t : ' • Tamamlandı!')); });
   for (const s of DSL) {
     DEC[s.id] = {}; const T = DECT[s.type];
-    DEC[s.id].pad = new CPad({ x: s.px, z: s.pz, w: 2.7, res: 256, color: '#ff7ab0', cost: () => s.cost, vis: () => cosOn() && areaOn(s.area) && !S.decor[s.id],
+    DEC[s.id].pad = new CPad({ x: s.px, z: s.pz, w: 2.7, res: 256, color: '#ff7ab0', cost: () => s.cost, vis: () => false, dead: true,
       draw: (ctx, w, p) => padCard(ctx, w, p, { icon: DICON[s.type], title: T.n, sub: '+' + T.pts + ' Güzellik', cost: s.cost }), buy: () => buyDecor(s) });
     if (S.decor[s.id]) placeDecor(s, true);
   }
@@ -3512,7 +3534,7 @@ let glowDirty = false;
 function updateDecor(dt, t) {
   for (let i = DANIM.length - 1; i >= 0; i--) { const a = DANIM[i]; a.t += dt; const k = clamp(a.t / 0.8, 0, 1); a.o.scale.setScalar(Math.max(0.001, easeOutBack(k))); if (k >= 1) { a.o.scale.setScalar(1); DANIM.splice(i, 1); } }
   GHOSTM.opacity = 0.26 + 0.1 * Math.sin(t * 3);
-  for (const s of DSL) { const d = DEC[s.id]; if (!d || !d.pad) continue; const want = d.pad.group.visible && !S.decor[s.id]; if (want && !d.ghost) { d.ghost = new THREE.Mesh(decGeo(s.type, s.v), GHOSTM); d.ghost.position.set(s.x, 0, s.z); d.ghost.rotation.y = s.ry; d.ghost.renderOrder = 3; world.add(d.ghost); } if (d.ghost) d.ghost.visible = want; }
+  for (const s of DSL) { const d = DEC[s.id]; if (!d || !d.pad) continue; const want = false; if (want && !d.ghost) { d.ghost = new THREE.Mesh(decGeo(s.type, s.v), GHOSTM); d.ghost.position.set(s.x, 0, s.z); d.ghost.rotation.y = s.ry; d.ghost.renderOrder = 3; world.add(d.ghost); } if (d.ghost) d.ghost.visible = want; }
   updateBeautyHUD();
 }
 
@@ -3708,7 +3730,7 @@ function initC2() { initTiers(); initDecor(); initCos(); initDN(); }
    18. C3 – ARICILIK / JAPON BAHÇESİ / NADİR ÇİÇEKLER / İHRACAT / FESTİVAL / MÜZE / GÖREVLER / ÇEVRİMDIŞI
    Yeni kayıt alanları (hepsi eklenen): S.lv.{bee..musTkt}, S.tier.{hon,bon}, S.cb, S.cs, S.pt, S.fe, S.q, S.bx, S.ts, S.op, S.mv
    ===================================================================== */
-const E3 = { bee: 20000, beeW: 3000, hiveN: 3000, hiveSpd: 2500, honSpd: 2000, jap: 70000, bonW: 8000, bonSpd: 3500, coll: 50000, port: 140000, portW: 15000, portBonus: 12000, fest: 200000, festBonus: 25000, mus: 380000, musTkt: 40000 };
+const E3 = { bee: 20000, beeW: 3000, hiveN: 3000, hiveSpd: 2500, honSpd: 2000, jap: 105000, bonW: 8000, bonSpd: 3500, coll: 75000, port: 230000, portW: 15000, portBonus: 12000, fest: 320000, festBonus: 25000, mus: 600000, musTkt: 40000 };
 PRICE.honey = 420; PRICE.bonsai = 1100;
 const vcMatI = LM({ vertexColors: true }); // instanceColor kullanan örnekleme için ayrı malzeme (program değişimi hatasını önler)
 const C3W = [];            // C3 çalışanları (üniforma/kozmetik için)
@@ -3841,6 +3863,7 @@ function sakura(g, x, z, sc, rnd) {
   shadowAll(t, true, false); ad(g, t, x, 0, z); return { x, z, y: 2.6 * sc };
 }
 function lantern(g, x, z, sc) {
+  if (1) return; // C4: küçük süs kaldırıldı
   GLOWS.push([x, z, 3.0]); const s = sc || 1, o = new THREE.Group(), st = mat(0xa8a8a4);
   o.add(mk(G.box, st, 0.62 * s, 0.14 * s, 0.62 * s, 0, 0.07 * s, 0), mk(G.cyl, st, 0.13 * s, 0.9 * s, 0.13 * s, 0, 0.6 * s, 0), mk(G.box, st, 0.46 * s, 0.1 * s, 0.46 * s, 0, 1.08 * s, 0), mk(G.box, LAMPM, 0.3 * s, 0.34 * s, 0.3 * s, 0, 1.3 * s, 0), mk(G.cone3, mat(0x8a8a86), 0.62 * s, 0.34 * s, 0.62 * s, 0, 1.64 * s, 0), mk(G.sphT, st, 0.08 * s, 0.08 * s, 0.08 * s, 0, 1.86 * s, 0));
   o.children[4].rotation.y = Math.PI / 4; shadowAll(o, true, false); ad(g, o, x, 0, z);
@@ -4000,7 +4023,7 @@ function updateJapan(dt, t) {
 /* ---- HUD: sağ düğme sütunu + C3 stilleri ---- */
 (function () {
   const st = document.createElement('style');
-  st.textContent = `#hbtns{position:absolute;right:max(12px,env(safe-area-inset-right));top:calc(max(12px,env(safe-area-inset-top)) + 150px);display:flex;flex-direction:column;gap:8px;pointer-events:none}
+  st.textContent = `#hbtns{display:none !important;position:absolute;right:max(12px,env(safe-area-inset-right));top:calc(max(12px,env(safe-area-inset-top)) + 150px);display:flex;flex-direction:column;gap:8px;pointer-events:none}
   .hb{position:relative;display:none;align-items:center;justify-content:center;width:46px;height:46px;border:0;border-radius:50%;background:linear-gradient(rgba(60,110,160,.88),rgba(18,48,84,.92));box-shadow:0 4px 0 rgba(0,0,0,.25),inset 0 2px 0 rgba(255,255,255,.4);padding:0;pointer-events:auto}
   .hb canvas{width:30px;height:30px}.hb i{position:absolute;right:-3px;top:-3px;min-width:20px;height:20px;border-radius:10px;background:#ff3d5a;color:#fff;font:900 12px/20px system-ui;text-align:center;font-style:normal;box-shadow:0 2px 0 #8a1428;display:none;padding:0 4px}
   .hb.pulse{animation:bump .5s ease-out 2}
@@ -4612,13 +4635,31 @@ for (const k in EXTAPPLY) if (S.lv[k] > 0) EXTAPPLY[k](true);
 for (const k in upPads) { const u = upPads[k]; if (S.lv[k] >= u.max()) { u.done = true; u.group.visible = false; } else { u.group.visible = padVisible(u); u.redraw(); } }
 restoreExtras(LOADED_X); for (const k in upPads) if (!upPads[k].done) upPads[k].redraw();
 for (let i = 0; i < 3; i++) { spawnCustomer(CFG.queueZ0 + i * CFG.queueGap); const c = customers[customers.length - 1]; c.group.position.x = CFG.queueX; c.yaw = 0; c.group.rotation.y = Math.PI; c.yaw = Math.PI; c.atSlot = true; }
-initC2(); initC3(); buildAmbient(); setupPost(); onResize();
+initC2(); initC3(); try { window.__padFix = fixPads(); } catch (e) {} buildAmbient(); setupPost(); onResize();
 introDone = !(S.tut === 0 && S.money === 0 && !Object.keys(S.lv).some(k => S.lv[k] > 0));
 if (!introDone) introEl.style.display = 'block';
 curGoalIdx = goalIndex(); curGoal = curGoalIdx >= 0 ? GOALS[curGoalIdx] : null; lastGoalIdx = curGoalIdx; drawGoalIcon();
 for (const k in upPads) { const u = upPads[k]; if (!u.done) { u.group.visible = padVisible(u); } }
 
+/* ---- pad çakışma denetimi: pad dikdörtgeni prop/collider ile kesişiyorsa en yakın boş yere taşınır ---- */
+function allPads() { const l = []; for (const k in upPads) l.push(upPads[k]); for (const c of CPADS) if (!c.o.dead) l.push(c); return l; }
+function padHits(p, x, z, others) {
+  const hw = p.w / 2 + 0.2, hd = p.d / 2 + 0.2, x0 = x - hw, x1 = x + hw, z0 = z - hd, z1 = z + hd;
+  for (const b of PROPBOX) if (b[0] < x1 && b[1] > x0 && b[2] < z1 && b[3] > z0) return 'prop';
+  for (const c of colliders) { if (c.active && !c.active()) continue; if (c.x0 < x1 && c.x1 > x0 && c.z0 < z1 && c.z1 > z0) return 'collider'; }
+  return null;
+}
+function fixPads() {
+  const pads = allPads(), moved = []; let bad = 0;
+  for (const p of pads) {
+    if (!padHits(p, p.x, p.z, pads)) continue;
+    let done = false; for (let r = 0.8; r <= 5 && !done; r += 0.8) for (let a = 0; a < 16 && !done; a++) { const ang = a / 16 * TAU, nx = p.x + Math.cos(ang) * r, nz = p.z + Math.sin(ang) * r; if (nz < -170 || nz > 40 || nx < -26 || nx > 46) continue; if (!padHits(p, nx, nz, pads)) { moved.push([p.key || '?', +p.x.toFixed(1), +p.z.toFixed(1), +nx.toFixed(1), +nz.toFixed(1)]); p.x = nx; p.z = nz; p.group.position.set(nx, 0.04, nz); done = true; } }
+    if (!done) bad++;
+  }
+  return { moved, bad };
+}
 window.__game = {
+  padCheck() { const pads = allPads(); const hits = []; for (const p of pads) { const h = padHits(p, p.x, p.z, pads); if (h) hits.push([p.key || (p.o && p.o.id) || '?', h, +p.x.toFixed(1), +p.z.toFixed(1)]); } return hits; }, fixPads, allPads, PROPBOX, padOK: () => PADOK,
   get camera() { return camera; },
   measure() { renderer.info.reset(); if (composer) composer.render(0); else renderer.render(scene, camera); return { calls: renderer.info.render.calls, tris: renderer.info.render.triangles }; },
   get c2() { return { TD, TDM, TK, applyTier, CPADS, S, cosGate, buyTier, DSL, DSLM, DECT, DEC, zonesAll: zones, buyDecor, beautyPts, BF, placeDecor, DN, NIGHT, DN_PERIOD }; },
