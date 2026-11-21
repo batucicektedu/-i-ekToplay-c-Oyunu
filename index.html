@@ -2427,6 +2427,11 @@ function updateTrail(tx, tz, show, t, dt) {
   trailMesh.instanceMatrix.needsUpdate = true;
 }
 let _obj = { x: 0, y: 0, z: 0, kind: '', ok: false };
+/* ortak kabul koşulları: ipucu (objective) ve bırakma kodu aynı kuralı kullanır */
+const canCity = t => !!(city && !city.z.locked && PROD_LIST.includes(t) && city.stock.count(t) < 4 && city.stock.length + (city.stock.pend || 0) < 28);
+const canCounter = t => PROD_LIST.includes(t) && (cashier ? shelfFree(t) > 0 : (!queue.length || queue.some(c => c.prod === t && c.want - c.got > 0)));
+const canWed = t => !!(wed && !wed.z.locked && wed.ord && (wed.ord.got[t] || 0) < (wed.ord.need[t] || 0));
+const canTable = () => !!(cafe && !cafe.z.locked && cafe.tables.some(q => q.guest && q.guest.state === 'wait' && !q.guest.pending));
 function objective(out) {
   out.ok = false; if (!introDone) return out;
   const st = P.stack, nF = st.count('flower'), nB = st.count('bouquet'), nO = st.count('orchid'), nP = st.count('pot');
@@ -2437,13 +2442,13 @@ function objective(out) {
   const ripe = () => { let best = null, bd = 1e9; for (const bb of beds) { if (bb.locked || bb.nohelp) continue; for (const f of bb.flowers) if (f.t >= f.gt) { const d = (f.x - P.group.position.x) ** 2 + (f.z - P.group.position.z) ** 2; if (d < bd) { bd = d; best = f; } } } return best; };
   if (outZone.inside && outputPile.length > 0 && P.free() > 0 && nB < 14) return set(outZone.x, 0.4, outZone.z, 'out');
   const hold = t => st.count(t), prodHeld = PROD_LIST.some(t => hold(t) > 0);
-  if (wed && !wed.z.locked && wed.ord && PROD_LIST.some(t => hold(t) >= 5 && (wed.ord.got[t] || 0) < (wed.ord.need[t] || 0))) return set(wed.zone.x, 0.4, wed.zone.z, 'wed');
-  if (PROD_LIST.some(t => hold(t) > 0 && (!cashier || shelfFree(t) > 0))) return set(counterZone.x, 0.4, counterZone.z, 'counter');
+  if (PROD_LIST.some(t => hold(t) >= 5 && canWed(t))) return set(wed.zone.x, 0.4, wed.zone.z, 'wed');
+  if (PROD_LIST.some(t => hold(t) > 0 && canCounter(t))) return set(counterZone.x, 0.4, counterZone.z, 'counter');
   if (prodHeld) {
-    if (wed && !wed.z.locked && wed.ord && PROD_LIST.some(t => hold(t) > 0 && (wed.ord.got[t] || 0) < (wed.ord.need[t] || 0))) return set(wed.zone.x, 0.4, wed.zone.z, 'wed');
-    if (city && !city.z.locked) return set(city.zone.x, 0.4, city.zone.z, 'city');
+    if (PROD_LIST.some(t => hold(t) > 0 && canWed(t))) return set(wed.zone.x, 0.4, wed.zone.z, 'wed');
+    if (PROD_LIST.some(t => hold(t) > 0 && canCity(t))) return set(city.zone.x, 0.4, city.zone.z, 'city');
   }
-  if (hold('tea') > 0 && cafe && !cafe.z.locked) { const tb = cafe.tables.find(q => q.guest && q.guest.state === 'wait' && !q.guest.pending); if (tb) return set(tb.zone.x, 0.4, tb.zone.z, 'tea'); }
+  if (hold('tea') > 0 && canTable()) { const tb = cafe.tables.find(q => q.guest && q.guest.state === 'wait' && !q.guest.pending); if (tb) return set(tb.zone.x, 0.4, tb.zone.z, 'tea'); }
   { let cand = null; for (const sn of STATIONS) { if (sn.zone.locked) continue; for (const q of sn.ins) if (hold(q.type) > 0 && !(q.type === 'orchid' && zone2 && !zone2.locked && sn.id !== 'tea' ) && q.stack.length + (q.stack.pend || 0) < 24 && (!cand || q.stack.length < cand.stack.length)) { if (q.type === 'orchid' && sn.id === 'tea' && nO > 0 && zone2 && !zone2.locked && potInput.length < 6) continue; cand = q; } } if (cand) return set(cand.zone.x, 0.4, cand.zone.z, 'drop'); }
   if (moneyPile.length + (moneyPile.extra || 0) > 0) return set(moneyZone.x, 0.8, moneyZone.z + 1.0, 'money');
   if (zone3 && !zone3.locked && vanPile.length + (vanPile.extra || 0) > 0) return set(vanMoneyZone.x, 0.8, vanMoneyZone.z, 'money');
@@ -2455,11 +2460,10 @@ function objective(out) {
   if (outputPile.length >= 3 && P.free() > 0 && nB < (wed && wed.ord ? 24 : 12)) return set(outZone.x, 0.4, outZone.z, 'out');
   if (fl) return set(fl.x, 1.2, fl.z, 'harvest');
   if (canPack) return set(packZone.x, 0.4, packZone.z, 'pack');
-  if (nO > 0 && zone2 && !zone2.locked) return set(potZone.x, 0.4, potZone.z, 'pot');
+  if (nO > 0 && zone2 && !zone2.locked && potInput.length + (potInput.pend || 0) < CFG.inputCap) return set(potZone.x, 0.4, potZone.z, 'pot');
   if (outputPile.length > 0 && P.free() > 0) return set(outZone.x, 0.4, outZone.z, 'out');
   if (zone2 && !zone2.locked && potOutput.length > 0 && P.free() > 0) return set(potOutZone.x, 0.4, potOutZone.z, 'potOut');
   if (P.free() > 0) { const f = ripe(); if (f) return set(f.x, 1.2, f.z, 'harvest'); }
-  if (gp && gp.group.visible && !gp.done) return set(gp.x, 0.4, gp.z, 'pad');
   return out;
 }
 function updateTutorial(dt, t) {
@@ -3228,7 +3232,7 @@ function updateCity(dt, t) {
     animChar(c, dt, mv, t);
   }
   if (city.out) for (let i = city.out.length - 1; i >= 0; i--) { const c = city.out[i], gp = c.group.position; if (c.hideBubble > 0) { c.hideBubble -= dt; if (c.hideBubble <= 0 && c.bubble) c.bubble.visible = false; } const dx = 7.0 - gp.x, dz = -72 - gp.z, d = Math.hypot(dx, dz); if (d < 0.6) { city.out.splice(i, 1); rm(c.group); if (c.bubble) { c.bubble.material.map.dispose(); c.bubble.material.dispose(); } continue; } const s2 = 5.6 * dt; gp.x += dx / d * s2; gp.z += dz / d * s2; c.vel.set(dx / d * 5.6, 0, dz / d * 5.6); faceChar(c, dx, dz, dt); animChar(c, dt, 1, t); }
-  if (city.zone.inside && (city.tk = (city.tk || 0) - dt) <= 0) { const ty = PROD_LIST.find(q => P.stack.count(q) > 0 && city.stock.count(q) < 4); if (ty && city.stock.length + (city.stock.pend || 0) < 28) { dropTo(city.stock, P, ty); city.tk = 0.05; } }
+  if (city.zone.inside && (city.tk = (city.tk || 0) - dt) <= 0) { const ty = PROD_LIST.find(q => P.stack.count(q) > 0 && canCity(q)); if (ty) { dropTo(city.stock, P, ty); city.tk = 0.05; } }
 }
 /* =====================================================================
    C5. TESLİMAT OTOBÜSÜ: sokakta döngü; istasyon çıkışlarından alır, raf / şehir şubesi / düğün / gemi / minibüse bırakır
@@ -4971,6 +4975,7 @@ window.__game = {
   get c2() { return { TD, TDM, TK, applyTier, CPADS, S, cosGate, buyTier, DSL, DSLM, DECT, DEC, zonesAll: zones, buyDecor, beautyPts, BF, placeDecor, DN, NIGHT, DN_PERIOD }; },
   path(tx, tz) { return findPath(P.group.position.x, P.group.position.z, tx, tz); }, colliders,
   EXTZ, STN, GARD, GROLES, roleEvolve, BUSES, cafe: () => cafe, wed: () => wed, city: () => city, tractor: () => tractor, give(type, n) { n = Math.min(n, Math.max(0, P.free())); for (let i = 0; i < n; i++) P.stack.add(['orchid', 'lav', 'sun', 'rosep', 'flower'].includes(type) ? makeFlowerItem(0, type === 'flower' ? 'tulip' : type) : makeItemOf(type), type); },
+  hintOK: { canCity, canCounter, canWed, canTable, makeItemOf, lane, shelfFree },
   bot(x, z) { BOT = (x || z) ? { x, z } : null; if (BOT) hideIntro(); }, hideIntro, objective() { objective(_obj); return Object.assign({}, _obj); }, get goal() { return curGoal; }, GOALS, UPG,
   S, stats, P: () => P, queue, beds, machine, inputPile, outputPile, moneyPile, get shelf() { return shelfB; }, get shelfP() { return shelfP; }, get potInput() { return potInput; }, get potOutput() { return potOutput; }, get zone2() { return zone2; }, get zone3() { return zone3; }, VAN, get vanLoad() { return vanLoad; }, get vanPile() { return vanPile; }, get cashier() { return cashier; }, get carrier() { return carrier; }, upPads, zones, customers, CFG, POS,
   c3x() { return { list: RARE.list, check: checkSets, bonus: collBonus, SETS, RARE, FEST, PORT, MUS, QT, qFill, incomeRate, festStart, festEnd, checkOffline, collectOffline, musTicket, C3I, spdBonus, hiveCount }; },
