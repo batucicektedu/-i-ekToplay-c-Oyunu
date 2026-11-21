@@ -1532,7 +1532,20 @@ function updatePotting(dt, t) {
 let zone3 = null, vanLoad, vanPile, vanZone, vanMoneyZone;
 const VZ = { x0: 12.6, x1: 24.4, z0: 16.6, z1: 32 };
 const VAN = { state: 'parked', group: null, wheels: [], hud: null, sum: 0, trip: 0, path: [], seg: 0, speed: 0, yaw: -Math.PI / 2, sig: '', doors: [], x: 16.2, z: 24 };
-const vanFree = () => VAN.state === 'parked' && zone3 && !zone3.locked ? 8 - vanLoad.length - vanLoad.pend : 0;
+/* C4: her sefer farklı bir istek; araç türü isteğin büyüklüğüne göre (Bisiklet / Araba / Kamyonet / Kamyon) */
+const VKINDS = [{ id: 'bike', n: 'Bisiklet', cap: 3, nt: 1, mult: 2.0, sc: 0.45 }, { id: 'car', n: 'Araba', cap: 5, nt: 2, mult: 2.3, sc: 0.75 }, { id: 'pick', n: 'Kamyonet', cap: 8, nt: 2, mult: 2.6, sc: 1.0 }, { id: 'truck', n: 'Kamyon', cap: 12, nt: 3, mult: 3.0, sc: 1.3 }];
+VAN.req = null;
+const vanCap = () => VAN.req ? VAN.req.cap : 8;
+const vanNeed = t => VAN.req ? (VAN.req.need[t] || 0) - (VAN.req.got[t] || 0) : 0;
+function vanNewReq() {
+  const avail = PROD_LIST.filter(t => { try { return t === 'bouquet' || prodOK(t); } catch (e) { return false; } }); if (!avail.length) avail.push('bouquet');
+  const runs = stats.vanRuns || 0, pool = runs < 2 ? [0] : runs < 4 ? [0, 1] : runs < 7 ? [1, 2] : [1, 2, 2, 3]; let ki = pool[Math.floor(Math.random() * pool.length)];
+  if (vanLoad.length > 0) { ki = VKINDS.findIndex(k => k.cap >= vanLoad.length); if (ki < 0) ki = 3; }
+  const k = VKINDS[ki], nt = Math.min(k.nt, avail.length), types = avail.slice().sort(() => Math.random() - 0.5).slice(0, nt), need = {}, got = {};
+  if (vanLoad.length > 0) { need.bouquet = k.cap; got.bouquet = vanLoad.length; } else { let left = k.cap; types.forEach((t, i) => { const n = i === types.length - 1 ? left : Math.max(1, Math.round(k.cap / nt + (Math.random() - 0.5))); need[t] = Math.min(n, left - (types.length - 1 - i)); left -= need[t]; }); }
+  VAN.req = { k, cap: k.cap, need, got }; VAN.group.scale.setScalar(k.sc); VAN.hud.scale.set(7.4 / k.sc, 3.0 / k.sc, 1); VAN.hud.position.set(0, 5.2 / k.sc, 0); VAN.sig = '';
+}
+const vanFree = () => VAN.state === 'parked' && zone3 && !zone3.locked ? vanCap() - vanLoad.length - vanLoad.pend : 0;
 function iconVan(ctx, cx, cy, s) {
   ctx.lineJoin = 'round'; ctx.lineWidth = s * 0.05; ctx.strokeStyle = '#1d3557';
   ctx.fillStyle = '#0aa89a'; rrect(ctx, cx - s * 0.5, cy - s * 0.3, s * 0.62, s * 0.5, s * 0.06); ctx.fill(); ctx.stroke();
@@ -1580,8 +1593,8 @@ function buildVan() {
   VAN.wheels = [];
   for (const wx of [-1.2, 1.2]) for (const wz of [-1.4, 1.7]) { const wh = new THREE.Mesh(new THREE.CylinderGeometry(0.46, 0.46, 0.32, 14), dk); wh.rotation.z = Math.PI / 2; wh.position.set(wx, 0.46, wz); const hub = mk(G.cyl, mat(0xb8bec8), 0.2, 0.34, 0.2, 0, 0, 0); wh.add(hub); vg.add(wh); VAN.wheels.push(wh); }
   shadowAll(vg, true, false);
-  VAN.hud = makeSprite(256, 100, () => {}, 4.6, 1.8, false); VAN.hud.position.set(0, 4.6, 0); vg.add(VAN.hud);
-  vanLoad = new Stack(scene, (i, out) => { out.set(19.55 + (i % 2) * 0.8, 0.5, 24 + (Math.floor(i / 2) - 1.5) * 0.85); }, 8); vanLoad.pend = 0;
+  VAN.hud = makeSprite(512, 200, () => {}, 7.4, 3.0, false); VAN.hud.position.set(0, 5.2, 0); vg.add(VAN.hud);
+  vanLoad = new Stack(scene, (i, out) => { out.set(19.55 + (i % 2) * 0.8, 0.5, 24 + (Math.floor(i / 2) - 1.5) * 0.85); }, 12); vanLoad.pend = 0;
   vanPile = new Stack(scene, (i, out) => { const per = 12, l = Math.floor(i / per), r = i % per; out.set(16.2 + ((r % 3) - 1) * 0.98, 0.14 + l * 0.14, 19.6 + (Math.floor(r / 3) - 1.5) * 0.6); }, 60); vanPile.extra = 0; vanPile.jitter = 0.07;
   const plate = rbox(3.1, 0.08, 2.5, 0.04, mat(0x9ee59a)); ad(rd, plate, 16.2, 0.06, 19.6);
   const lamp = (x, z) => { GLOWS.push([x, z, 3.4]); const g = new THREE.Group(); g.add(mk(G.cyl, mat(0x2d3a45), 0.09, 3.2, 0.09, 0, 1.6, 0)); g.add(mk(G.sph, LAMPM, 0.26, 0.3, 0.26, 0, 3.3, 0)); ad(rd, g, x, 0, z); }; lamp(13.2, 21); lamp(23.4, 29);
@@ -1594,18 +1607,20 @@ function buildVanZones() {
   vanZone.group.visible = vanMoneyZone.group.visible = false;
 }
 function vanHud() {
-  const away = VAN.state === 'away' || VAN.state === 'depart' || VAN.state === 'return', rem = Math.max(0, Math.ceil(20 - VAN.trip));
-  const sig = away ? 'a' + rem : 'p' + vanLoad.length; if (sig === VAN.sig) return; VAN.sig = sig;
+  const away = VAN.state === 'away' || VAN.state === 'depart' || VAN.state === 'return', rem = Math.max(0, Math.ceil(20 - VAN.trip)), rq = VAN.req;
+  const sig = away ? 'a' + rem : 'p' + (rq ? rq.k.id + Object.keys(rq.need).map(t => t + (rq.got[t] || 0)).join('') : '') + vanLoad.length; if (sig === VAN.sig) return; VAN.sig = sig;
   redrawSprite(VAN.hud, (ctx, w, h) => {
-    ctx.fillStyle = 'rgba(22,28,64,.9)'; ctx.strokeStyle = '#ffc21a'; ctx.lineWidth = 6; rrect(ctx, 6, 6, w - 12, h - 12, 26); ctx.fill(); ctx.stroke();
-    if (away) { iconVan(ctx, 52, 52, 56); otext(ctx, 'Teslimat ' + rem + ' sn', 160, 40, 30, '#fff', '#05071a'); ctx.fillStyle = '#35405a'; rrect(ctx, 90, 62, 140, 16, 8); ctx.fill(); ctx.fillStyle = '#6dff6a'; rrect(ctx, 90, 62, Math.max(8, 140 * clamp(VAN.trip / 20, 0, 1)), 16, 8); ctx.fill(); }
-    else { for (let i = 0; i < 8; i++) { ctx.fillStyle = i < vanLoad.length ? '#6dff6a' : '#35405a'; rrect(ctx, 20 + i * 27, 22, 22, 26, 6); ctx.fill(); } otext(ctx, 'Yükle ' + vanLoad.length + '/8', w / 2, 72, 28, '#fff', '#05071a'); }
+    ctx.fillStyle = 'rgba(22,28,64,.94)'; ctx.strokeStyle = '#ffc21a'; ctx.lineWidth = 8; rrect(ctx, 6, 6, w - 12, h - 12, 34); ctx.fill(); ctx.stroke();
+    if (away) { iconVan(ctx, 70, 100, 90); otext(ctx, 'Teslimat ' + rem + ' sn', 300, 66, 52, '#fff', '#05071a'); ctx.fillStyle = '#35405a'; rrect(ctx, 150, 120, 320, 30, 15); ctx.fill(); ctx.fillStyle = '#6dff6a'; rrect(ctx, 150, 120, Math.max(14, 320 * clamp(VAN.trip / 20, 0, 1)), 30, 15); ctx.fill(); return; }
+    if (!rq) return; const ts = Object.keys(rq.need), cw = (w - 40) / Math.max(ts.length, 1);
+    otext(ctx, rq.k.n + ' ' + vanLoad.length + '/' + rq.cap, w / 2, 34, 36, '#ffd23f', '#05071a');
+    ts.forEach((t, i) => { const cx = 20 + cw * (i + 0.5), g = rq.got[t] || 0, n = rq.need[t], done = g >= n; (ICONF[t] || iconBouquet)(ctx, cx, 100, 86); otext(ctx, done ? '✓' + n : g + '/' + n, cx, 172, 62, done ? '#6dff6a' : '#fff', '#05071a'); });
   });
 }
 function toVan(it, who) {
   if (posable(it.mesh)) bouquetPose(it.mesh, true);
-  const idx = vanLoad.length + vanLoad.pend; vanLoad.pend++; VAN.sum += Math.round((PRICE[it.type] || 10) * priceMul() * tierMul('van'));
-  fly(it.mesh, out => { vanLoad.slotFn(Math.min(idx, 7), out); return 0; }, 0.22, 1.5, () => { vanLoad.pend--; vanLoad.add(it.mesh, it.type); sfx('drop'); vanHud(); });
+  const idx = vanLoad.length + vanLoad.pend; vanLoad.pend++; if (VAN.req) VAN.req.got[it.type] = (VAN.req.got[it.type] || 0) + 1; VAN.sum += Math.round((PRICE[it.type] || 10) * priceMul() * tierMul('van'));
+  fly(it.mesh, out => { vanLoad.slotFn(Math.min(idx, 11), out); return 0; }, 0.22, 1.5, () => { vanLoad.pend--; vanLoad.add(it.mesh, it.type); sfx('drop'); vanHud(); });
   if (who === P) stats.delivered = (stats.delivered || 0) + 1;
 }
 function unlockVan(instant) {
@@ -1643,14 +1658,15 @@ function updateVan(dt, t) {
   if (!zone3 || zone3.locked) return;
   updateVanZone(dt);
   if (zone3.popT !== undefined && zone3.popT < 2) return;
+  if (VAN.state === 'parked' && !VAN.req) vanNewReq();
   if (VAN.state === 'parked') {
     VAN.doors.forEach((d, i) => { d.rotation.y = damp(d.rotation.y, (i ? 1 : -1) * 1.25, 8, dt); });
-    if (vanLoad.length >= 8 && vanLoad.pend === 0) { VAN.state = 'loading'; VAN.t = 0; VAN.k = 0; }
+    if (vanLoad.length >= vanCap() && vanLoad.pend === 0) { VAN.state = 'loading'; VAN.t = 0; VAN.k = 0; }
   } else if (VAN.state === 'loading') {
     VAN.t += dt;
-    if (VAN.t > VAN.k * 0.12 + 0.5 && VAN.k < 8) { const it = vanLoad.takeLast(); VAN.k++; if (it) fly(it.mesh, out => { out.set(VAN.x - 0.2, 2.6, VAN.z); return 0; }, 0.4, 1.8, () => { rm(it.mesh); sfx('pick'); dust(VAN.x + 2.0, 1.5, VAN.z, 1, 0.3); }); }
+    if (VAN.t > VAN.k * 0.12 + 0.5 && VAN.k < vanCap()) { const it = vanLoad.takeLast(); VAN.k++; if (it) fly(it.mesh, out => { out.set(VAN.x - 0.2, 2.6, VAN.z); return 0; }, 0.4, 1.8, () => { rm(it.mesh); sfx('pick'); dust(VAN.x + 2.0, 1.5, VAN.z, 1, 0.3); }); }
     VAN.doors.forEach((d, i) => { d.rotation.y = damp(d.rotation.y, (i ? 1 : -1) * 0.1, 8, dt); });
-    if (VAN.k >= 8 && VAN.t > 8 * 0.12 + 1.3) { VAN.state = 'depart'; VAN.trip = 0; VAN.path = [[10, 24], [10, 70]]; VAN.seg = 0; VAN.speed = 0; sfx('up'); vib(15); }
+    if (VAN.k >= vanCap() && VAN.t > vanCap() * 0.12 + 1.3) { VAN.state = 'depart'; VAN.trip = 0; VAN.path = [[10, 24], [10, 70]]; VAN.seg = 0; VAN.speed = 0; sfx('up'); vib(15); }
   } else if (VAN.state === 'depart') {
     VAN.trip += dt; if (vanDrive(dt, 9, 15, false)) { VAN.state = 'away'; VAN.group.visible = false; }
   } else if (VAN.state === 'away') {
@@ -1660,7 +1676,7 @@ function updateVan(dt, t) {
     VAN.trip += dt;
     if (vanDrive(dt, 8, 15, true)) {
       VAN.state = 'parked'; VAN.yaw = -Math.PI / 2; VAN.group.rotation.y = VAN.yaw; VAN.x = 16.2; VAN.z = 24; VAN.group.position.set(16.2, 0, 24);
-      const total = VAN.sum * 2, n = clamp(Math.round(total / CFG.billValue), 1, 14), bv = total / n; VAN.sum = 0; stats.vanRuns = (stats.vanRuns || 0) + 1;
+      const total = Math.round(VAN.sum * (VAN.req ? VAN.req.k.mult : 2)), n = clamp(Math.round(total / CFG.billValue), 1, 14), bv = total / n; VAN.sum = 0; VAN.req = null; stats.vanRuns = (stats.vanRuns || 0) + 1;
       confetti(16.2, 2.5, 24, 40); popText(16.2, 4.6, 24, '+' + fmt(total), '#6dff6a'); ring(16.2, 24, 0xffc21a, 6); sfx('up'); vib(20);
       for (let k = 0; k < n; k++) later(0.1 + k * Math.min(0.12, 1.2 / n), () => {
         const b = makeBill(); b.userData.v = bv; b.position.set(16.2, 2.2, 24); scene.add(b); const idx = vanPile.length + (vanPile.pend || 0); vanPile.pend = (vanPile.pend || 0) + 1;
@@ -1925,14 +1941,14 @@ function updateCarrier(dt, t) {
     if (h.stack.length > 0 && h.incoming === 0) { h.dest = 'shelf'; h.state = 'toShelf'; h.stuck = 0; } // elde kalan ürün: rafa götür
     const pt = h.state === 'idle' ? carrierPick(load) : null;
     if (pt) { h.dest = 'shelf'; h.ptype = pt; h.state = 'toOut'; }
-    else if (h.state === 'idle' && outSources().some(q => q.length > 0) && vanFree() - load > 0) { h.dest = 'van'; h.ptype = PROD_LIST.find(t => srcOf(t) && srcOf(t).length > 0) || 'bouquet'; h.state = 'toOut'; }
+    else if (h.state === 'idle' && PROD_LIST.some(t => srcOf(t) && srcOf(t).length > 0 && vanNeed(t) > 0) && vanFree() - load > 0) { h.dest = 'van'; h.ptype = PROD_LIST.find(t => srcOf(t) && srcOf(t).length > 0 && vanNeed(t) > 0) || 'bouquet'; h.state = 'toOut'; }
   } else if (h.state === 'toOut') { const o = outSpot(h.ptype); tx = o[0]; tz = o[1]; if (Math.hypot(tx - gp.x, tz - gp.z) < 0.4) { h.state = 'load'; h.cd = 0.1; } }
   else if (h.state === 'load') {
     tx = null;
     if (h.cd <= 0) {
-      const src = h.dest === 'van' ? (outSources().find(q => q.length > 0)) : srcOf(h.ptype);
+      const vT = h.dest === 'van' ? PROD_LIST.find(t => srcOf(t) && srcOf(t).length > 0 && vanNeed(t) - h.stack.count(t) - (h.incoming || 0) > 0) : null, src = h.dest === 'van' ? (vT ? srcOf(vT) : null) : srcOf(h.ptype);
       const room = (h.dest === 'van' ? vanFree() : shelfFree(h.ptype)) - load;
-      if (src && src.length > 0 && load < h.capFn() && room > 0) { h.waitT = 0; const it = src.takeLast(); it.mesh.getWorldPosition(_w); scene.add(it.mesh); it.mesh.position.copy(_w); if (posable(it.mesh)) bouquetPose(it.mesh, false); sendToBack(h, it.mesh, it.type, 1.4); h.cd = 0.14; }
+      if (src && src.length > 0 && load < h.capFn() && room > 0) { h.waitT = 0; const it = src.takeLast(vT || undefined); it.mesh.getWorldPosition(_w); scene.add(it.mesh); it.mesh.position.copy(_w); if (posable(it.mesh)) bouquetPose(it.mesh, false); sendToBack(h, it.mesh, it.type, 1.4); h.cd = 0.14; }
       else if (h.incoming === 0) {
         const producing = isProducing(h.ptype) || h.dest === 'van' && PROD_LIST.some(isProducing);
         h.waitT = (h.waitT || 0) + dt;
@@ -1944,7 +1960,7 @@ function updateCarrier(dt, t) {
   else if (h.state === 'unload') {
     if (h.cd <= 0 && h.stack.length > 0) {
       let top = h.stack.items[h.stack.items.length - 1].type; if (h.dest !== 'van') { const ok = h.stack.items.slice().reverse().find(i => shelfFree(i.type) > 0); if (ok) top = ok.type; } // üstteki ürünün rafı doluysa diğer ürünü bırak
-      if (h.dest === 'van') { if (vanFree() > 0) { toVan(takeFromBack(h, null), h); h.cd = 0.14; } else if (VAN.state !== 'parked') { h.dest = 'shelf'; h.ptype = top; h.state = 'toShelf'; } }
+      if (h.dest === 'van') { const vt = h.stack.items.slice().reverse().find(i => vanNeed(i.type) > 0); if (vt && vanFree() > 0) { toVan(takeFromBack(h, vt.type), h); h.cd = 0.14; } else if (VAN.state !== 'parked' || !vt) { h.dest = 'shelf'; h.ptype = top; h.state = 'toShelf'; } }
       else if (shelfFree(top) > 0) { toShelf(takeFromBack(h, top), h); h.cd = 0.14; }
       else { h.stuck = (h.stuck || 0) + dt; if (h.stuck > 4) { h.stuck = 0; h.ptype = top === 'pot' ? 'bouquet' : 'pot'; if (!h.stack.items.some(i => i.type !== top)) { /* keep waiting */ } } }
     }
@@ -2163,7 +2179,7 @@ function padOkRefresh(dt) {
   padOkT -= dt; if (padOkT > 0) return; padOkT = 0.25; PADOK.clear();
   const list = []; for (const k in upPads) { const u = upPads[k]; if (u.done || !padVisible(u)) continue; list.push(u); }
   const goalU = curGoal ? upPads[curGoal.key] : null, score = u => { if (u === goalU) return -3; if (u.paid > 0 || u.inside) return -2; if (HIREK.has(u.key)) return -1.5; const c = u.cost(); return (S.money + u.paid >= c * 0.4) ? c / 1e9 : 9; };
-  list.sort((a, b) => score(a) - score(b)); let n = 0; for (const u of list) { const sc = score(u); if (sc >= 9 && u !== goalU) continue; if (n >= 4 && !(sc <= -2)) continue; PADOK.add(u); n++; }
+  list.sort((a, b) => score(a) - score(b)); let n = 0; for (const u of list) { const sc = score(u); if (sc >= 9 && u !== goalU) continue; if (n >= 4 && !(sc <= -2)) continue; let ov = false; for (const q of PADOK) if (Math.abs(q.x - u.x) < (q.w + u.w) / 2 - 0.3 && Math.abs(q.z - u.z) < (q.d + u.d) / 2 - 0.3) { ov = true; break; } if (ov && u !== goalU && !(u.paid > 0 || u.inside)) continue; PADOK.add(u); n++; }
 }
 function updateUpgrades(dt) {
   padOkRefresh(dt);
@@ -2526,7 +2542,7 @@ function updateZoneActions(dt) {
   if (moneyZone.inside && monTick <= 0 && (moneyPile.length > 0 || moneyPile.extra > 0)) { collectMoney(moneyPile); monTick = 0.025; }
   if (zone3 && !zone3.locked) {
     if (vanMoneyZone.inside && monTick <= 0 && (vanPile.length > 0 || vanPile.extra > 0)) { collectMoney(vanPile); monTick = 0.03; }
-    if (vanZone.inside && vanTick <= 0 && vanFree() > 0) { const t = PROD_LIST.find(q => P.stack.count(q) > 0); if (t) { toVan(takeFromBack(P, t), P); vanTick = 0.05; } }
+    if (vanZone.inside && vanTick <= 0 && vanFree() > 0) { const t = PROD_LIST.find(q => P.stack.count(q) > 0 && vanNeed(q) > 0); if (t) { toVan(takeFromBack(P, t), P); vanTick = 0.05; } }
     vanTick -= dt;
   }
 }
@@ -2574,7 +2590,7 @@ function snapshot() {
   const paid = {}, shown = {}; for (const k in upPads) { if (upPads[k].paid > 0) paid[k] = upPads[k].paid; if (upPads[k].shown) shown[k] = 1; }
   const x = { paid, shown, mp: pileVal(moneyPile), vp: pileVal(vanPile), sb: shelfB.length, sp: shelfP.length, pi: potInput.length, po: potOutput.length, ii: inputPile.length, oo: outputPile.length, pc: carriedCounts() };
   const away = VAN.state === 'away' || VAN.state === 'depart' || VAN.state === 'return';
-  x.van = { away, load: vanLoad.length + (VAN.state === 'loading' ? 8 - vanLoad.length : 0), sum: VAN.sum, until: away ? Date.now() + Math.max(0, 20 - VAN.trip) * 1000 : 0 };
+  x.van = { away, load: vanLoad.length + (VAN.state === 'loading' ? vanCap() - vanLoad.length : 0), sum: VAN.sum, until: away ? Date.now() + Math.max(0, 20 - VAN.trip) * 1000 : 0 };
   return x;
 }
 function fillStack(st, n, maker, type) { for (let i = 0; i < n && st.length < st.cap; i++) st.add(maker(), type); }
@@ -2590,7 +2606,7 @@ function restoreExtras(x) {
   if (zone3 && !zone3.locked && x.van) {
     bills(vanPile, x.vp); VAN.sum = num(x.van.sum);
     if (x.van.away) { VAN.state = 'away'; VAN.group.visible = false; const rem = Math.max(0, (+x.van.until - Date.now()) / 1000); VAN.trip = rem <= 0 ? 14.5 : clamp(20 - rem, 0, 14.5); }
-    else fillStack(vanLoad, Math.min(8, num(x.van.load)), () => makeBouquetItem(undefined, true), 'bouquet');
+    else fillStack(vanLoad, Math.min(12, num(x.van.load)), () => makeBouquetItem(undefined, true), 'bouquet');
     vanHud();
   }
 }
