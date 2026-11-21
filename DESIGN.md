@@ -164,3 +164,7 @@ Müşteri istekleri yeni ürünlere ağırlıklıdır (sıra ağırlığı 1,5+1
 - Bölümler: ◀ ÖNCEKİ BÖLÜM kapısı (başlangıç), SIRADAKİ BÖLÜME GEÇ (yol sonu, 750K pad, `cicek_bolumler`), ayar menüsünde Bölümler, ilk ziyaret kartı.
 - Çalışan salınım önlemi: varış yarıçapı ≥ adım, yardım modunda en az 6 sn bağlılık, 10 sn'de >6 yön değişimi ise park (idleCool).
 - Testler: `tests/sahil/` (smoke, bot, padoverlap, padpay, idle30+osc, hints, saves).
+
+## Bölüm 3 – Hayvan Çiftliği (devam ediyor)
+`ciftlik/index.html` (Sahil motorunun kopyası; kayıt `bolum3_ciftlik`). Şu an oynanabilir: Tavuk Kümesi (yuva + yumurta, gezinen tavuklar) → kolileme → Çiftlik Dükkânı, İnek Ahırı (süt şişesi), Süt Kamyonu; ahır, silo, yel değirmeni, saman balyaları, ahşap çitler, ◀ ÖNCEKİ BÖLÜM → ../sahil/, Bölümler menüsü, giriş kartı. Diğer bölgeler (koyun, örgü, peynir, sevimli hayvanlar, havuç-elma, AT ÇİFTLİĞİ, final) henüz yok: pad'leri gizli (`SOON`).
+Tasarım notu: kullanıcı geri bildirimi "Sahil Bölüm 1 ile aynı" – Çiftlik'in kendi yerleşimi (otlaklar, çit, toprak yollar, avlu merkezli) ve bölge başına kendi mekaniği (sağım, kırkım, hayvan severler, at bakımı/binicilik/parkur) yapılmalı; motorun sabit Bölüm 1 koordinatları bunun için yeniden düzenlenmeli.
