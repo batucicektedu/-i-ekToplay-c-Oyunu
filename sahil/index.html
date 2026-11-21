@@ -5015,7 +5015,7 @@ function chapShow(html, buttons) {
   for (const b of buttons) { const e = document.createElement('button'); e.textContent = b.t; if (b.cls) e.className = b.cls; e.addEventListener('click', () => { if (b.cls === 'dis') return; chapEl.style.display = 'none'; chapOpen = false; b.fn && b.fn(); }); row.appendChild(e); }
   chapEl.style.display = 'flex'; chapOpen = true;
 }
-function chapGo(c) { writeSave(); bolWrite(o => { o.last = c.n; }); location.href = c.url; }
+function chapGo(c) { writeSave(); fetch(c.url, { method: 'HEAD', cache: 'no-store' }).then(r => { if (r.ok) { bolWrite(o => { o.last = c.n; }); location.href = c.url; } else toast('Bu bölüm çok yakında geliyor! Paran ve ilerlemen güvende.'); }).catch(() => toast('Bağlantı yok, biraz sonra tekrar dene.')); }
 function chapConfirm(c, back) {
   chapShow('<div class="ct">' + c.name + "'" + (back ? 'na' : 'na') + (back ? ' dön?' : ' geç?') + '</div><div class="cs">İlerlemen burada kayıtlı kalır.</div>', [{ t: back ? 'Dön' : 'Geç', fn: () => chapGo(c) }, { t: 'Kal', cls: 'no' }]);
 }
