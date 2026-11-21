@@ -254,7 +254,7 @@ function migrateSave(s) { // ver alanı yoksa 1 sayılır; sadece alan ekler, hi
       { const n0 = (v, a, b, d) => { v = Math.floor(+v); return isFinite(v) ? clamp(v, a, b) : d; };
         if (s.cb && typeof s.cb === 'object') for (const k in s.cb) { const v = n0(s.cb[k], 0, 9999, 0); if (v > 0) S.cb[String(k).slice(0, 24)] = v; }
         if (Array.isArray(s.cs)) S.cs = s.cs.filter(q => typeof q === 'string').map(q => q.slice(0, 24)).slice(0, 40);
-        if (s.pt && typeof s.pt === 'object') { S.pt.n = n0(s.pt.n, 0, 99999, 0); S.pt.cur = s.pt.cur && typeof s.pt.cur === 'object' ? s.pt.cur : null; }
+        if (s.pt && typeof s.pt === 'object') { S.pt.n = n0(s.pt.n, 0, 99999, 0); S.pt.pile = n0(s.pt.pile, 0, 1e12, 0); S.pt.cur = s.pt.cur && typeof s.pt.cur === 'object' ? s.pt.cur : null; }
         if (s.fe && typeof s.fe === 'object') { S.fe.n = n0(s.fe.n, 0, 99999, 0); S.fe.t = isFinite(+s.fe.t) ? clamp(+s.fe.t, 0, 3600) : 420; }
         if (s.q && typeof s.q === 'object') { S.q.n = n0(s.q.n, 0, 99999, 0); if (Array.isArray(s.q.a)) S.q.a = s.q.a.filter(q => q && typeof q === 'object').slice(0, 3); }
         S.bx = n0(s.bx, 0, 1e6, 0); S.mv = n0(s.mv, 0, 1e9, 0); S.op = n0(s.op, 0, 1e12, 0); S.ts = isFinite(+s.ts) ? Math.max(0, +s.ts) : 0; }
@@ -2060,7 +2060,7 @@ function watchdog(h, dt, pos, extra, home, reset) {
 }
 function resetWalker(h) { h.state = 'seek'; h.idle = 0; h.cd = 0; h.vel && h.vel.set(0, 0, 0); }
 function harvest(f, who) {
-  const item = makeFlowerItem(f.ci, f.type); item.position.set(f.x, 0.6, f.z); scene.add(item);
+  const item = makeFlowerItem(f.ci, f.type); item.position.set(f.x, 0.6, f.z); scene.add(item); if (f.rare) rareClaim(f, who);
   f.gt = GROW[f.type] || 10; f.t = 0; f.pop = 0.18; f.claimed = false; f.owner = null; f.full = false; f.ss = 0.001; f.bs = 0.001;
   petals(f.x, 0.8, f.z, colsFor(f.type)[f.ci % colsFor(f.type).length]);
   sendToBack(who, item, ITYPE[f.type] || 'flower', 1.6);
@@ -2372,6 +2372,7 @@ function objective(out) {
   const set = (x, y, z, kind) => { out.x = x; out.y = y; out.z = z; out.kind = kind; out.ok = true; return out; };
   const gp = curGoal ? upPads[curGoal.key] : null;
   if (gp && gp.group.visible && !gp.done && S.money + gp.paid >= gp.cost()) return set(gp.x, 0.4, gp.z, 'pad');
+  { const ce = c3Early(set); if (ce) return ce; }
   const ripe = () => { let best = null, bd = 1e9; for (const bb of beds) { if (bb.locked || bb.nohelp) continue; for (const f of bb.flowers) if (f.t >= f.gt) { const d = (f.x - P.group.position.x) ** 2 + (f.z - P.group.position.z) ** 2; if (d < bd) { bd = d; best = f; } } } return best; };
   if (outZone.inside && outputPile.length > 0 && P.free() > 0 && nB < 14) return set(outZone.x, 0.4, outZone.z, 'out');
   const hold = t => st.count(t), prodHeld = PROD_LIST.some(t => hold(t) > 0);
@@ -2462,7 +2463,7 @@ function updateBeds(dt) {
     for (const f of b.flowers) {
       if (f.pop > 0) { f.pop -= dt; f.gs = Math.max(0.001, f.pop / 0.18) * 1.15; writeFlower(f); continue; }
       f.gs = 1;
-      if (f.t < f.gt) { f.t += dt; growFlower(f); } else if (!f.full) { growFlower(f); f.full = true; }
+      if (f.t < f.gt) { f.t += dt; growFlower(f); } else if (!f.full) { growFlower(f); f.full = true; rollRare(f); }
       f.rz = Math.sin(T * 1.7 + f.ph) * 0.045; f.rx = Math.cos(T * 1.3 + f.ph * 1.7) * 0.03; writeFlower(f);
     }
   }
@@ -3041,7 +3042,7 @@ function updateTractor(dt, t) {
     else { if (tr.target && (tr.target.t < tr.target.gt || tr.target.bed.locked)) dropTarget(tr); if (!tr.target) { let best = 1e9, bf = null; for (const b of EXTZ.sunf.beds) { if (b.locked) continue; for (const f of b.flowers) if (claimOK(f)) { const d = (f.x - gp.x) ** 2 + (f.z - gp.z) ** 2; if (d < best) { best = d; bf = f; } } } if (bf) claimF(bf, tr); } if (tr.target) { tx = tr.target.x; tz = tr.target.z; } else if (tr.load > 0) tr.state = 'haul'; }
   } else { tx = crate.zone.x; tz = crate.zone.z; if (Math.hypot(tx - gp.x, tz - gp.z) < 1.2) { const n = Math.min(tr.load, 24 - crate.stack.length - (crate.stack.pend || 0)); for (let i = 0; i < n; i++) { crate.stack.pend = (crate.stack.pend || 0) + 1; later(i * 0.05, () => { const m = makeFlowerItem(rand(0, 4) | 0, 'sun'); m.position.set(gp.x, 2, gp.z); scene.add(m); fly(m, out => { crate.stack.slotFn(Math.min(crate.stack.length + 0, 23), out); return 0; }, 0.3, 1.5, () => { crate.stack.pend--; crate.stack.add(m, 'sun'); }); }); } tr.load -= n; if (tr.load <= 0) tr.state = 'seek'; else tr.state = tr.load >= 30 ? 'haul' : 'seek'; } }
   if (tx !== null) { const dx = tx - gp.x, dz = tz - gp.z, d = Math.hypot(dx, dz); if (d > 0.2) { const s2 = Math.min(d, spd * dt); gp.x += dx / d * s2; gp.z += dz / d * s2; tr.yaw += angDiff(tr.yaw, Math.atan2(dx, dz)) * (1 - Math.exp(-6 * dt)); tr.g.rotation.y = tr.yaw; for (const w of tr.wheels) w.rotation.x += spd * dt / 0.6; if (Math.random() < dt * 10) dust(gp.x, 0.2, gp.z, 1, 0.5); }
-    if (tr.state === 'seek' && tr.target && Math.hypot(tr.target.x - gp.x, tr.target.z - gp.z) < 1.1) { const f = tr.target; f.gt = GROW.sun; f.t = 0; f.pop = 0.18; f.claimed = false; f.owner = null; f.full = false; f.ss = 0.001; f.bs = 0.001; petals(f.x, 0.8, f.z, 0xffc800); tr.load++; tr.target = null; sfx('pick'); } }
+    if (tr.state === 'seek' && tr.target && Math.hypot(tr.target.x - gp.x, tr.target.z - gp.z) < 1.1) { const f = tr.target; f.gt = GROW.sun; f.t = 0; f.pop = 0.18; f.claimed = false; f.owner = null; f.full = false; f.ss = 0.001; f.bs = 0.001; petals(f.x, 0.8, f.z, 0xffc800); if (f.rare) rareClaim(f, tr); tr.load++; tr.target = null; sfx('pick'); } }
   watchdog(tr, dt, gp, tr.load, [-8, -70], resetWalker);
 }
 /* ---- şehir şubesi ---- */
@@ -3934,9 +3935,12 @@ function beeZoneActions(dt) {
 /* bot / ipucu yönlendirmesi (objective içinden çağrılır) */
 function c3Objective(set, hold, prodHeld) {
   if (beeZone && unlockedZ('bee') && S.lv.beeW === 0 && P.free() > 0 && !prodHeld && C3.hives.reduce((a, q) => a + (q.on ? q.stack.length : 0), 0) >= 3) return set(beeZone.x, 0.4, beeZone.z, 'comb');
-  return c3Obj2 ? c3Obj2(set, hold, prodHeld) : null;
+  if (RARE.list.length && P.free() > 0 && !prodHeld) { let best = null, bd = 1e9; for (const f of RARE.list) { if (f.t < f.gt || f.bed.locked) continue; const d = (f.x - P.group.position.x) ** 2 + (f.z - P.group.position.z) ** 2; if (d < bd) { bd = d; best = f; } } if (best && bd < 20 * 20) return set(best.x, 1.2, best.z, 'harvest'); }
+  for (const f of C3OBJ) { const r = f(set, hold, prodHeld); if (r) return r; }
+  return null;
 }
-var c3Obj2 = null;
+function c3Early(set) { for (const f of C3EARLY) { const r = f(set); if (r) return r; } return null; }
+const C3OBJ = [], C3EARLY = [];
 /* ---- JAPON BAHÇESİ ---- */
 const JAP = { pond: { x: 17.5, z: -101, w: 6, d: 8 }, trees: [], koi: [], bridgeY: null };
 function gravelTex() { return cached('gravel', () => { const c = cv(128, 128), x = c.getContext('2d'); x.fillStyle = '#e9dfc6'; x.fillRect(0, 0, 128, 128); x.strokeStyle = 'rgba(150,130,95,.45)'; x.lineWidth = 2; for (let i = 0; i < 16; i++) { x.beginPath(); x.moveTo(0, i * 8 + 4); x.bezierCurveTo(40, i * 8 + 1, 80, i * 8 + 7, 128, i * 8 + 4); x.stroke(); } for (let i = 0; i < 120; i++) { x.fillStyle = 'rgba(255,255,255,.35)'; x.fillRect(rand(0, 128), rand(0, 128), 2, 2); } const t = canvasTex(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(2, 2); return t; }); }
@@ -3985,6 +3989,293 @@ function updateJapan(dt, t) {
   // köprüde oyuncu yükselir
   const gp = P.group.position, onB = JAP.bridgeY && Math.abs(gp.z + 101) < 1.25 && gp.x > pd.x - 3.4 && gp.x < pd.x + 3.4; P.group.position.y = damp(gp.y, onB ? JAP.bridgeY(gp.x) : 0, 18, dt);
 }
+/* ---- HUD: sağ düğme sütunu + C3 stilleri ---- */
+(function () {
+  const st = document.createElement('style');
+  st.textContent = `#hbtns{position:absolute;right:max(12px,env(safe-area-inset-right));top:calc(max(12px,env(safe-area-inset-top)) + 150px);display:flex;flex-direction:column;gap:8px;pointer-events:none}
+  .hb{position:relative;display:none;align-items:center;justify-content:center;width:46px;height:46px;border:0;border-radius:50%;background:linear-gradient(rgba(60,110,160,.88),rgba(18,48,84,.92));box-shadow:0 4px 0 rgba(0,0,0,.25),inset 0 2px 0 rgba(255,255,255,.4);padding:0;pointer-events:auto}
+  .hb canvas{width:30px;height:30px}.hb i{position:absolute;right:-3px;top:-3px;min-width:20px;height:20px;border-radius:10px;background:#ff3d5a;color:#fff;font:900 12px/20px system-ui;text-align:center;font-style:normal;box-shadow:0 2px 0 #8a1428;display:none;padding:0 4px}
+  .hb.pulse{animation:bump .5s ease-out 2}
+  .ovl{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(10,20,40,.6);z-index:21;pointer-events:auto}
+  .ovl .wbox{width:min(372px,95vw)}
+  #bGrid{display:grid;grid-template-columns:62px repeat(3,1fr);gap:5px;align-items:center;overflow:auto;touch-action:pan-y;-webkit-overflow-scrolling:touch;padding:2px}
+  .bh{font-weight:900;font-size:12px;color:#5a7290;text-align:center}.bs{font-weight:900;font-size:12px;color:#16324a;line-height:13px}
+  .bc{position:relative;border-radius:12px;background:#eef4ff;box-shadow:inset 0 0 0 2px #d5e1f3;height:62px;display:flex;align-items:center;justify-content:center}
+  .bc canvas{width:56px;height:56px}.bc b{position:absolute;right:3px;bottom:1px;font-size:12px;color:#fff;-webkit-text-stroke:3px #16324a;paint-order:stroke fill}
+  .bc.g{box-shadow:inset 0 0 0 3px #ffc21a;background:#fff8dc}.bc.r{box-shadow:inset 0 0 0 3px #ff7ad9;background:#fff0fa}.bc.c{box-shadow:inset 0 0 0 3px #4fd8ff;background:#eafaff}
+  #bSets{display:flex;flex-direction:column;gap:3px;max-height:84px;overflow:auto;touch-action:pan-y}
+  .bset{font-weight:900;font-size:12px;color:#5a7290;background:#fff;border-radius:9px;padding:3px 8px;display:flex;justify-content:space-between;gap:6px;box-shadow:inset 0 0 0 2px #e1eaf7}.bset.ok{color:#1e7a2c;background:#e4f8dc;box-shadow:inset 0 0 0 2px #9ee08a}
+  .obtn{font:900 17px/1 inherit;font-family:inherit;border:0;border-radius:14px;padding:13px;color:#fff;background:linear-gradient(#4aa8ff,#2f7bff);box-shadow:0 4px 0 #1d4fb0}.obtn.g{background:linear-gradient(#5fe36a,#2fc43a);box-shadow:0 4px 0 #1e7a2c}.obtn.x{background:linear-gradient(#aab6c8,#8393ab);box-shadow:0 4px 0 #5b6b82}.obtn:disabled{opacity:.5}
+  #qList{display:flex;flex-direction:column;gap:8px}.qc{position:relative;background:#fff;border-radius:14px;padding:8px 10px;box-shadow:0 3px 0 #c5d3e8,inset 0 0 0 2px #e1eaf7;color:#16324a;font-weight:900}
+  .qc .qt{font-size:15px}.qc .qr{font-size:12px;color:#5a7290;margin-top:2px}.qc .qb{height:14px;margin-top:5px;border-radius:7px;background:#dbe6f6;overflow:hidden;position:relative}.qc .qb i{position:absolute;left:0;top:0;bottom:0;border-radius:7px;background:linear-gradient(#9dff6a,#2fc43a)}.qc .qb b{position:absolute;inset:0;text-align:center;font-size:11px;line-height:14px;color:#16324a}
+  #evt{position:absolute;left:max(12px,env(safe-area-inset-left));right:max(12px,env(safe-area-inset-right));top:calc(max(12px,env(safe-area-inset-top)) + 104px);height:38px;display:none;align-items:center;gap:8px;padding:3px 12px 3px 4px;border-radius:999px;background:linear-gradient(rgba(255,90,160,.9),rgba(160,30,100,.92));box-shadow:0 4px 0 rgba(0,0,0,.25),inset 0 2px 0 rgba(255,255,255,.4)}
+  #evt canvas{width:30px;height:30px;flex:none}#evt .gm{flex:1;min-width:0}#evt .gn{font-size:12px;line-height:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;-webkit-text-stroke:3px #5a0a38}#evt .gb{position:relative;height:14px;margin-top:1px;border-radius:7px;background:rgba(40,0,30,.6);overflow:hidden}#evt .gb i{position:absolute;left:0;top:0;bottom:0;border-radius:7px;background:linear-gradient(#ffe36a,#ffb000)}#evt .gb b{position:absolute;inset:0;text-align:center;font-size:11px;line-height:14px;-webkit-text-stroke:3px #5a0a38}
+  #offc .wbox{align-items:center;text-align:center;padding:20px 18px;gap:10px}#offc .big{font-size:38px;color:#1e7a2c;font-weight:900}#offc .sub{font-size:15px;color:#16324a;font-weight:900}`;
+  document.head.appendChild(st);
+  const hud = document.getElementById('hud'), d = document.createElement('div'); d.id = 'hbtns'; d.innerHTML = '<button class="hb" id="bQuest" aria-label="Görevler"><canvas width="60" height="60"></canvas><i></i></button><button class="hb" id="bBook" aria-label="Koleksiyon"><canvas width="60" height="60"></canvas><i></i></button>';
+  hud.appendChild(d);
+  const e = document.createElement('div'); e.id = 'evt'; e.innerHTML = '<canvas width="60" height="60"></canvas><div class="gm"><div class="gn txt" id="evtN"></div><div class="gb"><i id="evtF"></i><b class="txt" id="evtP"></b></div></div>'; hud.appendChild(e);
+  const mk2 = (id, html) => { const o = document.createElement('div'); o.id = id; o.className = 'ovl'; o.innerHTML = html; document.body.appendChild(o); return o; };
+  mk2('book', '<div class="wbox"><div class="wh"><div class="wt">Koleksiyon Defteri</div><div class="wm" id="bProg">0/18</div></div><div id="bGrid"></div><div class="wsec" style="grid-column:auto">Setler (kalıcı bonus)</div><div id="bSets"></div><button class="obtn g" id="bSell">Kopyaları Sat</button><button class="obtn x" id="bClose">Kapat</button></div>');
+  mk2('quests', '<div class="wbox"><div class="wh"><div class="wt">Görevler</div><div class="wm" id="qDone">0</div></div><div id="qList"></div><button class="obtn x" id="qClose">Kapat</button></div>');
+  mk2('offc', '<div class="wbox"><div class="wt">Hoş geldin!</div><canvas id="offCv" width="160" height="110" style="width:160px;height:110px"></canvas><div class="sub">Sen yokken kazandın</div><div class="big" id="offAmt">0</div><div class="sub" id="offSub"></div><button class="obtn g" id="offBtn" style="width:100%">Topla!</button></div>');
+})();
+/* ---- NADİR ÇİÇEKLER + KOLEKSİYON DEFTERİ ---- */
+const SPECIES = [['tulip', 'Lale', '#e0001c'], ['rose', 'Gül', '#ff1f8e'], ['orchid', 'Orkide', '#9b30e8'], ['lav', 'Lavanta', '#8f5be0'], ['sun', 'Ayçiçeği', '#ffc800'], ['rosep', 'Parfüm Gülü', '#c2185b']];
+const RVARS = [{ id: 'gold', n: 'Altın', col: 0xffc21a, val: 1200, w: 0.62 }, { id: 'rain', n: 'Gökkuşağı', col: 0xff5fd2, val: 3000, w: 0.28 }, { id: 'crys', n: 'Kristal', col: 0x7fe9ff, val: 8000, w: 0.10 }];
+const SETS = [];
+SPECIES.forEach(sp => SETS.push({ id: 's_' + sp[0], n: sp[1] + ' Ailesi', keys: RVARS.map(v => sp[0] + ':' + v.id), price: 0.02, txt: 'Tüm fiyatlar +%2' }));
+RVARS.forEach(v => SETS.push({ id: 'v_' + v.id, n: v.n + ' Seti', keys: SPECIES.map(sp => sp[0] + ':' + v.id), price: v.id === 'crys' ? 0 : v.id === 'gold' ? 0.06 : 0.08, spd: v.id === 'crys' ? 0.08 : 0, txt: v.id === 'crys' ? 'Üretim hızı +%8' : 'Tüm fiyatlar +%' + (v.id === 'gold' ? 6 : 8) }));
+SETS.push({ id: 'all', n: 'Büyük Koleksiyon', keys: SPECIES.flatMap(sp => RVARS.map(v => sp[0] + ':' + v.id)), price: 0.10, spd: 0.10, txt: 'Fiyat +%10, hız +%10' });
+function collBonus(k) { let b = 0; for (const s of SETS) if (S.cs.includes(s.id)) b += s[k] || 0; return b; }
+const collCount = () => { let n = 0; for (const sp of SPECIES) for (const v of RVARS) if (S.cb[sp[0] + ':' + v.id] > 0) n++; return n; };
+const RARE = { gem: null, halo: null, cap: 12, list: [], t: 0 };
+function rareInit() {
+  const gm = new THREE.OctahedronGeometry(0.28, 0); gm.scale(1, 1.5, 1);
+  RARE.gem = new THREE.InstancedMesh(gm, new THREE.MeshBasicMaterial({ color: 0xffffff }), RARE.cap); RARE.gem.frustumCulled = false; RARE.gem.userData.dyn = true; RARE.gem.count = 0; scene.add(RARE.gem);
+  const c = cv(64, 64), x = c.getContext('2d'), g = x.createRadialGradient(32, 32, 0, 32, 32, 32); g.addColorStop(0, 'rgba(255,255,255,.95)'); g.addColorStop(0.35, 'rgba(255,255,255,.4)'); g.addColorStop(1, 'rgba(255,255,255,0)'); x.fillStyle = g; x.fillRect(0, 0, 64, 64);
+  RARE.halo = new THREE.InstancedMesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(c), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false }), RARE.cap); RARE.halo.frustumCulled = false; RARE.halo.userData.dyn = true; RARE.halo.count = 0; RARE.halo.renderOrder = 5; scene.add(RARE.halo);
+  for (let i = 0; i < RARE.cap; i++) { RARE.gem.setColorAt(i, new THREE.Color(1, 1, 1)); RARE.halo.setColorAt(i, new THREE.Color(1, 1, 1)); }
+}
+function rareColor(v, t, out) { if (v === 'rain') return out.setHSL((t * 0.4) % 1, 0.9, 0.62); return out.setHex(v === 'gold' ? 0xffc21a : 0x7fe9ff); }
+function rollRare(f) {
+  if (!(S.lv.coll > 0) || f.type === 'sap' || RARE.list.length >= RARE.cap) return;
+  const miss = 18 - collCount(); if (miss <= 0) return; if (Math.random() > 0.0042 * (1 + miss / 14)) return;
+  const sp = f.type; if (!SPECIES.some(q => q[0] === sp)) return;
+  const ws = RVARS.map(v => v.w * (S.cb[sp + ':' + v.id] > 0 ? 0.35 : 2.2)); let r = Math.random() * ws.reduce((a, b) => a + b, 0), vi = 0; for (; vi < ws.length - 1; vi++) { r -= ws[vi]; if (r <= 0) break; }
+  f.rare = { sp, v: RVARS[vi].id }; RARE.list.push(f); sparkles(f.x, 1.2, f.z, 8, 0xfff2a0, 0.4);
+}
+function rareClaim(f, who) {
+  const r = f.rare; if (!r) return; f.rare = null; const i = RARE.list.indexOf(f); if (i >= 0) RARE.list.splice(i, 1);
+  const key = r.sp + ':' + r.v, first = !(S.cb[key] > 0), nm = RVARS.find(v => v.id === r.v).n + ' ' + SPECIES.find(q => q[0] === r.sp)[1];
+  S.cb[key] = Math.min(9999, (S.cb[key] || 0) + 1); stats.rares = (stats.rares || 0) + 1; saveDirty = true;
+  const near = nearD(f.x, f.z, 22); if (near) { confetti(f.x, 1.6, f.z, first ? 40 : 16); sparkles(f.x, 1.4, f.z, 12, RVARS.find(v => v.id === r.v).col, 0.6); popText(f.x, 3.2, f.z, '✦ ' + nm, first ? '#ffd23f' : '#9dffb0'); if (first) { ring(f.x, f.z, 0xffc21a, 6); sfx('up'); vib(20); } else sfx('happy'); }
+  if (first) toast('Deftere eklendi: ' + nm + ' (' + collCount() + '/18)');
+  bookBadge(first ? 1 : 0); checkSets();
+}
+function checkSets() {
+  for (const s of SETS) if (!S.cs.includes(s.id) && s.keys.every(k => S.cb[k] > 0)) {
+    S.cs.push(s.id); saveDirty = true; stats.sets = (stats.sets || 0) + 1;
+    later(0.5, () => { praise(s.n + ' Tamamlandı!', true); flash(); sfx('up'); vib(40); popText(P.group.position.x, 5.4, P.group.position.z, s.txt, '#ffd23f'); toast(s.n + ': ' + s.txt); confetti(P.group.position.x, 3, P.group.position.z, 90); coinBurstUI(); for (let i = 0; i < 6; i++) later(i * 0.25, () => fireworks(P.group.position.x + rand(-6, 6), P.group.position.z + rand(-6, 1))); });
+  }
+}
+function rareUpdate(dt, t) {
+  const n = RARE.list.length; if (!RARE.gem) return; RARE.gem.visible = RARE.halo.visible = n > 0; if (!n) return;
+  RARE.gem.count = RARE.halo.count = n; const M = new THREE.Matrix4(), V = new THREE.Vector3(), Sc = new THREE.Vector3(), Qy = new THREE.Quaternion(), col = new THREE.Color(); RARE.t += dt;
+  RARE.list.forEach((f, i) => {
+    const y = 1.55 + Math.sin(t * 2.4 + i) * 0.12; Qy.setFromAxisAngle(_Y, t * 1.6 + i);
+    M.compose(V.set(f.x, y, f.z), Qy, Sc.set(1, 1, 1)); RARE.gem.setMatrixAt(i, M); rareColor(f.rare.v, t + i * 0.2, col); RARE.gem.setColorAt(i, col); RARE.halo.setColorAt(i, col);
+    const hs = 1.7 + Math.sin(t * 3 + i) * 0.25; M.compose(V.set(f.x, y, f.z), camera.quaternion, Sc.set(hs, hs, 1)); RARE.halo.setMatrixAt(i, M);
+    if (Math.random() < dt * 3 && nearD(f.x, f.z, 24)) emit({ x: f.x + rand(-0.4, 0.4), y: y + rand(-0.3, 0.5), z: f.z + rand(-0.4, 0.4), vx: rand(-0.3, 0.3), vy: rand(0.2, 0.9), vz: rand(-0.3, 0.3), life: rand(0.6, 1.0), size: rand(0.3, 0.5), c: f.rare.v === 'rain' ? pick([0xff5fd2, 0x7fe9ff, 0xffe36a, 0x9dff7a]) : f.rare.v === 'gold' ? 0xffe36a : 0xbff4ff, type: 1, grav: 0, drag: 1.5 });
+  });
+  RARE.gem.instanceMatrix.needsUpdate = RARE.halo.instanceMatrix.needsUpdate = true; RARE.gem.instanceColor.needsUpdate = RARE.halo.instanceColor.needsUpdate = true;
+}
+/* ---- defter arayüzü ---- */
+function drawRareCell(cv_, sp, vi, cnt) {
+  const c = cv_.getContext('2d'), s = 56; c.clearRect(0, 0, 64, 64); const v = RVARS[vi], own = cnt > 0, cx = 32, cy = 32;
+  if (!own) { c.globalAlpha = 0.28; ICONF[sp[0] === 'tulip' || sp[0] === 'rose' ? 'flower' : sp[0]](c, cx, cy + 2, s * 0.8, sp[2]); c.globalAlpha = 1; c.fillStyle = 'rgba(40,60,90,.55)'; c.font = '900 26px system-ui'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('?', cx, cy); return; }
+  const g = c.createRadialGradient(cx, cy, 2, cx, cy, 30); if (v.id === 'gold') { g.addColorStop(0, 'rgba(255,230,120,.95)'); g.addColorStop(1, 'rgba(255,194,26,0)'); } else if (v.id === 'rain') { g.addColorStop(0, 'rgba(255,255,255,.9)'); g.addColorStop(0.5, 'rgba(255,120,220,.5)'); g.addColorStop(1, 'rgba(90,200,255,0)'); } else { g.addColorStop(0, 'rgba(200,250,255,.95)'); g.addColorStop(1, 'rgba(79,216,255,0)'); }
+  c.fillStyle = g; c.fillRect(0, 0, 64, 64);
+  const col = v.id === 'gold' ? '#ffc21a' : v.id === 'crys' ? '#7fe9ff' : null;
+  if (sp[0] === 'tulip' || sp[0] === 'rose') iconFlower(c, cx, cy + 2, s * 0.8, col || sp[2]); else if (col && sp[0] !== 'sun') { c.save(); c.filter = 'none'; ICONF[sp[0]](c, cx, cy + 2, s * 0.8); c.globalCompositeOperation = 'source-atop'; c.fillStyle = col; c.globalAlpha = 0.45; c.fillRect(0, 0, 64, 64); c.restore(); } else ICONF[sp[0]](c, cx, cy + 2, s * 0.8);
+  if (v.id === 'rain') { c.save(); c.globalCompositeOperation = 'source-atop'; const lg = c.createLinearGradient(0, 8, 64, 56); ['#ff4f5e', '#ffb02e', '#ffe14a', '#4fe36a', '#4fb0ff', '#a64dff'].forEach((q, i) => lg.addColorStop(i / 5, q)); c.fillStyle = lg; c.globalAlpha = 0.5; c.fillRect(0, 0, 64, 64); c.restore(); }
+  c.fillStyle = '#fff'; for (const [x, y, r] of [[10, 12, 3], [52, 18, 2.4], [48, 50, 2.8]]) { c.beginPath(); c.moveTo(x, y - r * 2); c.lineTo(x + r * 0.7, y - r * 0.7); c.lineTo(x + r * 2, y); c.lineTo(x + r * 0.7, y + r * 0.7); c.lineTo(x, y + r * 2); c.lineTo(x - r * 0.7, y + r * 0.7); c.lineTo(x - r * 2, y); c.lineTo(x - r * 0.7, y - r * 0.7); c.closePath(); c.fill(); }
+}
+const dupeValue = () => { let v = 0; for (const sp of SPECIES) for (const r of RVARS) { const n = S.cb[sp[0] + ':' + r.id] || 0; if (n > 1) v += (n - 1) * r.val; } return Math.round(v * priceMul()); };
+let _bookSeen = 0;
+function bookBadge(n) { const b = document.getElementById('bBook'); if (!b) return; const i = b.querySelector('i'); _bookSeen += n; if (n) { b.classList.remove('pulse'); void b.offsetWidth; b.classList.add('pulse'); } i.textContent = _bookSeen > 0 ? '!' : ''; i.style.display = _bookSeen > 0 ? 'block' : 'none'; }
+function renderBook() {
+  const gr = document.getElementById('bGrid'); gr.innerHTML = ''; document.getElementById('bProg').textContent = collCount() + '/18';
+  const hd = (t) => { const d = document.createElement('div'); d.className = 'bh'; d.textContent = t; gr.appendChild(d); }; hd('');
+  RVARS.forEach(v => hd(v.n));
+  for (const sp of SPECIES) {
+    const nm = document.createElement('div'); nm.className = 'bs'; nm.textContent = sp[1]; gr.appendChild(nm);
+    RVARS.forEach((v, vi) => { const n = S.cb[sp[0] + ':' + v.id] || 0, cell = document.createElement('div'); cell.className = 'bc' + (n > 0 ? ' ' + v.id[0] : ''); const cvs = document.createElement('canvas'); cvs.width = cvs.height = 64; drawRareCell(cvs, sp, vi, n); cell.appendChild(cvs); if (n > 1) { const b = document.createElement('b'); b.textContent = 'x' + n; cell.appendChild(b); } gr.appendChild(cell); });
+  }
+  const se = document.getElementById('bSets'); se.innerHTML = '';
+  for (const s of SETS) { const ok = S.cs.includes(s.id), n = s.keys.filter(k => S.cb[k] > 0).length, d = document.createElement('div'); d.className = 'bset' + (ok ? ' ok' : ''); d.innerHTML = '<span>' + (ok ? '✔ ' : '') + s.n + ' ' + n + '/' + s.keys.length + '</span><span>' + s.txt + '</span>'; se.appendChild(d); }
+  const dv = dupeValue(), sb = document.getElementById('bSell'); sb.disabled = dv <= 0; sb.textContent = dv > 0 ? 'Kopyaları Sat (+' + fmt(dv) + ')' : 'Satılacak kopya yok';
+}
+function openBook() { document.getElementById('menu').style.display = 'none'; _bookSeen = 0; bookBadge(0); document.getElementById('book').style.display = 'flex'; renderBook(); }
+function sellDupes() {
+  const v = dupeValue(); if (v <= 0) return; for (const sp of SPECIES) for (const r of RVARS) { const k = sp[0] + ':' + r.id; if (S.cb[k] > 1) S.cb[k] = 1; }
+  addMoney(v); stats.rareSold = (stats.rareSold || 0) + 1; sfx('cash'); sfx('up'); coinBurstUI(); popText(P.group.position.x, 4, P.group.position.z, '+' + fmt(v), '#6dff6a'); confetti(P.group.position.x, 2.5, P.group.position.z, 40); saveDirty = true; renderBook(); writeSave();
+}
+function initColl() {
+  document.getElementById('bBook').addEventListener('click', openBook); document.getElementById('bClose').addEventListener('click', () => { document.getElementById('book').style.display = 'none'; });
+  document.getElementById('bSell').addEventListener('click', sellDupes);
+  const c = document.querySelector('#bBook canvas').getContext('2d'); iconBook(c, 30, 30, 50);
+  rareInit();
+}
+function buildColl() {
+  const pm0 = priceMul; priceMul = () => pm0() * (1 + collBonus('price'));
+  extPad('coll', 'Koleksiyon Defteri', [E3.coll], -8.6, 13.3, iconBook, null);
+  EXTAPPLY.coll = i => { document.getElementById('bBook').style.display = 'flex'; if (!i) { praise('Nadir Çiçekler!', true); flash(); sfx('up'); toast('Yataklarda nadir çiçekler belirecek: parıltılı mücevheri topla!'); } };
+}
+/* ---- İHRACAT LİMANI ---- */
+const PORT = { pend: 0, z: null, ship: null, crates: null, pile: null, zone: null, mz: null, spr: null, sig: '', porter: null, t: 0, st: 'load', anim: 0, sea: null, gull: null };
+const PCOL = { bouquet: 0xff7ab0, pot: 0xff9a3c, sachet: 0xa47be8, perfume: 0xff4f93, sbq: 0xffc21a, honey: 0xf2a81d, bonsai: 0x3fa85a };
+const SHIP_X = -10, SHIP_Z = -135.3;
+function portManifest(L) {
+  const m = { bouquet: 30 + 8 * L };
+  if (unlockedZ('bee')) m.honey = 10 + 3 * L; if (unlockedZ('jap')) m.bonsai = 5 + 2 * L;
+  if (L >= 2 && unlockedZ('parf')) m.perfume = 6 + 2 * L; if (L >= 3 && S.lv.sera > 0) m.pot = 12 + 3 * L; if (L >= 4 && unlockedZ('sunf')) m.sbq = 8 + 2 * L;
+  return m;
+}
+const portReward = (need, L) => { let v = 0; for (const t in need) v += need[t] * PRICE[t]; return Math.round(v * 3.4 * priceMul() * (1 + 0.15 * (S.lv.portBonus || 0)) * (1 + 0.05 * Math.min(L, 20))); };
+function portNew() { const L = S.pt.n, need = portManifest(L); S.pt.cur = { need, got: {}, reward: portReward(need, L), st: 'load', until: 0, lv: L }; PORT.st = 'load'; PORT.sig = ''; saveDirty = true; }
+function shipGeo() {
+  return mkProdGeo('x_ship', () => {
+    const P_ = [];
+    P_.push(part(G.box, 0x7a1616, 0, 0.95, 0, 12.4, 1.9, 5.0), part(G.box, 0x1b2a4a, 0, 0.3, 0, 12.4, 0.6, 4.84), part(G.box, 0xf2f2f2, 0, 1.92, 0, 12.6, 0.12, 5.15), part(G.box, 0xe8142e, 0, 1.5, 0, 12.5, 0.16, 5.06));
+    P_.push(part(new THREE.CylinderGeometry(0.05, 2.5, 3.4, 4), 0x7a1616, -7.9, 0.95, 0, 0.76, 1, 1, 0, 0, Math.PI / 2), part(new THREE.CylinderGeometry(0.05, 2.5, 3.4, 4), 0xf2f2f2, -7.9, 1.93, 0, 0.07, 0.99, 1.02, 0, 0, Math.PI / 2));
+    P_.push(part(G.box, 0xf6f6f6, 4.2, 3.5, 0, 2.8, 3.1, 4.3), part(G.box, 0x1d3b66, 2.8, 3.9, 0, 0.06, 0.55, 3.8), part(G.box, 0xf6f6f6, 4.4, 5.6, 0, 2.2, 1.2, 4.0), part(G.box, 0x1d3b66, 3.3, 5.7, 0, 0.06, 0.6, 3.6), part(G.box, 0xe8142e, 4.6, 6.5, 0, 1.0, 0.8, 1.0), part(G.cyl, 0xe8142e, 5.6, 6.2, 0, 0.7, 2.4, 0.7), part(G.cyl, 0x1a1a1a, 5.6, 7.5, 0, 0.74, 0.3, 0.74), part(G.cyl, 0xffd23f, 5.6, 7.0, 0, 0.72, 0.25, 0.72));
+    P_.push(part(G.cyl, 0x8a98a8, -3.2, 3.6, 0, 0.1, 3.4, 0.1), part(G.cyl, 0x8a98a8, 2.0, 3.6, 0, 0.1, 3.4, 0.1), part(G.box, 0x8a98a8, -0.6, 5.3, 0, 5.4, 0.1, 0.1), part(G.box, 0xffd23f, -4.9, 2.2, 0, 0.08, 0.5, 5.1), part(G.sph6, 0xffffff, -6.4, 2.3, 0, 0.1, 0.1, 0.1));
+    for (const sz of [-2.55, 2.55]) for (let i = 0; i < 8; i++) P_.push(part(G.cyl, 0xffd23f, -5.2 + i * 1.6, 2.2, sz, 0.05, 0.6, 0.05));
+    for (let i = 0; i < 6; i++) for (const sz of [-1, 1]) P_.push(part(G.sph6, 0xffe9a8, -4.6 + i * 1.7, 1.1, sz * 2.52, 0.14, 0.14, 0.05));
+    return P_;
+  });
+}
+function portCrateLayout(i, out) { const layer = Math.floor(i / 28), r = i % 28, c = r % 7, row = Math.floor(r / 7); return out.set(-4.6 + c * 1.0, 2.45 + layer * 0.84, (row - 1.5) * 0.98); }
+function buildPort() {
+  const z = c3Ext('port', 'İhracat Limanı', 'İHRACAT LİMANI', true, 5), g0 = mkGroup(z, 0.1), g1 = mkGroup(z, 0.5), g2 = mkGroup(z, 0.8), rnd = rng(55);
+  PORT.z = z;
+  // deniz
+  const sc = cv(128, 128), sx = sc.getContext('2d'); sx.fillStyle = '#2a8fc4'; sx.fillRect(0, 0, 128, 128); sx.strokeStyle = 'rgba(255,255,255,.35)'; sx.lineWidth = 3; for (let i = 0; i < 10; i++) { const y = i * 13 + 4; sx.beginPath(); sx.moveTo(0, y); sx.bezierCurveTo(30, y - 6, 60, y + 6, 128, y); sx.stroke(); } const stx = canvasTex(sc, [14, 2.2]);
+  const sea = new THREE.Mesh(G.plane, LM({ map: stx, transparent: true, opacity: 0.94 })); sea.rotation.x = -Math.PI / 2; sea.scale.set(80, 11, 1); ad(g0, sea, -38, 0.045, -136.5); sea.renderOrder = 1; PORT.sea = stx;
+  // dok + kıyı
+  ad(g0, rbox(21.6, 0.3, 6.6, 0.06, mat(0xb98a55)), -10, 0.15, -128.3);
+  for (let i = 0; i < 11; i++) ad(g0, mk(G.box, mat(i % 2 ? 0xc99a65 : 0xad7f4c), 21.4, 0.02, 0.5), -10, 0.32, -125.2 - i * 0.6);
+  for (let i = 0; i < 12; i++) { ad(g0, mk(G.cyl, mat(0x5a3a22), 0.22, 1.1, 0.22), -20 + i * 1.9, 0.5, -131.7); }
+  for (let i = 0; i < 16; i++) { const s = 0.5 + rnd() * 0.3; ad(g0, mk(G.sphT, mat(rnd() < 0.5 ? 0x8a8a86 : 0xa6a6a0), s * 1.4, s * 0.7, s), -24 + i * 1.7, 0.18, -131.9 - rnd() * 0.3); }
+  for (const bx of [-18, -10, -2]) { ad(g0, mk(G.cyl, mat(0x2d3a45), 0.3, 0.55, 0.3), bx, 0.5, -130.7); ad(g0, mk(G.cyl, mat(0xe8142e), 0.34, 0.1, 0.34), bx, 0.8, -130.7); }
+  // yığılı konteyner / varil / vinç
+  const cols = [0xe8442e, 0x2f7bff, 0x3fbf4a, 0xffc21a, 0xa64dff, 0xff7a1a];
+  [[-21, -124.5, 0], [-21, -126.9, 1], [-18.6, -124.5, 2], [-21, -124.5, 3, 1], [-18.6, -124.5, 4, 1]].forEach(([x, zz, ci, up]) => { const c = rbox(2.2, 1.2, 2.2, 0.05, mat(cols[ci % 6])); ad(g1, c, x, 0.9 + (up ? 1.2 : 0), zz); for (let k = -1; k <= 1; k++) ad(g1, mk(G.box, mat(0x00000), 0.04, 1.0, 2.24), x + k * 0.6, 0.9 + (up ? 1.2 : 0), zz); });
+  for (const [bx, bz] of [[-4, -123.2], [-3.2, -122.4], [-14, -123]]) ad(g1, mk(G.cyl, mat(0x8a5a30), 0.45, 0.9, 0.45), bx, 0.55, bz);
+  { const cr = new THREE.Group(), cm = mat(0xf0b020); for (const cz2 of [-1.6, 1.6]) for (const cx2 of [-0.9, 0.9]) cr.add(mk(G.cyl, cm, 0.12, 6.2, 0.12, cx2, 3.1, cz2)); cr.add(mk(G.box, cm, 2.4, 0.3, 4.2, 0, 6.2, 0), mk(G.box, cm, 0.4, 0.4, 9.5, 0, 6.5, -2.2), mk(G.box, mat(0x2d3a45), 0.08, 2.2, 0.08, 0, 5.2, -5.6), mk(G.box, mat(0xe8142e), 0.8, 0.5, 0.8, 0, 3.8, -5.6)); shadowAll(cr, true, false); ad(g1, cr, -22, 0, -128.6); }
+  // deniz feneri
+  { const lh = new THREE.Group(), rm_ = mat(0x7a7a78); lh.add(mk(G.sphT, rm_, 2.6, 1.0, 2.2, 0, 0.4, 0)); for (let i = 0; i < 4; i++) lh.add(mk(G.cyl, mat(i % 2 ? 0xffffff : 0xe8142e), 1.2 - i * 0.14, 1.5, 1.2 - i * 0.14, 0, 1.6 + i * 1.5, 0)); lh.add(mk(G.box, LAMPM, 0.7, 0.8, 0.7, 0, 7.8, 0), mk(G.cone3, mat(0xe8142e), 1.2, 0.8, 1.2, 0, 8.6, 0)); shadowAll(lh, true, false); ad(g2, lh, -22.5, 0.3, -140); GLOWS.push([-22.5, -140, 4]); addCollider(-24, -21, -141.2, -138.8, () => !z.locked); }
+  decorTree(g0, 0, -139, 1.0); lamp(g0, -2, -120); lamp(g0, -14, -121);
+  // gemi (dinamik)
+  const sg = new THREE.Group(), sm = new THREE.Mesh(shipGeo(), vcMat); sm.castShadow = true; sg.add(sm);
+  const crates = new THREE.InstancedMesh(G.box, LM({ color: 0xffffff }), 56); crates.frustumCulled = false; crates.setColorAt(0, new THREE.Color(1, 1, 1)); crates.count = 0; sg.add(crates); PORT.crates = crates;
+  sg.position.set(SHIP_X, 0.5, SHIP_Z); sg.rotation.y = 0; sg.visible = false; scene.add(sg); PORT.ship = sg;
+  // sözleşme panosu
+  const bd = makeBoard('İHRACAT SÖZLEŞMESİ', 4.6, 0.9, 'chalk'); ad(g2, bd, -2.6, 3.6, -121.8); ad(g2, mk(G.cyl, mat(0x8a5a30), 0.12, 3.0, 0.12), -5.1, 1.5, -121.8); ad(g2, mk(G.cyl, mat(0x8a5a30), 0.12, 3.0, 0.12), -0.1, 1.5, -121.8);
+  PORT.spr = makeSprite(512, 400, () => {}, 5.6, 4.4, false); PORT.spr.position.set(-2.6 - z.cx, 6.7, -121.8 - z.cz); g2.add(PORT.spr);
+  PORT.zone = new Zone({ x: -10, z: -128.4, w: 7, d: 3.4, color: '#2f7bff', draw: drawZoneIcon(iconShip, 0.45) }); PORT.zone.group.visible = false;
+  PORT.mz = new Zone({ x: -1.6, z: -126.0, w: 3.4, d: 3.0, color: '#1ed760', draw: null, labelSize: 0.01 }); PORT.mz.label.visible = false; PORT.mz.group.visible = false;
+  ad(g1, rbox(3.0, 0.7, 2.2, 0.08, woodM()), -1.6, 0.4, -127.8); ad(g1, rbox(3.1, 0.1, 2.3, 0.04, mat(0x12a04a)), -1.6, 0.78, -127.8); addCollider(-3.2, 0.0, -129, -126.6, () => !z.locked);
+  PORT.pile = new Stack(scene, (i, out) => { const per = 12, l = Math.floor(i / per), r = i % per; out.set(-1.6 + ((r % 3) - 1) * 0.98, 0.9 + l * 0.14, -127.8 + (Math.floor(r / 3) - 1.5) * 0.5); }, 60); PORT.pile.extra = 0; PORT.pile.jitter = 0.07; PORT.pile.pend = 0;
+  addCollider(-25, 1.7, -142.4, -131.9, () => !z.locked); // deniz
+  portPersistLoad();
+  z.onShow = () => { PORT.zone.group.visible = true; PORT.mz.group.visible = true; PORT.ship.visible = true; if (!S.pt.cur) portNew(); portShipPlace(); };
+  extPad('port', 'İhracat Limanı', [E3.port], 5.4, -121.0, iconShip, null);
+  extPad('portW', 'Liman Hamalı', [E3.portW], -8.5, -120.6, iconHelper, () => unlockedZ('port'));
+  extPad('portBonus', 'İhracat Ödülü', geo(E3.portBonus, 5), -13.5, -120.6, iconStar, () => unlockedZ('port'));
+  EXTAPPLY.port = i => unlockExt(z, i); EXTAPPLY.portW = i => spawnPorter(i);
+}
+function portShipPlace() {
+  const c = S.pt.cur; if (!c) return; const sh = PORT.ship; if (c.st === 'load') { PORT.st = 'load'; sh.position.set(SHIP_X, 0.5, SHIP_Z); sh.rotation.y = 0; sh.visible = true; portCrates(); }
+}
+function portCrates() {
+  const c = S.pt.cur, cr = PORT.crates; if (!c) return; let n = 0, tot = 0; for (const t in c.need) { tot += c.need[t]; n += Math.min(c.got[t] || 0, c.need[t]); }
+  const k = tot ? Math.min(56, Math.ceil(n / tot * 56)) : 0, M = new THREE.Matrix4(), V = new THREE.Vector3(), Q = new THREE.Quaternion(), Sc = new THREE.Vector3(0.88, 0.8, 0.88), col = new THREE.Color();
+  const types = Object.keys(c.need); cr.count = k; for (let i = 0; i < k; i++) { portCrateLayout(i, V); M.compose(V, Q, Sc); cr.setMatrixAt(i, M); col.setHex(PCOL[types[i % types.length]] || 0xffffff); cr.setColorAt(i, col); } cr.instanceMatrix.needsUpdate = true; if (cr.instanceColor) cr.instanceColor.needsUpdate = true;
+}
+function portLoad(ty, mesh) { // oyuncu/hamal bir ürünü gemiye yükler
+  const c = S.pt.cur; if (!c || c.st !== 'load') return false; c.got[ty] = (c.got[ty] || 0) + 1; saveDirty = true; PORT.sig = '';
+  fly(mesh, out => { out.set(SHIP_X + rand(-3, 1.5), 3.0, SHIP_Z + rand(-1.2, 1.2)); return 0; }, 0.4, 2.4, () => { rm(mesh); sparkles(SHIP_X, 3.2, SHIP_Z, 4, 0xffe9a8, 0.8); sfx('coin'); portCrates(); });
+  return true;
+}
+const portNeeds = () => { const c = S.pt.cur; if (!c || c.st !== 'load') return []; return Object.keys(c.need).filter(t => (c.got[t] || 0) < c.need[t]); };
+function portDone() {
+  const c = S.pt.cur; return !!c && Object.keys(c.need).every(t => (c.got[t] || 0) >= c.need[t]);
+}
+function portSail() {
+  const c = S.pt.cur; c.st = 'sail'; c.left = 60; c.until = Date.now() + 60000; PORT.st = 'depart'; PORT.anim = 0; PORT.t = 0; saveDirty = true; sfx('up'); vib(30); praise('Gemi yola çıktı!', true); stats.exports = (stats.exports || 0) + 1;
+  for (let i = 0; i < 6; i++) later(i * 0.2, () => fireworks(SHIP_X + rand(-8, 8), SHIP_Z + rand(-4, 2))); confetti(SHIP_X, 4, SHIP_Z, 60); panTo(SHIP_X, SHIP_Z + 6, 0.9, 2.2); writeSave();
+}
+function portReturn() {
+  const c = S.pt.cur, v = c.reward; c.st = 'back'; PORT.pend += v; S.pt.n++; stats.exportsDone = (stats.exportsDone || 0) + 1; PORT.st = 'arrive'; PORT.anim = 0; saveDirty = true;
+  later(2.6, () => { const n = 10, bv = Math.round(v / n); for (let k = 0; k < n; k++) later(k * 0.08, () => { const b = makeBill(); b.userData.v = bv; b.position.set(SHIP_X + rand(-2, 2), 3.5, SHIP_Z + rand(-1, 1)); scene.add(b); const idx = PORT.pile.length + (PORT.pile.pend || 0); PORT.pile.pend++; fly(b, out => { PORT.pile.slotFn(Math.min(idx, 59), out); return 0; }, 0.7, 3.0, () => { PORT.pile.pend--; PORT.pend -= bv; if (PORT.pile.length >= 60) { PORT.pile.extra += bv; rm(b); } else PORT.pile.add(b, 'bill'); sfx('cash'); }); }); PORT.pile.extra += v - bv * n; PORT.pend -= v - bv * n;
+    praise('Gemi döndü! +' + fmt(v), true); flash(); sfx('up'); coinBurstUI(); for (let i = 0; i < 8; i++) later(i * 0.2, () => fireworks(-8 + rand(-8, 8), -128 + rand(-5, 3))); confetti(-6, 4, -128, 90); toast('Sözleşme tamamlandı! Parayı iskeleden topla (' + (S.pt.n + 1) + '. sözleşme büyüdü)'); });
+  later(5, () => { portNew(); portShipPlace(); writeSave(); });
+}
+function updatePort(dt, t) {
+  const z = PORT.z; if (!z || z.locked) return; const c = S.pt.cur; if (!c) return;
+  if (PORT.sea) PORT.sea.offset.x += dt * 0.012;
+  const sh = PORT.ship; PORT.t += dt;
+  if (c.st === 'load') {
+    sh.position.y = 0.5 + Math.sin(t * 1.3) * 0.07; sh.rotation.z = Math.sin(t * 1.1) * 0.012; sh.visible = true;
+    if (PORT.zone.inside) { PORT.tk = (PORT.tk || 0) - dt; if (PORT.tk <= 0) for (const ty of portNeeds()) if (P.stack.count(ty) > 0) { const it = takeFromBack(P, ty); if (it) { if (posable(it.mesh)) bouquetPose(it.mesh, true); portLoad(ty, it.mesh); PORT.tk = 0.06; stats.exportItems = (stats.exportItems || 0) + 1; } break; } }
+    if (portDone() && PORT.st === 'load') { portSail(); }
+  } else if (c.st === 'sail') {
+    c.left = (c.left === undefined ? clamp((c.until - Date.now()) / 1000, 0, 60) : c.left) - dt; c.until = Date.now() + Math.max(0, c.left) * 1000; const rem = c.left, el = 60 - c.left; // 0..60
+    if (el < 8) { PORT.st = 'depart'; const k = clamp(el / 8, 0, 1); sh.visible = true; sh.position.set(SHIP_X - k * k * 66, 0.5 + Math.sin(t * 1.3) * 0.07, SHIP_Z); sh.rotation.y = 0; }
+    else if (el < 52 && rem > 0) { PORT.st = 'away'; sh.visible = false; }
+    else if (rem > 0 && el >= 52) { PORT.st = 'arrive'; PORT.crates.count = 0; const k = clamp((el - 52) / 8, 0, 1), e = 1 - Math.pow(1 - k, 2); sh.visible = true; sh.position.set(SHIP_X - 60 * (1 - e) - 0.001, 0.5, SHIP_Z); sh.rotation.y = lerp(Math.PI, 0, clamp((k - 0.45) / 0.55, 0, 1)); }
+    if (rem <= 0) { c.st = 'back'; sh.visible = true; sh.position.set(SHIP_X, 0.5, SHIP_Z); sh.rotation.y = 0; portReturn(); }
+  } else if (c.st === 'back') { sh.visible = true; sh.position.y = 0.5 + Math.sin(t * 1.3) * 0.07; }
+  const dock = nearD(-10, -130, 60); sh.visible = sh.visible && dock;
+  // para yığını
+  PORT.pile.update(dt, t); if (PORT.mz.inside) { PORT.mk = (PORT.mk || 0) - dt; if (PORT.mk <= 0 && (PORT.pile.length > 0 || PORT.pile.extra > 0)) { collectMoney(PORT.pile); PORT.mk = 0.03; } }
+  S.pt.pile = pileVal(PORT.pile) + Math.max(0, PORT.pend);
+  // pano
+  const sig = c.st + '|' + JSON.stringify(c.got) + '|' + (c.st === 'sail' ? Math.ceil(c.left || 0) : 0) + '|' + c.reward;
+  if (sig !== PORT.sig && nearD(-4, -124, 45)) { PORT.sig = sig; drawPortBoard(); }
+  updatePorter(dt, t);
+}
+function drawPortBoard() {
+  const c = S.pt.cur; if (!c) return;
+  redrawSprite(PORT.spr, (ctx, w, h) => {
+    ctx.fillStyle = 'rgba(14,32,64,.94)'; ctx.strokeStyle = '#6ec6ff'; ctx.lineWidth = 10; rrect(ctx, 8, 8, w - 16, h - 16, 40); ctx.fill(); ctx.stroke();
+    otext(ctx, (c.lv + 1) + '. SÖZLEŞME', w / 2, 48, 40, '#ffd400', '#05071a');
+    if (c.st === 'load') { let i = 0; for (const ty in c.need) { const x = 70 + (i % 3) * 160, y = 140 + Math.floor(i / 3) * 105; ICONF[ty](ctx, x, y, 84); const g = Math.min(c.got[ty] || 0, c.need[ty]); otext(ctx, g + '/' + c.need[ty], x + 6, y + 60, 32, g >= c.need[ty] ? '#6dff6a' : '#fff', '#05071a'); i++; }
+      iconBill(ctx, 90, 362, 50); otext(ctx, fmt(c.reward), 230, 362, 46, '#6dff6a', '#0c1a0c'); otext(ctx, '~60 sn sefer', 410, 362, 28, '#9fd0ff', '#05071a'); }
+    else { iconShip(ctx, 100, 170, 140); const rem = Math.max(0, Math.ceil(c.left || 0)); otext(ctx, c.st === 'sail' ? 'Seferde: ' + Math.floor(rem / 60) + ':' + String(rem % 60).padStart(2, '0') : 'Döndü!', 330, 150, 46, '#fff', '#05071a'); iconBill(ctx, 90, 320, 54); otext(ctx, '+' + fmt(c.reward), 270, 320, 52, '#6dff6a', '#0c1a0c'); }
+  });
+}
+/* ---- hamal ---- */
+function spawnPorter(instant) {
+  if (PORT.porter) return; const c = makeChar({ shirt: 0xff7a00, pants: 0x2f3542, hair: 0x2a1a10, hairStyle: 'short', hat: 'cap', hatColor: 0x2f7bff, skin: 0xc68863, shoe: 0xffffff });
+  c.group.position.set(-14, 0, -126.5); attachBackStack(c, () => 14); scene.add(c.group); c.state = 'idle'; c.cd = 0; c.kind = 'porter'; popInWorker(c, instant); PORT.porter = c; C3W.push(c);
+}
+function updatePorter(dt, t) {
+  const h = PORT.porter; if (!h) return; workerPop(h, dt); const gp = h.group.position, spd = 5.2; let tx = null, tz = null; h.cd -= dt; const need = portNeeds();
+  const outSpot = ty => ty === 'bouquet' ? [POS.outPad.x, POS.outPad.z + 0.3] : ty === 'pot' ? [POS.potOut.x, POS.potOut.z + 0.3] : OUTSPOT[ty]();
+  const held = ty => h.stack.count(ty) + 0, inflight = ty => (S.pt.cur ? 0 : 0);
+  if (h.state === 'idle') {
+    tx = -14; tz = -126.5; if (h.stack.length > 0 && h.incoming === 0) { h.state = 'toShip'; }
+    else { const c = S.pt.cur; let pick = null; for (const ty of need) { const src = srcOf(ty); const want = (c.need[ty] - (c.got[ty] || 0)) - held(ty); if (src && src.length > 0 && want > 0) { pick = ty; break; } } if (pick) { h.ptype = pick; h.state = 'toOut'; h.waitT = 0; } }
+  } else if (h.state === 'toOut') { const o = outSpot(h.ptype); tx = o[0]; tz = o[1]; if (Math.hypot(tx - gp.x, tz - gp.z) < 0.5) { h.state = 'load'; h.cd = 0.1; } }
+  else if (h.state === 'load') {
+    tx = null; const c = S.pt.cur, src = srcOf(h.ptype), want = c ? (c.need[h.ptype] - (c.got[h.ptype] || 0)) - held(h.ptype) - h.incoming : 0;
+    if (h.cd <= 0) { if (src && src.length > 0 && h.free() > 0 && want > 0) { const it = src.takeLast(); it.mesh.getWorldPosition(_w); scene.add(it.mesh); it.mesh.position.copy(_w); if (posable(it.mesh)) bouquetPose(it.mesh, false); sendToBack(h, it.mesh, it.type, 1.4); h.cd = 0.12; h.waitT = 0; }
+      else if (h.incoming === 0) { h.waitT = (h.waitT || 0) + dt; if (h.free() <= 0 || want <= 0 || h.waitT > 1.5) h.state = h.stack.length > 0 ? 'toShip' : 'idle'; } }
+  } else if (h.state === 'toShip') { tx = PORT.zone.x; tz = PORT.zone.z + 0.2; if (Math.hypot(tx - gp.x, tz - gp.z) < 0.6) { h.state = 'unload'; h.cd = 0.1; } }
+  else if (h.state === 'unload') {
+    tx = null; if (h.cd <= 0) { const it0 = h.stack.items.find(i => need.includes(i.type)); if (it0) { const it = takeFromBack(h, it0.type); if (posable(it.mesh)) bouquetPose(it.mesh, true); portLoad(it.type, it.mesh); h.cd = 0.1; } else if (h.stack.length > 0) { /* gereksiz ürün: rafa geri götür */ const o = h.stack.items[0]; const l = lane(o.type); if (l && shelfFree(o.type) > 0) { h.state = 'toShelf'; } else { const it = takeFromBack(h, o.type); rm(it.mesh); } } }
+    if (h.stack.length === 0 && h.incoming === 0) h.state = 'idle';
+  } else if (h.state === 'toShelf') { tx = 8.9; tz = -1.1; if (Math.hypot(tx - gp.x, tz - gp.z) < 0.5) { const o = h.stack.items[h.stack.items.length - 1]; if (o && shelfFree(o.type) > 0) toShelf(takeFromBack(h, o.type), h); else if (o) { const it = takeFromBack(h, o.type); rm(it.mesh); } if (h.stack.length === 0) h.state = 'idle'; } }
+  else h.state = 'idle';
+  let mv = 0, dx = 0, dz = 0; if (tx !== null) { dx = tx - gp.x; dz = tz - gp.z; const d = Math.hypot(dx, dz); if (d > 0.3) { const s2 = Math.min(d, spd * dt); gp.x += dx / d * s2; gp.z += dz / d * s2; h.vel.set(dx / d * spd, 0, dz / d * spd); mv = 1; faceChar(h, dx, dz, dt); } else h.vel.set(0, 0, 0); } else { h.vel.set(0, 0, 0); if (h.state === 'unload') faceChar(h, -0.3, -1, dt); }
+  watchdog(h, dt, gp, h.state + (h.ptype || ''), [-14, -126.5], c => { c.state = 'idle'; c.waitT = 0; c.cd = 0; });
+  updateSway(h, dt); animChar(h, dt, mv, t); h.stack.update(dt, t);
+}
+function portPersistLoad() { // yükleme: kayıtlı sözleşmeyi temizle, süre dolduysa öde
+  const c = S.pt.cur; if (c && typeof c === 'object') {
+    const num = v => Math.max(0, Math.floor(+v || 0)), need = {}, got = {}; for (const t in (c.need || {})) if (PRICE[t] && num(c.need[t]) > 0) { need[t] = Math.min(num(c.need[t]), 9999); got[t] = Math.min(num(c.got && c.got[t]), need[t]); }
+    if (!Object.keys(need).length) S.pt.cur = null; else { S.pt.cur = { need, got, reward: num(c.reward) || portReward(need, num(c.lv)), st: c.st === 'sail' ? 'sail' : 'load', until: isFinite(+c.until) ? +c.until : 0, lv: num(c.lv) }; }
+  } else S.pt.cur = null;
+  if (S.pt.cur && S.pt.cur.st === 'sail') { const rem = (S.pt.cur.until - Date.now()) / 1000; S.pt.cur.left = rem > 0 && rem <= 61 ? Math.min(60, rem) : 0; }
+  if (c && c.st === 'back') S.pt.cur = null; // dönüş ödemesi zaten yığına yazılmıştı
+  const pv = Math.max(0, Math.floor(+S.pt.pile || 0)); S.pt.pile = 0;
+  if (pv > 0 && PORT.pile) { const n = Math.min(14, Math.max(1, Math.round(pv / CFG.billValue))), v = Math.floor(pv / n); fillStack(PORT.pile, n, () => { const b = makeBill(); b.userData.v = v; return b; }, 'bill'); PORT.pile.extra = pv - v * n; }
+}
+C3EARLY.push(set => { if (PORT.z && !PORT.z.locked && PORT.pile.length + (PORT.pile.extra || 0) > 0) return set(PORT.mz.x, 0.8, PORT.mz.z, 'money'); return null; });
+C3OBJ.push((set, hold) => { if (!PORT.z || PORT.z.locked || S.lv.portW > 0) return null; for (const t of portNeeds()) if (hold(t) >= 5) return set(PORT.zone.x, 0.4, PORT.zone.z, 'ship'); return null; });
 /* ---- veri: mekan seviyeleri, dekor yuvaları, hedef sırası ---- */
 GEN('hon', 'Bal', 'hız', 'BAL KAVANOZU', iconHoney, 0xffb703, ['#ffb703', '#ffffff'], [60000, 240000], [-3.2, -101.4], () => unlockedZ('bee'), -6.2, -108);
 GEN('bon', 'Bonsai', 'hız', 'BONSAİ ATÖLYESİ', iconBonsai, 0xe8587a, ['#e8587a', '#ffffff'], [110000, 440000], [27.5, -96.2], () => unlockedZ('jap'), 20.5, -111);
@@ -3996,7 +4287,7 @@ Object.assign(AREA_MUL, { bee: 3, jap: 3, port: 3.5, fest: 3.5, mus: 4 });
   const i = GOALS.findIndex(q => q.key === 'citySpd' && q.lv === 2) + 1; GOALS.splice(i);
   const g = (k, l) => ({ key: k, lv: l });
   GOALS.push(g('bee', 1), g('beeW', 1), g('hiveSpd', 1), g('honSpd', 1), g('hiveN', 1), g('honSpd', 2), g('hiveSpd', 2), g('stars', 4), g('hiveN', 2), g('honSpd', 3), g('sbqSpd', 5), g('hiveSpd', 3), g('citySpd', 3), g('honSpd', 4), g('hiveN', 3), g('sbqSpd', 6), g('hiveSpd', 4), g('citySpd', 4), g('honSpd', 5), g('hiveN', 4),
-    g('jap', 1), g('bonW', 1), g('bonSpd', 1), g('bonSpd', 2), g('honSpd', 6), g('stars', 5), g('bonSpd', 3), g('hiveSpd', 5), g('sbqSpd', 7), g('bonSpd', 4), g('honSpd', 7), g('citySpd', 5), g('bonSpd', 5), g('bonSpd', 6), g('citySpd', 6), g('bonSpd', 7), g('citySpd', 7));
+    g('jap', 1), g('bonW', 1), g('bonSpd', 1), g('bonSpd', 2), g('honSpd', 6), g('stars', 5), g('bonSpd', 3), g('hiveSpd', 5), g('sbqSpd', 7), g('bonSpd', 4), g('honSpd', 7), g('citySpd', 5), g('bonSpd', 5), g('bonSpd', 6), g('citySpd', 6), g('bonSpd', 7), g('citySpd', 7), g('coll', 1), g('port', 1), g('portW', 1), g('portBonus', 1), g('portBonus', 2), g('portBonus', 3), g('portBonus', 4), g('portBonus', 5));
   for (const k in GFIRST) delete GFIRST[k]; GOALS.forEach((q, j) => { if (GFIRST[q.key] === undefined) GFIRST[q.key] = j; });
   Object.assign(MAIN_UNLOCKS, { bee: 1, beeW: 1, jap: 1, bonW: 1, coll: 1, port: 1, portW: 1, fest: 1, mus: 1 });
 })();
@@ -4005,13 +4296,12 @@ function buildC3() {
   PROD_LIST.push('honey', 'bonsai');
   const ct = POS.counter; for (const [t, sy, x0, n, dx] of [['honey', 2.2, ct.x + 0.2, 3, 0.5], ['bonsai', 2.2, ct.x + 1.8, 2, 0.55]]) { const l = new Stack(scene, (i, out) => out.set(x0 + (i % n) * dx, sy + 0.06, ct.z - 0.9), n); l.pend = 0; LANES[t] = l; EXTSTACKS.push(l); }
   world.add(mk(G.box, mat(0xe8a850), 0.9, 0.07, 0.4, ct.x + 2.45, 2.2, ct.z - 0.9));
-  buildBee(); buildJapan();
+  buildBee(); buildJapan(); buildColl(); buildPort();
 }
-function initC3() { hivesRefresh(true); }
+function initC3() { hivesRefresh(true); initColl(); }
 function updateC3(dt, t) {
-  updateBees(dt, t); updateBeek(dt, t); beeZoneActions(dt); updateJapan(dt, t);
+  updateBees(dt, t); updateBeek(dt, t); beeZoneActions(dt); updateJapan(dt, t); rareUpdate(dt, t); updatePort(dt, t);
 }
-function collBonus(k) { return 0; }
 /*C3-END*/
 /* =====================================================================
    15. INIT
@@ -4054,6 +4344,7 @@ window.__game = {
   EXTZ, STN, GARD, cafe: () => cafe, wed: () => wed, city: () => city, tractor: () => tractor, give(type, n) { for (let i = 0; i < n; i++) P.stack.add(['orchid', 'lav', 'sun', 'rosep', 'flower'].includes(type) ? makeFlowerItem(0, type === 'flower' ? 'tulip' : type) : makeItemOf(type), type); },
   bot(x, z) { BOT = (x || z) ? { x, z } : null; if (BOT) hideIntro(); }, hideIntro, objective() { objective(_obj); return Object.assign({}, _obj); }, get goal() { return curGoal; }, GOALS, UPG,
   S, stats, P: () => P, queue, beds, machine, inputPile, outputPile, moneyPile, get shelf() { return shelfB; }, get shelfP() { return shelfP; }, get potInput() { return potInput; }, get potOutput() { return potOutput; }, get zone2() { return zone2; }, get zone3() { return zone3; }, VAN, get vanLoad() { return vanLoad; }, get vanPile() { return vanPile; }, get cashier() { return cashier; }, get carrier() { return carrier; }, upPads, zones, customers, CFG, POS,
+  c3x() { return { list: RARE.list, check: checkSets, bonus: collBonus, SETS, RARE }; },
   helper: () => helper, get c3() { return { C3, JAP, E3, beek: () => beek, beeZone, hiveInterval, nearFlowerZones }; },
   carry(n) { while (P.stack.length) P.stack.items.pop(); for (let i = 0; i < n; i++) P.stack.add(makeFlowerItem(0, "tulip"), "flower"); },
   tp(x, z) { P.group.position.set(x, 0, z); P.vel.set(0, 0, 0); camInit = false; },
