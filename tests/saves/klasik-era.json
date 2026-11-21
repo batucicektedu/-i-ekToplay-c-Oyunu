@@ -1,0 +1,50 @@
+{
+ "key": "cicek_bahcesi_v1",
+ "value": {
+  "money": 2050,
+  "lv": {
+   "cap": 0,
+   "speed": 0,
+   "pack": 0,
+   "bed": 0,
+   "helper": 1,
+   "cashier": 0,
+   "carrier": 0,
+   "cashSpd": 0,
+   "carSpd": 0,
+   "carCap": 0,
+   "helpSpd": 0,
+   "sera": 0,
+   "van": 0
+  },
+  "tut": 0,
+  "x": {
+   "paid": {},
+   "shown": {
+    "bed": 1,
+    "sera": 1,
+    "helper": 1,
+    "helpSpd": 1,
+    "cap": 1,
+    "speed": 1,
+    "pack": 1,
+    "cashier": 1,
+    "carrier": 1
+   },
+   "mp": 0,
+   "vp": 0,
+   "sb": 0,
+   "sp": 0,
+   "pi": 0,
+   "po": 0,
+   "ii": 24,
+   "oo": 16,
+   "van": {
+    "away": false,
+    "load": 0,
+    "sum": 0,
+    "until": 0
+   }
+  }
+ }
+}

@@ -197,19 +197,41 @@ const MAIN_UNLOCKS = { bed: 1, helper: 1, cashier: 1, carrier: 1, sera: 1, van: 
 const S = { money: 0, lv: { cap: 0, speed: 0, pack: 0, bed: 0, helper: 0, cashier: 0, carrier: 0, cashSpd: 0, carSpd: 0, carCap: 0, helpSpd: 0, sera: 0, van: 0, lav: 0, lavW: 0, keseSpd: 0, parf: 0, parfW: 0, parfSpd: 0, cafe: 0, cafeW: 0, teaSpd: 0, wed: 0, wedBonus: 0, sunf: 0, sunW: 0, sbqSpd: 0, city: 0, cityW: 0, citySpd: 0, stars: 0 }, tut: 0 };
 let saveDirty = false, saveTimer = 0;
 let introDone = false, curGoal = null, curGoalIdx = -1, lastGoalIdx = -2;
+const SAVE_VER = 2, BAK_KEY = SAVE_KEY + '_bak', TMP_KEY = SAVE_KEY + '_tmp';
+let SAVE_BLOCKED = false; // okuma bozuk/başarısızsa eski kaydın üzerine yazma
+function readSaveKey(k) { try { const r = localStorage.getItem(k); if (r === null) return { none: true }; const o = JSON.parse(r); return o && typeof o === 'object' && !Array.isArray(o) ? { o, raw: r } : { bad: true, raw: r }; } catch (e) { return { bad: true }; } }
+const hasProgress = o => !!o && (+o.money > 0 || (o.lv && Object.keys(o.lv).some(k => +o.lv[k] > 0)) || +o.tut > 0);
+function migrateSave(s) { // ver alanı yoksa 1 sayılır; sadece alan ekler, hiçbir şeyi silmez
+  if (!s.lv || typeof s.lv !== 'object') s.lv = {};
+  const v = Math.floor(+s.ver) || 1; if (v < 2) { /* v1 -> v2: geçici işçi durumları artık kaydedilmez/yok sayılır */ }
+  s.ver = SAVE_VER; return s;
+}
 (function loadSave() {
   try {
-    const s = JSON.parse(localStorage.getItem(SAVE_KEY));
-    if (s && typeof s === 'object') {
-      S.money = Math.max(0, Math.floor(+s.money || 0));
-      for (const k in S.lv) S.lv[k] = clamp(Math.floor((s.lv && s.lv[k]) || 0), 0, UPG[k] ? UPG[k].costs.length : 7);
-      S.tut = clamp(Math.floor(+s.tut || 0), 0, 12); LOADED_X = s.x && typeof s.x === 'object' ? s.x : null;
+    let r = readSaveKey(SAVE_KEY), s = r.o;
+    if (!s && !r.none) { // ana kayıt bozuk: yedeği dene, bozuk kopyayı sakla
+      try { if (r.raw) localStorage.setItem(SAVE_KEY + '_corrupt', r.raw); } catch (e) {}
+      const b = readSaveKey(BAK_KEY); if (b.o) s = b.o; else SAVE_BLOCKED = true;
     }
-  } catch (e) {}
+    if (s) {
+      s = migrateSave(s);
+      const m = Math.floor(+s.money); S.money = isFinite(m) ? Math.max(0, m) : 0;
+      for (const k in S.lv) { const v = Math.floor(+(s.lv && s.lv[k])); S.lv[k] = clamp(isFinite(v) ? v : 0, 0, UPG[k] ? UPG[k].costs.length : 7); }
+      S.tut = clamp(Math.floor(+s.tut) || 0, 0, 12); LOADED_X = s.x && typeof s.x === 'object' ? s.x : null;
+    }
+  } catch (e) { SAVE_BLOCKED = true; }
 })();
 function writeSave() {
-  saveDirty = false; if (window.__resetting) return;
-  try { const o = JSON.parse(JSON.stringify(S)); try { o.x = snapshot(); } catch (e) {} localStorage.setItem(SAVE_KEY, JSON.stringify(o)); } catch (e) {}
+  saveDirty = false; if (window.__resetting || SAVE_BLOCKED) return;
+  try {
+    const o = JSON.parse(JSON.stringify(S)); o.ver = SAVE_VER; try { o.x = snapshot(); } catch (e) {}
+    if (!isFinite(o.money)) return; const str = JSON.stringify(o);
+    const cur = readSaveKey(SAVE_KEY);
+    if (!hasProgress(o) && cur.o && hasProgress(cur.o)) return; // boş oyun iyi kaydın üstüne yazılmaz
+    localStorage.setItem(TMP_KEY, str); if (localStorage.getItem(TMP_KEY) !== str) return;
+    if (cur.o) { try { localStorage.setItem(BAK_KEY, cur.raw); } catch (e) {} }
+    localStorage.setItem(SAVE_KEY, str);
+  } catch (e) {}
 }
 
 let AC = null; const sfxLast = {};
@@ -991,7 +1013,7 @@ function sendToBack(c, mesh, type, h) {
   fly(mesh, out => {
     const idx = Math.min(base, c.stack.length + c.incoming - 1);
     c.slotFn(idx, _w); charToWorld(c, _w, out); return c.yaw;
-  }, 0.2, h || 1.4, () => { c.incoming--; c.stack.add(mesh, type); if (c === P) { charToWorld(c, _w.set(0, 1.2, -0.7), _e); dust(_e.x, _e.y, _e.z, 2, 0.22); } });
+  }, 0.2, h || 1.4, () => { c.incoming = Math.max(0, c.incoming - 1); c.stack.add(mesh, type); if (c === P) { charToWorld(c, _w.set(0, 1.2, -0.7), _e); dust(_e.x, _e.y, _e.z, 2, 0.22); } });
 }
 function takeFromBack(c, type) {
   const it = c.stack.takeLast(type); if (!it) return null;
@@ -1764,21 +1786,23 @@ function updateHelper(dt, t) {
   const full = h.stack.length + h.incoming >= CFG.helperCap;
   if (!h.kind) h.kind = 'flower';
   if (h.state === 'seek') {
-    if (h.stack.length === 0 && h.incoming === 0 && !h.target) h.kind = helperKind();
+    if (h.stack.length === 0 && h.incoming === 0 && !h.target && !(h.idle > 0)) h.kind = helperKind();
     if (full) h.state = 'deliver';
     else {
-      if (h.target && (h.target.t < h.target.gt || h.target.bed.locked)) h.target = null;
+      if (h.target && (h.target.t < h.target.gt || h.target.bed.locked)) dropTarget(h);
       if (!h.target) {
-        let best = 1e9;
-        for (const b of beds) { if (b.locked) continue; for (const f of b.flowers) if (f.t >= f.gt && !f.claimed && (f.type === 'orchid') === (h.kind === 'orchid')) { const d = (f.x - h.group.position.x) ** 2 + (f.z - h.group.position.z) ** 2; if (d < best) { best = d; h.target = f; } } }
-        if (h.target) h.target.claimed = true;
+        const pickT = kind => { let best = 1e9, bf = null; for (const b of beds) { if (b.locked) continue; for (const f of b.flowers) if (claimOK(f) && (kind === 'orchid' ? f.type === 'orchid' : !ITYPE[f.type])) { const d = (f.x - h.group.position.x) ** 2 + (f.z - h.group.position.z) ** 2; if (d < best) { best = d; bf = f; } } } return bf; };
+        let f = pickT(h.kind);
+        if (!f && h.stack.length === 0 && h.incoming === 0 && zone2 && !zone2.locked) { const k2 = h.kind === 'orchid' ? 'flower' : 'orchid'; f = pickT(k2); if (f) h.kind = k2; } // tercih edilen tür yoksa diğerine geç (kilitlenme önlemi)
+        if (f) claimF(f, h);
       }
       if (h.target) { tx = h.target.x; tz = h.target.z; h.idle = 0; }
-      else { h.idle += dt; if (h.idle > 1.2 && h.stack.length > 0) h.state = 'deliver'; else if (h.idle > 3 && h.stack.length === 0) { h.kind = h.kind === 'orchid' ? 'flower' : 'orchid'; h.idle = 0; if (h.kind === 'orchid' && !(zone2 && !zone2.locked)) h.kind = 'flower'; } }
+      else { h.idle += dt; if (h.idle > 1.2 && h.stack.length > 0) h.state = 'deliver'; }
     }
   } else if (h.state === 'deliver') {
     const ot = h.stack.items.length && h.stack.items[0].type === 'orchid';
     if (ot) { tx = potZone.x; tz = potZone.z; } else { tx = POS.packPad.x + Math.sin(1.3) * 0.2; tz = POS.packPad.z; }
+    if (h.stack.length > 0 && h.incoming === 0 && h.stack.count('flower') + h.stack.count('orchid') === 0) { let it; while ((it = h.stack.takeLast())) rm(it.mesh); } // yanlış türde ürün (ör. gül/lavanta) asla teslim edilemez: at
     if (h.stack.items.length === 0 && h.incoming === 0) h.state = 'seek';
   }
   let mv = 0, dx = 0, dz = 0;
@@ -1797,6 +1821,7 @@ function updateHelper(dt, t) {
     if (h.stack.count('flower') > 0 && packZone.contains(gx, gz) && inputPile.length + (inputPile.pend || 0) < CFG.inputCap) { transferToInput(h); h.cd = 0.1; }
     else if (h.stack.count('orchid') > 0 && potZone.contains(gx, gz) && potInput.length + (potInput.pend || 0) < CFG.inputCap) { dropToPot(h); h.cd = 0.1; }
   }
+  watchdog(h, dt, h.group.position, h.kind, [-9.2, 3.2], resetWalker);
   updateSway(h, dt); animChar(h, dt, mv, t); h.stack.update(dt, t);
 }
 /* ---- cashier & carrier ---- */
@@ -1838,9 +1863,10 @@ function updateCarrier(dt, t) {
   const outSpot = ty => ty === 'bouquet' ? [POS.outPad.x, POS.outPad.z + 0.3] : ty === 'pot' ? [POS.potOut.x, POS.potOut.z + 0.3] : OUTSPOT[ty]();
   if (h.state === 'idle') {
     tx = 7.5; tz = 4.6;
-    const pt = carrierPick(load);
+    if (h.stack.length > 0 && h.incoming === 0) { h.dest = 'shelf'; h.state = 'toShelf'; h.stuck = 0; } // elde kalan ürün: rafa götür
+    const pt = h.state === 'idle' ? carrierPick(load) : null;
     if (pt) { h.dest = 'shelf'; h.ptype = pt; h.state = 'toOut'; }
-    else if (outSources().some(q => q.length > 0) && vanFree() - load > 0) { h.dest = 'van'; h.ptype = PROD_LIST.find(t => srcOf(t) && srcOf(t).length > 0) || 'bouquet'; h.state = 'toOut'; }
+    else if (h.state === 'idle' && outSources().some(q => q.length > 0) && vanFree() - load > 0) { h.dest = 'van'; h.ptype = PROD_LIST.find(t => srcOf(t) && srcOf(t).length > 0) || 'bouquet'; h.state = 'toOut'; }
   } else if (h.state === 'toOut') { const o = outSpot(h.ptype); tx = o[0]; tz = o[1]; if (Math.hypot(tx - gp.x, tz - gp.z) < 0.4) { h.state = 'load'; h.cd = 0.1; } }
   else if (h.state === 'load') {
     tx = null;
@@ -1858,9 +1884,9 @@ function updateCarrier(dt, t) {
   } else if (h.state === 'toShelf') { if (h.dest === 'van') { tx = 21.6; tz = 24; } else { tx = 8.9; tz = -1.1; } if (Math.hypot(tx - gp.x, tz - gp.z) < 0.4) { h.state = 'unload'; h.cd = 0.1; } }
   else if (h.state === 'unload') {
     if (h.cd <= 0 && h.stack.length > 0) {
-      const top = h.stack.items[h.stack.items.length - 1].type;
+      let top = h.stack.items[h.stack.items.length - 1].type; if (h.dest !== 'van') { const ok = h.stack.items.slice().reverse().find(i => shelfFree(i.type) > 0); if (ok) top = ok.type; } // üstteki ürünün rafı doluysa diğer ürünü bırak
       if (h.dest === 'van') { if (vanFree() > 0) { toVan(takeFromBack(h, null), h); h.cd = 0.14; } else if (VAN.state !== 'parked') { h.dest = 'shelf'; h.ptype = top; h.state = 'toShelf'; } }
-      else if (shelfFree(top) > 0) { toShelf(takeFromBack(h, null), h); h.cd = 0.14; }
+      else if (shelfFree(top) > 0) { toShelf(takeFromBack(h, top), h); h.cd = 0.14; }
       else { h.stuck = (h.stuck || 0) + dt; if (h.stuck > 4) { h.stuck = 0; h.ptype = top === 'pot' ? 'bouquet' : 'pot'; if (!h.stack.items.some(i => i.type !== top)) { /* keep waiting */ } } }
     }
     if (h.stack.length === 0) h.state = 'idle';
@@ -1868,6 +1894,7 @@ function updateCarrier(dt, t) {
   let mv = 0, dx = 0, dz = 0;
   if (tx !== null) { dx = tx - gp.x; dz = tz - gp.z; const d = Math.hypot(dx, dz); if (d > 0.3) { const st = Math.min(d, spd * dt); gp.x += dx / d * st; gp.z += dz / d * st; h.vel.set(dx / d * spd, 0, dz / d * spd); mv = 1; faceChar(h, dx, dz, dt); } else h.vel.set(0, 0, 0); }
   else { h.vel.set(0, 0, 0); if (h.state === 'unload') faceChar(h, 1, -0.4, dt); }
+  watchdog(h, dt, gp, h.dest + h.ptype, [5.0, 3.4], c => { c.state = 'idle'; c.waitT = 0; c.stuck = 0; c.cd = 0; });
   updateSway(h, dt); animChar(h, dt, mv, t); h.stack.update(dt, t);
 }
 /* ---- customers ---- */
@@ -1958,9 +1985,26 @@ function removeCustomer(i) {
    11. GAMEPLAY ACTIONS
    ===================================================================== */
 const GROW = { orchid: 18, lav: 12, sun: 15, rosep: 10 }, ITYPE = { orchid: 'orchid', lav: 'lav', sun: 'sun', rosep: 'rosep' };
+/* ---- işçi talepleri (claim): sahipli; sahibi artık hedeflemiyorsa talep geçersiz sayılır ---- */
+const claimOK = f => f.t >= f.gt && !(f.ban > T) && (!f.claimed || !f.owner || f.owner.target !== f);
+function claimF(f, who) { f.claimed = true; f.owner = who; who.target = f; }
+function dropTarget(h) { const f = h.target; if (f && f.owner === h) { f.claimed = false; f.owner = null; } h.target = null; }
+const badPos = p => !isFinite(p.x) || !isFinite(p.z) || Math.abs(p.x) > 400 || Math.abs(p.z) > 400;
+/* genel bekçi: ~10 sn ilerleme yoksa talepleri bırak, durumu sıfırla; takılı hedefi 30 sn yasakla */
+function watchdog(h, dt, pos, extra, home, reset) {
+  if (badPos(pos)) { pos.x = home[0]; pos.z = home[1]; dropTarget(h); reset(h); return; }
+  const w = h.wd || (h.wd = { sig: '', t: 0, c: 0 }); w.c += dt; if (w.c < 0.5) return; const el = w.c; w.c = 0;
+  const sig = h.state + '|' + Math.round(pos.x * 5) + '|' + Math.round(pos.z * 5) + '|' + extra + '|' + (h.stack ? h.stack.length : 0) + '|' + (h.incoming || 0);
+  if (sig !== w.sig) { w.sig = sig; w.t = 0; return; }
+  w.t += el; if (w.t < 10) return; w.t = 0;
+  if (h.target && h.target.t !== undefined) h.target.ban = T + 30;
+  if (h.incoming > 0) h.incoming = 0;
+  dropTarget(h); reset(h);
+}
+function resetWalker(h) { h.state = 'seek'; h.idle = 0; h.cd = 0; h.vel && h.vel.set(0, 0, 0); }
 function harvest(f, who) {
   const item = makeFlowerItem(f.ci, f.type); item.position.set(f.x, 0.6, f.z); scene.add(item);
-  f.gt = GROW[f.type] || 10; f.t = 0; f.pop = 0.18; f.claimed = false; f.full = false; f.ss = 0.001; f.bs = 0.001;
+  f.gt = GROW[f.type] || 10; f.t = 0; f.pop = 0.18; f.claimed = false; f.owner = null; f.full = false; f.ss = 0.001; f.bs = 0.001;
   petals(f.x, 0.8, f.z, colsFor(f.type)[f.ci % colsFor(f.type).length]);
   sendToBack(who, item, ITYPE[f.type] || 'flower', 1.6);
   if (who === P) { stats.harvested++; sfx('pick'); }
@@ -2149,7 +2193,7 @@ document.getElementById('reset').addEventListener('click', () => { menuEl.style.
 document.getElementById('mClose').addEventListener('click', () => { menuEl.style.display = 'none'; });
 mQ.addEventListener('click', () => { try { localStorage.setItem(QKEY, HQ ? 'low' : 'high'); } catch (e) {} writeSave(); location.reload(); });
 document.getElementById('mReset').addEventListener('click', () => {
-  if (window.confirm('Tüm ilerleme silinsin mi?')) { window.__resetting = true; try { localStorage.removeItem(SAVE_KEY); } catch (e) {} location.reload(); }
+  if (window.confirm('Tüm ilerleme silinsin mi?')) { window.__resetting = true; try { localStorage.removeItem(SAVE_KEY); localStorage.removeItem(BAK_KEY); localStorage.removeItem(TMP_KEY); } catch (e) {} location.reload(); }
 });
 window.addEventListener('beforeunload', () => writeSave());
 window.addEventListener('pagehide', () => writeSave());
@@ -2711,8 +2755,8 @@ function updateGardener(h, dt, t) {
   if (h.state === 'seek') {
     if (full) h.state = 'deliver';
     else {
-      if (h.target && h.target.t < h.target.gt) h.target = null;
-      if (!h.target) { let best = 1e9; for (const b of sp.beds()) { if (b.locked) continue; for (const f of b.flowers) if (f.t >= f.gt && !f.claimed) { const d = (f.x - gp.x) ** 2 + (f.z - gp.z) ** 2; if (d < best) { best = d; h.target = f; } } } if (h.target) h.target.claimed = true; }
+      if (h.target && (h.target.t < h.target.gt || h.target.bed.locked)) dropTarget(h);
+      if (!h.target) { let best = 1e9, bf = null; for (const b of sp.beds()) { if (b.locked) continue; for (const f of b.flowers) if (claimOK(f)) { const d = (f.x - gp.x) ** 2 + (f.z - gp.z) ** 2; if (d < best) { best = d; bf = f; } } } if (bf) claimF(bf, h); }
       if (h.target) { tx = h.target.x; tz = h.target.z; h.idle = 0; } else { h.idle += dt; if (h.idle > 1.2 && h.stack.length > 0) h.state = 'deliver'; }
     }
   } else { const d = sp.dest(); tx = d.zone.x; tz = d.zone.z; if (h.stack.length === 0 && h.incoming === 0) h.state = 'seek'; }
@@ -2722,6 +2766,7 @@ function updateGardener(h, dt, t) {
   h.cd -= dt;
   if (h.state === 'seek' && h.target && h.cd <= 0 && Math.hypot(h.target.x - gp.x, h.target.z - gp.z) < 0.9 && h.free() > 0) { harvest(h.target, h); h.target = null; h.cd = 0.12; }
   if (h.state === 'deliver' && h.cd <= 0) { const d = sp.dest(); if (d.zone.contains(gp.x, gp.z) && h.stack.count(sp.type) > 0 && d.stack.length + (d.stack.pend || 0) < 24) { dropTo(d.stack, h, sp.type); h.cd = 0.1; } }
+  watchdog(h, dt, gp, 0, [sp.sx, sp.sz], resetWalker);
   updateSway(h, dt); animChar(h, dt, mv, t); h.stack.update(dt, t);
 }
 function showExt(z) {
@@ -2858,7 +2903,7 @@ function fireworks(x, z) {
 function spawnWaiter(instant) {
   const c = makeChar({ shirt: 0xffffff, pants: 0x222833, hair: 0x2a1a10, hairStyle: 'bob', outfit: 'apron', apron: 0xff7a8a, skin: 0xf0b98a }); c.group.position.set(-4, 0, -45); scene.add(c.group); c.hold = null; c.target = null; c.cd = 0; popInWorker(c, instant); return c;
 }
-function teaWaiting() { return cafe.tables.filter(t => t.guest && t.guest.state === 'wait' && !t.guest.pending && !t.claimed); }
+function teaWaiting() { const w = cafe.waiter; return cafe.tables.filter(t => t.guest && t.guest.state === 'wait' && !t.guest.pending && (!t.claimed || !w || w.target !== t)); }
 function serveTea(t, mesh, fromPos) {
   const g = t.guest; g.pending = true; t.claimed = false;
   fly(mesh, out => { out.set(g.group.position.x, 1.2, g.group.position.z + 0.3); return 0; }, 0.25, 1.2, () => { rm(mesh); sfx('drop'); g.state = 'drink'; g.drink = 2.2; g.pending = false; if (g.bubble) g.bubble.visible = false; g.held = makeItemOf('tea'); g.held.scale.setScalar(0.9); g.held.position.set(0, 0.95, 0.45); g.group.add(g.held); });
@@ -2866,7 +2911,7 @@ function serveTea(t, mesh, fromPos) {
 function spawnGuest() {
   const free = cafe.tables.filter(t => !t.guest); if (!free.length) return; const t = pick(free);
   const fem = Math.random() < 0.5, c = makeChar({ shirt: pick(SHIRTS), pants: pick([0x3b4a6b, 0x5b4636, 0x2f6f5f]), hair: pick(HAIRS), skin: pick(SKINS), hairStyle: fem ? pick(['bob', 'long', 'ponytail', 'bun']) : 'short', dress: fem ? pick(SHIRTS) : 0, shoe: 0x3a2a22 });
-  c.group.position.set(5.4, 0, -40.6); c.state = 'walk'; c.table = t; c.wait = 0; c.want = 1; c.got = 0; c.prod = 'tea'; c.vip = Math.random() < 0.15; t.guest = c; scene.add(c.group); cafe.guests.push(c);
+  c.group.position.set(5.4, 0, -40.6); c.state = 'walk'; c.table = t; t.claimed = false; c.wait = 0; c.want = 1; c.got = 0; c.prod = 'tea'; c.vip = Math.random() < 0.15; t.guest = c; scene.add(c.group); cafe.guests.push(c);
   c.seat = [t.x + (Math.random() < 0.5 ? -1.3 : 1.3), t.z + 0.0];
 }
 function updateGuest(c, dt, t, i) {
@@ -2890,6 +2935,7 @@ function updateCafe(dt, t) {
     if (!w.hold) { const tb = teaWaiting()[0]; if (tb && tray.length > 0) { tx = STN.tea.outZone.x; tz = STN.tea.outZone.z; if (Math.hypot(tx - gw.x, tz - gw.z) < 0.8 && w.cd <= 0) { const it = tray.takeLast(); if (it) { w.hold = it.mesh; w.group.add(w.hold); w.hold.position.set(0, 1.6, 0.3); w.hold.scale.setScalar(0.8); w.target = null; } } } else { tx = -4; tz = -45; } }
     else { if (!w.target || !w.target.guest || w.target.guest.state !== 'wait') { w.target = teaWaiting()[0] || null; if (w.target) w.target.claimed = true; } if (w.target) { tx = w.target.x; tz = w.target.z + 1.5; if (Math.hypot(tx - gw.x, tz - gw.z) < 0.8) { const m = w.hold; w.group.remove(m); scene.add(m); m.position.set(gw.x, 1.6, gw.z); m.scale.setScalar(1); w.hold = null; serveTea(w.target, m); w.target = null; w.cd = 0.4; } } else { /* masa kalmadı: tepsiye geri bırak */ tray.add(w.hold, 'tea'); w.group.remove(w.hold); scene.add(w.hold); w.hold = null; } }
     let mv = 0; const spd = 4.6 * (1 + 0.12 * (S.lv.teaSpd || 0)); if (tx !== null) { const dx = tx - gw.x, dz = tz - gw.z, d = Math.hypot(dx, dz); if (d > 0.35) { const s2 = Math.min(d, spd * dt); gw.x += dx / d * s2; gw.z += dz / d * s2; w.vel.set(dx / d * spd, 0, dz / d * spd); mv = 1; faceChar(w, dx, dz, dt); } else w.vel.set(0, 0, 0); } else w.vel.set(0, 0, 0);
+    watchdog(w, dt, gw, (w.hold ? 1 : 0) + '' + (w.target ? 1 : 0), [-4, -45], q => { for (const tb of cafe.tables) tb.claimed = false; q.target = null; q.cd = 0; });
     animChar(w, dt, mv, t);
   }
 }
@@ -2933,10 +2979,11 @@ function updateTractor(dt, t) {
   const spd = 7; let tx = null, tz = null; const crate = STN.sbq.ins[0];
   if (tr.state === 'seek') {
     if (tr.load >= 30) tr.state = 'haul';
-    else { if (tr.target && tr.target.t < tr.target.gt) tr.target = null; if (!tr.target) { let best = 1e9; for (const b of EXTZ.sunf.beds) for (const f of b.flowers) if (f.t >= f.gt && !f.claimed) { const d = (f.x - gp.x) ** 2 + (f.z - gp.z) ** 2; if (d < best) { best = d; tr.target = f; } } if (tr.target) tr.target.claimed = true; } if (tr.target) { tx = tr.target.x; tz = tr.target.z; } else if (tr.load > 0) tr.state = 'haul'; }
+    else { if (tr.target && (tr.target.t < tr.target.gt || tr.target.bed.locked)) dropTarget(tr); if (!tr.target) { let best = 1e9, bf = null; for (const b of EXTZ.sunf.beds) { if (b.locked) continue; for (const f of b.flowers) if (claimOK(f)) { const d = (f.x - gp.x) ** 2 + (f.z - gp.z) ** 2; if (d < best) { best = d; bf = f; } } } if (bf) claimF(bf, tr); } if (tr.target) { tx = tr.target.x; tz = tr.target.z; } else if (tr.load > 0) tr.state = 'haul'; }
   } else { tx = crate.zone.x; tz = crate.zone.z; if (Math.hypot(tx - gp.x, tz - gp.z) < 1.2) { const n = Math.min(tr.load, 24 - crate.stack.length - (crate.stack.pend || 0)); for (let i = 0; i < n; i++) { crate.stack.pend = (crate.stack.pend || 0) + 1; later(i * 0.05, () => { const m = makeFlowerItem(rand(0, 4) | 0, 'sun'); m.position.set(gp.x, 2, gp.z); scene.add(m); fly(m, out => { crate.stack.slotFn(Math.min(crate.stack.length + 0, 23), out); return 0; }, 0.3, 1.5, () => { crate.stack.pend--; crate.stack.add(m, 'sun'); }); }); } tr.load -= n; if (tr.load <= 0) tr.state = 'seek'; else tr.state = tr.load >= 30 ? 'haul' : 'seek'; } }
   if (tx !== null) { const dx = tx - gp.x, dz = tz - gp.z, d = Math.hypot(dx, dz); if (d > 0.2) { const s2 = Math.min(d, spd * dt); gp.x += dx / d * s2; gp.z += dz / d * s2; tr.yaw += angDiff(tr.yaw, Math.atan2(dx, dz)) * (1 - Math.exp(-6 * dt)); tr.g.rotation.y = tr.yaw; for (const w of tr.wheels) w.rotation.x += spd * dt / 0.6; if (Math.random() < dt * 10) dust(gp.x, 0.2, gp.z, 1, 0.5); }
-    if (tr.state === 'seek' && tr.target && Math.hypot(tr.target.x - gp.x, tr.target.z - gp.z) < 1.1) { const f = tr.target; f.gt = GROW.sun; f.t = 0; f.pop = 0.18; f.claimed = false; f.full = false; f.ss = 0.001; f.bs = 0.001; petals(f.x, 0.8, f.z, 0xffc800); tr.load++; tr.target = null; sfx('pick'); } }
+    if (tr.state === 'seek' && tr.target && Math.hypot(tr.target.x - gp.x, tr.target.z - gp.z) < 1.1) { const f = tr.target; f.gt = GROW.sun; f.t = 0; f.pop = 0.18; f.claimed = false; f.owner = null; f.full = false; f.ss = 0.001; f.bs = 0.001; petals(f.x, 0.8, f.z, 0xffc800); tr.load++; tr.target = null; sfx('pick'); } }
+  watchdog(tr, dt, gp, tr.load, [-8, -70], resetWalker);
 }
 /* ---- şehir şubesi ---- */
 function spawnCityCust() {
@@ -3026,6 +3073,7 @@ window.__game = {
   carry(n) { while (P.stack.length) P.stack.items.pop(); for (let i = 0; i < n; i++) P.stack.add(makeFlowerItem(0, "tulip"), "flower"); },
   tp(x, z) { P.group.position.set(x, 0, z); P.vel.set(0, 0, 0); camInit = false; },
   sim(sec) { const n = Math.round(sec * 30); for (let i = 0; i < n; i++) update(1 / 30); },
+  simDt(sec, dt) { const n = Math.round(sec / dt); for (let i = 0; i < n; i++) update(dt); },
   render() { if (composer) composer.render(0); else renderer.render(scene, camera); },
   get scene() { return scene; }, fill(name, n) { const M = { input: [inputPile, () => makeFlowerItem(0, 'tulip'), 'flower'], output: [outputPile, () => makeBouquetItem(undefined, true), 'bouquet'], potIn: [potInput, () => makeFlowerItem(0, 'orchid'), 'orchid'], potOut: [potOutput, () => makePotItem(true), 'pot'], shelfB: [shelfB, () => makeBouquetItem(undefined, true), 'bouquet'], shelfP: [shelfP, () => makePotItem(true), 'pot'], vanLoad: [vanLoad, () => makeBouquetItem(undefined, true), 'bouquet'], money: [moneyPile, makeBill, 'bill'], vanMoney: [vanPile, makeBill, 'bill'] }[name]; const st = M[0]; while (st.length) rm(st.items.pop().mesh); fillStack(st, n, M[1], M[2]); }, get calls() { return renderer.info.render.calls; }, get tris() { return renderer.info.render.triangles; }, tutStep: () => S.tut, forceVip() { custCount = 5; }, zoom(v) { camMul = v; }
 };
