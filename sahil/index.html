@@ -1685,6 +1685,16 @@ const potM = { x: 40.3, z: -3, working: false, timer: 0, pendingOut: 0, group: n
 const SZ = { x0: 21, x1: 45, z0: -12, z1: 12 };
 function pivotGroup(px, pz) { const g = new THREE.Group(); g.position.set(px, 0, pz); g.userData.px = px; g.userData.pz = pz; return g; }
 function ad(g, o, x, y, z) { o.position.set(x - g.userData.px, y, z - g.userData.pz); g.add(o); return o; }
+/* gelgit: midye kayalığında su çekilince midyeler ortaya çıkar; sadece alçak gelgitte toplanır */
+const smoothstep01 = x => x * x * (3 - 2 * x);
+const TIDE = { w: null, level: 1, low: false, per: 36 };
+const tideOK = f => f.type !== 'orchid' || TIDE.low;
+function updateTide(dt) {
+  if (!zone2 || zone2.locked) return;
+  const u = (T % TIDE.per) / TIDE.per; TIDE.level = 0.5 + 0.5 * Math.cos(u * TAU); const was = TIDE.low; TIDE.low = TIDE.level < 0.3;
+  if (TIDE.w) { const y = lerp(0.04, 0.46, TIDE.level); TIDE.w.position.y = y; const k = 0.3 + 0.7 * smoothstep01(TIDE.level); TIDE.w.scale.set(7.6 * k, 6.4 * k, 1); }
+  if (TIDE.low !== was) { const gp = P.group.position; if (TIDE.low && gp.x > 14) { toast('Gelgit çekildi! Midyeler ortaya çıktı'); sparkles(28.5, 0.6, -3, 14, 0xfff2a0, 3); } for (const f of zone2.bed.flowers) { f.vis = TIDE.low; writeFlower(f); } }
+}
 function buildSera() {
   zone2 = { locked: true, popT: undefined, groups: [] };
   const woodMt = woodM(), dark = mat(0x5a2f12), light = mat(0xe8a850);
@@ -1706,15 +1716,15 @@ function buildSera() {
   addCollider(SZ.x0 - 0.2, SZ.x1 + 0.2, SZ.z0 - 0.4, SZ.z1 + 0.4, () => zone2.locked);
   // ---- greenhouse with orchid bed
   const gh = pivotGroup(28.5, -3); gh.visible = false; world.add(gh); zone2.groups.push([gh, 0]);
-  const glass = LM({ color: lc(0xbfe8f5), transparent: true, opacity: 0.28, depthWrite: false, roughness: 0.15 }), white = mat(0xffffff);
-  const slab = new THREE.Mesh(G.plane, LM({ color: lc(0xcfd6dc) })); slab.rotation.x = -Math.PI / 2; slab.scale.set(11.6, 9.4, 1); ad(gh, slab, 28.5, 0.035, -3); slab.receiveShadow = true;
-  ad(gh, mk(G.box, glass, 11.4, 3.2, 0.08), 28.5, 1.6, -7.4); ad(gh, mk(G.box, glass, 11.4, 3.2, 0.08), 28.5, 1.6, 1.4); ad(gh, mk(G.box, glass, 0.08, 3.2, 8.8), 34.2, 1.6, -3);
-  for (const sx of [-5.7, -1.9, 1.9, 5.7]) for (const sz of [-7.4, 1.4]) ad(gh, mk(G.box, white, 0.14, 3.3, 0.14), 28.5 + sx, 1.65, sz);
-  for (const sz of [-7.4, 1.4]) { ad(gh, mk(G.box, white, 11.5, 0.12, 0.14), 28.5, 3.25, sz); ad(gh, mk(G.box, white, 11.5, 0.1, 0.14), 28.5, 0.06, sz); }
-  ad(gh, mk(G.box, white, 0.14, 0.14, 8.9), 34.2, 3.25, -3); ad(gh, mk(G.box, white, 0.14, 3.3, 0.14), 22.8, 1.65, -7.4); ad(gh, mk(G.box, white, 0.14, 3.3, 0.14), 22.8, 1.65, 1.4); ad(gh, mk(G.box, white, 0.14, 0.14, 8.9), 22.8, 3.25, -3);
-  const rf1 = mk(G.box, glass, 11.4, 0.08, 4.8, 0, 0, 0); rf1.rotation.x = 0.42; ad(gh, rf1, 28.5, 3.95, -5.2); const rf2 = mk(G.box, glass, 11.4, 0.08, 4.8, 0, 0, 0); rf2.rotation.x = -0.42; ad(gh, rf2, 28.5, 3.95, -0.8); 
-  ad(gh, mk(G.box, white, 11.5, 0.14, 0.14), 28.5, 4.75, -3);
-  poolRim(gh, 28.5, -3, 6.6, 5.4, 0.33); poolWater(gh, 28.5, -3, 6.5, 5.3, 0.31);
+  const white = mat(0xffffff);
+  const slab = new THREE.Mesh(G.plane, LM({ color: lc(0xcdb98a) })); slab.rotation.x = -Math.PI / 2; slab.scale.set(11.6, 9.4, 1); ad(gh, slab, 28.5, 0.035, -3); slab.receiveShadow = true;
+  { // kayalık: havuzun çevresinde kayalar + her midyenin altında küçük kaya (gelgitte ortaya çıkar)
+    const R_ = [], rc = [0x6f7478, 0x8a8f92, 0x5d6266, 0x7b8185];
+    for (let i = 0; i < 26; i++) { const a = i / 26 * TAU, rx = 3.9 + (i % 3) * 0.22, rz = 3.2 + (i % 2) * 0.25; R_.push(part(G.sph, rc[i % 4], 28.5 + Math.cos(a) * rx, 0.25, -3 + Math.sin(a) * rz, 0.55 + (i % 4) * 0.12, 0.42 + (i % 3) * 0.1, 0.5 + (i % 5) * 0.08)); }
+    for (let r = 0; r < 5; r++) for (let c = 0; c < 7; c++) R_.push(part(G.sph, rc[(r + c) % 4], 28.5 + (c - 3) * 0.95, 0.12, -3 + (r - 2) * 0.98, 0.33, 0.22, 0.3));
+    const rk = new THREE.Mesh(mergeParts(R_), vcMat); rk.castShadow = true; rk.receiveShadow = true; ad(gh, rk, 0, 0, 0); rk.position.set(-gh.userData.px, 0, -gh.userData.pz);
+  }
+  TIDE.w = poolWater(gh, 28.5, -3, 7.6, 6.4, 0.3);
   const bed = { idx: 3, x: 28.5, z: -3, locked: true, nohelp: true, flowers: [], group: new THREE.Group() };
   for (let r = 0; r < 5; r++) for (let c = 0; c < 7; c++) {
     const ci = (r * 2 + c) % 4, fx = 28.5 + (c - 3) * 0.95, fz = -3 + (r - 2) * 0.98;
@@ -1766,7 +1776,7 @@ function buildSeraZones() {
 }
 function unlockSera(instant) {
   zone2.locked = false; const bed = zone2.bed; bed.locked = false;
-  bed.flowers.forEach(f => { f.vis = true; f.t = instant ? rand(0, f.gt) : 0; });
+  bed.flowers.forEach(f => { f.vis = TIDE.low; f.t = instant ? rand(0, f.gt) : 0; });
   potZone.group.visible = potOutZone.group.visible = true;
   if (instant) { zone2.lockedGroup.visible = false; zone2.groups.forEach(g => { g[0].visible = true; g[0].scale.setScalar(1); }); return; }
   zone2.popT = 0; zone2.popFlags = []; zone2.lockedGroup.dropping = 0;
@@ -2119,7 +2129,7 @@ function updateHelper(dt, t) {
     if (h.stack.length === 0 && h.incoming === 0 && !h.target && !(h.idle > 0)) h.kind = helperKind();
     if (full) h.state = 'deliver';
     else {
-      if (h.target && (h.target.t < h.target.gt || h.target.bed.locked)) dropTarget(h);
+      if (h.target && (h.target.t < h.target.gt || h.target.bed.locked || !tideOK(h.target))) dropTarget(h);
       if (!h.target) {
         const pickT = kind => { let best = 1e9, bf = null; for (const b of beds) { if (b.locked) continue; for (const f of b.flowers) if (claimOK(f) && (kind === 'orchid' ? f.type === 'orchid' : !ITYPE[f.type])) { const d = (f.x - h.group.position.x) ** 2 + (f.z - h.group.position.z) ** 2; if (d < best) { best = d; bf = f; } } } return bf; };
         let f = pickT(h.kind);
@@ -2335,7 +2345,7 @@ function removeCustomer(i) {
    ===================================================================== */
 const GROW = { orchid: 18, lav: 12, sun: 15, rosep: 10, sap: 14 }, ITYPE = { orchid: 'orchid', lav: 'lav', sun: 'sun', rosep: 'rosep', sap: 'sap' };
 /* ---- işçi talepleri (claim): sahipli; sahibi artık hedeflemiyorsa talep geçersiz sayılır ---- */
-const claimOK = f => f.t >= f.gt && !(f.ban > T) && (!f.claimed || !f.owner || f.owner.target !== f);
+const claimOK = f => f.t >= f.gt && tideOK(f) && !(f.ban > T) && (!f.claimed || !f.owner || f.owner.target !== f);
 function claimF(f, who) { f.claimed = true; f.owner = who; who.target = f; }
 function dropTarget(h) { const f = h.target; if (f && f.owner === h) { f.claimed = false; f.owner = null; } h.target = null; }
 const badPos = p => !isFinite(p.x) || !isFinite(p.z) || Math.abs(p.x) > 400 || Math.abs(p.z) > 400;
@@ -2808,6 +2818,7 @@ function rodUpdate(c, dt, on) {
 function fishSplash(f) { for (let i = 0; i < 9; i++) { const a = rand(0, TAU), s = rand(0.8, 2.2); emit({ x: f.x, y: 0.35, z: f.z, vx: Math.cos(a) * s, vy: rand(2.5, 4.5), vz: Math.sin(a) * s, life: rand(0.45, 0.7), size: rand(0.14, 0.24), c: i % 3 ? 0xdff6ff : 0x7fd3f0, grav: 11, drag: 0.8 }); } }
 function fishPick(gx, gz, maxD, claimChk) { let best = null, bd = maxD * maxD; for (const b of beds) { if (b.locked || b.nohelp) continue; for (const f of b.flowers) { if (!isFishT(f.type) || f.t < f.gt || f.pop > 0 || (claimChk && !claimOK(f))) continue; const d = (f.x - gx) ** 2 + (f.z - gz) ** 2; if (d < bd) { bd = d; best = f; } } } return best; }
 function updateBeds(dt) {
+  updateTide(dt);
   for (const b of beds) {
     if (b.dropping !== undefined) { b.dropping += dt; const k = Math.min(1, b.dropping / 0.9); b.group.position.y = -3.2 * k * k; if (k >= 1) { b.group.visible = false; b.group.position.y = 0; b.dropping = undefined; for (let i = 0; i < 10; i++) dust(b.x + rand(-3.4, 3.4), 0.3, b.z + rand(-2.8, 2.8), 1, 0.7); } }
     if (b.locked) continue;
@@ -2832,7 +2843,7 @@ function updateBeds(dt) {
       if (b.locked || Math.abs(gp.x - b.x) > 4.2 || Math.abs(gp.z - b.z) > 3.6) continue;
       for (const f of b.flowers) {
         if (isFishT(f.type)) continue;
-        if (f.t >= f.gt && f.pop <= 0 && (f.x - gp.x) ** 2 + (f.z - gp.z) ** 2 < 1.0) { harvest(f, P); P.cd = 0.04; if (P.free() <= 0) break; if (P.cd > 0) break; }
+        if (f.t >= f.gt && f.pop <= 0 && tideOK(f) && (f.x - gp.x) ** 2 + (f.z - gp.z) ** 2 < 1.0) { harvest(f, P); P.cd = 0.04; if (P.free() <= 0) break; if (P.cd > 0) break; }
       }
       if (P.cd > 0) break;
     }
@@ -3148,7 +3159,7 @@ function updateGardener(h, dt, t) {
   workerPop(h, dt); const r = h.role, gp = h.group.position, spd = gSpdOf(h), cap = gCapOf(h); if (h.idleCool > 0) h.idleCool -= dt; if (h.helping) h.helpT = (h.helpT || 0) + dt;
   let tx = null, tz = null; const full = h.stack.length + h.incoming >= cap; h.pickT -= dt;
   if (h.state === 'seek') {
-    if (h.target && (h.target.t < h.target.gt || h.target.bed.locked || (h.ctype && !gMatch(h.ctype, h.target)))) dropTarget(h);
+    if (h.target && (h.target.t < h.target.gt || h.target.bed.locked || !tideOK(h.target) || (h.ctype && !gMatch(h.ctype, h.target)))) dropTarget(h);
     if (!h.ctype && h.stack.length === 0 && h.incoming === 0 && h.pickT <= 0 && !(h.idleCool > 0)) { h.pickT = 0.35; const p = gPickType(h); if (p) { h.ctype = p[0]; h.helping = p[1]; h.idleT = 0; h.helpT = 0; } else h.idleT += 0.35; }
     else if (h.helping && h.ctype && h.stack.length + h.incoming === 0 && h.pickT <= 0 && h.helpT > 6) { h.pickT = 0.35; for (const ty of r.types) if (gNeed(ty, 16) && gFlower(ty, gp)) { dropTarget(h); h.ctype = null; h.helping = false; break; } } // kendi bölgesinde iş çıktı: eve dön
     if (h.ctype) {

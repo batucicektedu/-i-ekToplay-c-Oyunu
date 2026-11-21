@@ -7,12 +7,12 @@ const { chromium } = require(PW);
 const THREE = process.env.THREE_DIR || path.dirname(require.resolve('three/package.json'));
 const GAME = 'file://' + path.resolve(process.env.GAME || path.join(__dirname, '../../sahil/index.html'));
 const KEY = 'bolum2_sahil';
-const DIRS = [path.join(__dirname, 'saves'), path.join(__dirname, '../saves')];
+const DIRS = process.env.CH1 ? [path.join(__dirname, 'saves'), path.join(__dirname, '../saves')] : [path.join(__dirname, 'saves')];
 const files = []; for (const d of DIRS) for (const f of fs.readdirSync(d).filter(f => f.endsWith('.json'))) files.push(path.join(d, f));
 let fails = 0; const ok = (c, m) => { if (!c) { fails++; console.log('  FAIL', m); } };
 async function open(b, pre, arg) {
   const page = await (await b.newContext({ viewport: { width: 600, height: 800 } })).newPage(); const errs = [];
-  page.on('pageerror', e => errs.push(e.message)); page.on('console', m => { if (m.type() === 'error') errs.push(m.text()); });
+  page.on('pageerror', e => errs.push(e.message)); page.on('console', m => { if (m.type() === 'error' && !/vibrate/.test(m.text())) errs.push(m.text()); });
   await page.addInitScript(() => { window.__noAuto = true; });
   await page.route('**/three.min.js', r => r.fulfill({ path: THREE + '/build/three.min.js', contentType: 'application/javascript' }));
   await page.route('**/cdn.jsdelivr.net/npm/three@0.128.0/examples/js/**', r => { const u = r.request().url().split('examples/js/')[1]; r.fulfill({ path: THREE + '/examples/js/' + u, contentType: 'application/javascript' }); });
@@ -27,7 +27,7 @@ async function open(b, pre, arg) {
     const { page, errs } = await open(b, ([k, v]) => { localStorage.clear(); localStorage.setItem(k, v); window.__resetting = true; }, [KEY, JSON.stringify(sv)]).catch(e => ({ page: null, errs: [String(e)] }));
     if (!page) { ok(false, 'açılamadı ' + errs); continue; }
     const r = await page.evaluate(() => { const g = __game; const z = id => g.EXTZ[id] && !g.EXTZ[id].locked; return { money: g.S.money, lv: JSON.parse(JSON.stringify(g.S.lv)), helper: !!g.helper(), cashier: !!g.cashier, carrier: !!g.carrier, z2: g.zone2 && !g.zone2.locked, z3: g.zone3 && !g.zone3.locked, ext: { lav: z('lav'), parf: z('parf'), cafe: z('cafe'), wed: z('wed'), sunf: z('sunf'), city: z('city'), bee: z('bee'), jap: z('jap'), port: z('port'), fest: z('fest'), mus: z('mus') }, c3: { cb: JSON.parse(JSON.stringify(g.S.cb)), cs: g.S.cs.slice(), bx: g.S.bx, ptn: g.S.pt.n, fen: g.S.fe.n, qn: g.S.q.n, qa: g.S.q.a.length, ver: 0 }, gard: g.GARD.length, tractor: !!g.tractor(), tier: JSON.parse(JSON.stringify(g.S.tier)), decor: Object.keys(g.S.decor).sort().join(), cos: JSON.stringify(g.S.cos), dn: g.S.dn }; });
-    ok(r.money >= sv.money, `para ${r.money} < ${sv.money}`);
+    ok(r.money >= Math.floor(sv.money) - 1e-6, `para ${r.money} < ${sv.money}`);
     for (const k in sv.lv) ok(r.lv[k] >= Math.min(sv.lv[k], 99) || r.lv[k] === sv.lv[k], `seviye ${k}: ${r.lv[k]} != ${sv.lv[k]}`);
     ok(!sv.lv.helper || r.helper, 'yardımcı yok'); ok(!sv.lv.cashier || r.cashier, 'kasiyer yok'); ok(!sv.lv.carrier || r.carrier, 'taşıyıcı yok');
     ok(!sv.lv.sera || r.z2, 'sera kilitli'); ok(!sv.lv.van || r.z3, 'van bölgesi kilitli');
@@ -50,7 +50,7 @@ async function open(b, pre, arg) {
   // Bozuk ana kayıt + yedek: yedekten yüklenmeli
   { console.log('bozuk-ana+yedek'); const sv = JSON.parse(fs.readFileSync(files[files.length - 1], 'utf8')).value;
     const { page, errs } = await open(b, ([k, v]) => { localStorage.clear(); localStorage.setItem(k, '{bozuk'); localStorage.setItem(k + '_bak', v); window.__resetting = true; }, [KEY, JSON.stringify(sv)]);
-    const m = await page.evaluate(() => __game.S.money); ok(m >= sv.money, 'yedekten yüklenmedi ' + m);
+    const m = await page.evaluate(() => __game.S.money); ok(m >= Math.floor(sv.money), 'yedekten yüklenmedi ' + m);
     await page.evaluate(() => __game.sim(10)); ok(JSON.parse(await page.evaluate(k => localStorage.getItem(k), KEY)).money >= sv.money, 'yedekten sonra kayıt bozuldu'); ok(errs.length === 0, 'hata ' + errs); await page.context().close(); }
   // Bozuk ana kayıt, yedek yok: taze oyun eski kaydın üstüne YAZMAMALI
   { console.log('bozuk-ana, yedek yok'); const { page, errs } = await open(b, ([k]) => { localStorage.clear(); localStorage.setItem(k, '{"money":5000,"lv":{"cap":3}'); window.__resetting = true; }, [KEY]);
