@@ -29,6 +29,13 @@
   #capP{font-size:20px;margin-top:8px;display:flex;width:fit-content}
   #capP svg{width:26px;height:26px}
   #capP.full #capV{color:#ffb703}
+  #bRow{display:flex;align-items:center;gap:6px;margin-top:8px;pointer-events:none}
+  #beauty{font-size:17px;width:fit-content;padding:3px 12px 3px 6px;gap:6px;pointer-events:auto}
+  #beauty svg{width:26px;height:26px}
+  #beauty .bb{width:46px;height:10px;border-radius:6px;background:rgba(10,20,40,.75);overflow:hidden;position:relative;box-shadow:inset 0 2px 3px rgba(0,0,0,.4)}
+  #beauty .bb i{position:absolute;left:0;top:0;bottom:0;width:0;border-radius:6px;background:linear-gradient(#ffb3dc,#ff4f93)}
+  #wardBtn{display:none;align-items:center;justify-content:center;width:38px;height:38px;border:0;border-radius:50%;background:linear-gradient(rgba(60,110,160,.85),rgba(18,48,84,.9));box-shadow:0 4px 0 rgba(0,0,0,.25),inset 0 2px 0 rgba(255,255,255,.4);padding:0;pointer-events:auto}
+  #wardBtn svg{width:24px;height:24px}
   #topleft{position:absolute;left:max(12px,env(safe-area-inset-left));top:max(12px,env(safe-area-inset-top))}
   #toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom));transform:translateX(-50%);background:rgba(18,48,84,.9);color:#fff;font-weight:900;font-size:14px;padding:10px 16px;border-radius:14px;display:none;z-index:15;pointer-events:none}
   #hint{position:absolute;left:50%;top:max(124px,calc(env(safe-area-inset-top) + 112px));transform:translateX(-50%);display:none;align-items:center;gap:10px;
@@ -96,6 +103,7 @@
         <svg viewBox="0 0 48 48"><path d="M24 44V26" stroke="#2e9a3e" stroke-width="4" stroke-linecap="round"/><path d="M24 36c-8 0-10-6-10-9 6 0 10 3 10 9z" fill="#3fbf4a"/><path d="M13 12c0-5 3-8 5-9 2 2 4 3 6 3 2 0 4-1 6-3 2 1 5 4 5 9 0 8-5 15-11 15S13 20 13 12z" fill="#ff4f7b" stroke="#b81f4a" stroke-width="2.5" stroke-linejoin="round"/></svg>
         <span id="capV">0/10</span>
       </div>
+      <div id="bRow"><div id="beauty" class="pill txt" style="display:none"><svg viewBox="0 0 48 48"><circle cx="24" cy="24" r="6" fill="#ffd23f"/><g fill="#ff7ab0" stroke="#b81f64" stroke-width="2"><ellipse cx="24" cy="10" rx="6" ry="8"/><ellipse cx="24" cy="38" rx="6" ry="8"/><ellipse cx="10" cy="24" rx="8" ry="6"/><ellipse cx="38" cy="24" rx="8" ry="6"/></g><circle cx="24" cy="24" r="5.5" fill="#ffd23f" stroke="#b8860b" stroke-width="2"/></svg><span id="beautyV">0</span><span class="bb"><i id="beautyB"></i></span></div><button id="wardBtn" aria-label="Gardırop"><svg viewBox="0 0 24 24"><path fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M12 6.5a2 2 0 1 1 2 2c-1 0-2 .6-2 1.8V11l9 5.5a1 1 0 0 1-.5 1.9h-17A1 1 0 0 1 3 16.5L12 11"/></svg></button></div>
     </div>
     <div id="hint">
       <svg id="hintArrow" viewBox="0 0 48 48"><path d="M6 18h20V8l16 16-16 16V30H6z" fill="#ffb703" stroke="#b36b00" stroke-width="3" stroke-linejoin="round"/></svg>
@@ -3130,7 +3138,7 @@ function tdef(o) { TD.push(o); TDM[o.id] = o; }
 const GOLD = 0xf0c040, CREAM = 0xfff3d6;
 tdef({ id: 'pack', short: 'Atölye', word: 'hız', title: 'PAKETLEME', ico: iconPack, acc: 0xff7a59, awn: ['#ff7a59', '#fff3d6'], cost: [6000, 24000], pad: [-2.4, 1.0], un: () => true,
   cx: -2.2, cz: -3.0, W: 11.6, rf: { y: 4.15, z: -3.95, d: 2.4, w: 12.2, rx: -0.1 }, sg: { y: 5.05, z: -2.95, w: 4.6, h: 1.0 }, posts: [[-7.8, -4.2, 4.2], [3.4, -4.2, 4.2]], foot: [-8, 3.6, -5, -1.1], floor: [-8, 3.6, -1.15, 3.2], fz: -0.8, boxes: [-4.6, -0.2], pots: [[-8.4, -0.6], [3.9, -0.6]] });
-tdef({ id: 'flo', short: 'Çiçekçi', word: 'fiyat', title: 'ÇİÇEKÇİ', ico: iconBouquet, acc: 0x1c9ad6, awn: ['#1c9ad6', '#ffffff'], cost: [8000, 32000], pad: [15.0, 2.4], un: () => true,
+tdef({ id: 'flo', short: 'Çiçekçi', word: 'fiyat', title: 'ÇİÇEKÇİ', ico: iconBouquet, acc: 0x1c9ad6, awn: ['#1c9ad6', '#ffffff'], cost: [8000, 32000], pad: [13.6, 3.4], un: () => true,
   cx: 10, cz: -3.4, W: 5.4, rf: { y: 3.15, z: -3.7, d: 2.3, w: 5.4, rx: -0.12 }, sg: { y: 4.2, z: -3.95, w: 3.4, h: 0.9 }, posts: [[7.4, -2.6, 3.1], [12.6, -2.6, 3.1]], foot: [7.2, 12.8, -4.7, -2.2], floor: [7.2, 12.8, -2.3, 0.4], fz: -2.2, boxes: [7.55, 12.45], pots: [[6.6, -2.0], [13.4, -2.0]] });
 tdef({ id: 'pot', short: 'Saksı', word: 'hız', title: 'SAKSI ATÖLYESİ', ico: iconPot, acc: 0xff9a3c, awn: ['#ff9a3c', '#fff3d6'], cost: [10000, 40000], pad: [40.4, 3.4], un: () => zone2 && !zone2.locked,
   cx: 40.5, cz: -3.0, W: 7.8, rf: { y: 4.15, z: -4.2, d: 2.4, w: 7.8, rx: -0.1 }, sg: { y: 5.05, z: -3.2, w: 5.4, h: 1.0 }, posts: [[37, -4.5, 4.2], [44, -4.5, 4.2]], foot: [36.8, 44.2, -5.1, -1.1], floor: [36.8, 44.2, -1.2, 3.0], fz: -0.8, boxes: [39.4, 41.6], pots: [[36.4, -0.6], [44.6, -0.6]] });
@@ -3138,9 +3146,9 @@ tdef({ id: 'van', short: 'Minibüs', word: 'kazanç', title: 'TESLİMAT', ico: i
   cx: 22.6, cz: 24, W: 3.4, foot: [20.9, 24.3, 21.3, 26.7], floor: [20.9, 24.3, 21.3, 26.7] });
 const GEN = (id, short, word, title, ico, acc, awn, cost, pad, un, cx, cz, extra) => tdef(Object.assign({ id, short, word, title, ico, acc, awn, cost, pad, un, cx, cz, W: 11.0, rf: { y: 4.15, z: cz - 1.2, d: 2.6, w: 11.8, rx: -0.1 }, sg: { y: 5.05, z: cz - 0.2, w: 5.6, h: 1.0 }, posts: [[cx - 5.4, cz - 2.0, 4.2], [cx + 5.4, cz - 2.0, 4.2]], foot: [cx - 5.6, cx + 5.6, cz - 2.3, cz + 1.1], floor: [cx - 5.6, cx + 5.6, cz + 1.2, cz + 4.4], fz: cz + 1.4, boxes: [cx - 2.0, cx + 2.2], pots: [[cx - 6.2, cz + 1.2], [cx + 6.2, cz + 1.2]] }, extra || {}));
 GEN('kese', 'Kese', 'hız', 'KESE ATÖLYESİ', iconSachet, 0x2fb872, ['#2fb872', '#ffffff'], [16000, 64000], [-6.0, -21.5], () => unlockedZ('lav'), -6.2, -28.5);
-GEN('parf', 'Parfüm', 'hız', 'PARFÜM ATÖLYESİ', iconPerfume, 0x7a5cff, ['#7a5cff', '#ffffff'], [22000, 88000], [22.0, -19.4], () => unlockedZ('parf'), 20.5, -26);
+GEN('parf', 'Parfüm', 'hız', 'PARFÜM ATÖLYESİ', iconPerfume, 0x7a5cff, ['#7a5cff', '#ffffff'], [22000, 88000], [23.4, -19.2], () => unlockedZ('parf'), 20.5, -26);
 GEN('tea', 'Kafe', 'fiyat', 'ÇİÇEK KAFE', iconCafe, 0x2fb6a8, ['#2fb6a8', '#ffffff'], [30000, 120000], [-3.2, -42.8], () => unlockedZ('cafe'), -6.2, -49, { patio: true });
-tdef({ id: 'wed', short: 'Düğün', word: 'ödül', title: 'DÜĞÜN', ico: iconWedding, acc: 0xff3d7f, awn: ['#ff7ab0', '#ffffff'], cost: [40000, 160000], pad: [28.5, -44.5], un: () => unlockedZ('wed'), kind: 'wed',
+tdef({ id: 'wed', short: 'Düğün', word: 'ödül', title: 'DÜĞÜN', ico: iconWedding, acc: 0xff3d7f, awn: ['#ff7ab0', '#ffffff'], cost: [40000, 160000], pad: [29.5, -42.4], un: () => unlockedZ('wed'), kind: 'wed',
   cx: 21, cz: -54, W: 9, foot: [16.6, 25.4, -62, -46], floor: [17.3, 24.7, -61, -47], floors: [[17.2, 19.2, -61.2, -46.8], [22.8, 24.8, -61.2, -46.8]] });
 tdef({ id: 'city', short: 'Şehir', word: 'fiyat', title: 'ŞEHİR ÇİÇEKÇİSİ', ico: iconShop, acc: 0xffb020, awn: ['#ffb020', '#ffffff'], cost: [50000, 200000], pad: [26.5, -72.5], un: () => unlockedZ('city'),
   cx: 21, cz: -81, W: 6.6, rf: { y: 3.4, z: -81.4, d: 2.6, w: 6.6, rx: -0.12 }, sg: { y: 4.6, z: -81.6, w: 5.2, h: 1.0 }, posts: [[17.9, -80.1, 3.3], [24.1, -80.1, 3.3]], foot: [17.6, 24.4, -82.7, -79.9], floor: [17.4, 24.6, -79.9, -75.2], fz: -79.6, boxes: [18.4, 23.6], pots: [[16.8, -79.0], [25.2, -79.0]] });
@@ -3292,8 +3300,171 @@ function initTiers() {
     if (S.tier[d.id] > 0) applyTier(d.id, true);
   }
 }
-function updateC2(dt, t) { updateTiers(dt); }
-function initC2() { initTiers(); }
+
+/* =====================================================================
+   17b. C2 – DEKORASYON + GÜZELLİK PUANI
+   ===================================================================== */
+const DECT = {
+  arch: { n: 'Çiçek Kemeri', pts: 12, base: 10000, r: 2.2 }, lantern: { n: 'Fener', pts: 3, base: 1500, r: 0.6 }, statue: { n: 'Heykel', pts: 14, base: 14000, r: 1.1 },
+  pond: { n: 'Küçük Havuz', pts: 10, base: 8000, r: 2.0 }, bench: { n: 'Bank', pts: 4, base: 2200, r: 1.2 }, butterfly: { n: 'Kelebek Bahçesi', pts: 9, base: 6500, r: 2.0 },
+  fence: { n: 'Çiçekli Çit', pts: 5, base: 3200, r: 2.3 }, topiary: { n: 'Şekilli Çalı', pts: 7, base: 4500, r: 0.9 }, gazebo: { n: 'Çardak', pts: 18, base: 20000, r: 3.0 }
+};
+const AREA_MUL = { main: 1, sera: 1.2, van: 1.2, lav: 1.5, parf: 1.5, cafe: 2, wed: 2, sunf: 2.5, city: 2.5 };
+const DSL = [];
+(function () {
+  const A = (id, type, area, x, z, ry, px, pz, v) => DSL.push({ id, type, area, x, z, ry: ry || 0, px: px === undefined ? x : px, pz: pz === undefined ? z + 2.4 : pz, v: v || 0, cost: Math.round(DECT[type].base * AREA_MUL[area] / 100) * 100 });
+  A('m1', 'arch', 'main', 10, 15.0, 0, 6.4, 15.6);
+  A('m2', 'statue', 'main', -5, 15.0, 0, -5, 12.9);
+  A('m3', 'butterfly', 'main', -12.5, 15.8, 0, -12.5, 13.4);
+  A('m4', 'gazebo', 'main', -1.5, 19.5, 0, -1.5, 16.3);
+  A('m5', 'pond', 'main', -8.5, 19.6, 0, -8.5, 17.0);
+  A('m6', 'topiary', 'main', 3.4, 17.6, 0, 3.4, 15.4, 0);
+  A('m7', 'bench', 'main', 6.0, 20.2, 0, 6.0, 18.4);
+  A('m8', 'fence', 'main', -16.6, 14.2, 0, -16.6, 16.6);
+  A('e1', 'gazebo', 'sera', 30, 7, 0, 30, 10.8);
+  A('e2', 'bench', 'sera', 40, 7.6, 0, 40, 10.0);
+  A('e3', 'lantern', 'sera', 24.5, 4.0, 0, 24.5, 6.4);
+  A('v1', 'lantern', 'van', 12.9, 30.2, 0, 14.6, 29.4);
+  A('v2', 'topiary', 'van', 23.6, 18.6, 0, 23.6, 20.6, 1);
+  A('l1', 'butterfly', 'lav', -5, -35.8, 0, -5, -33.2);
+  A('l2', 'pond', 'lav', -19, -19.6, 0, -19.2, -17.0);
+  A('l3', 'lantern', 'lav', -1.2, -36.0, 0, -1.2, -33.8);
+  A('p1', 'gazebo', 'parf', 29, -21, 0, 29, -17.6);
+  A('p2', 'statue', 'parf', 12.4, -31, 0, 12.4, -28.2);
+  A('c1', 'pond', 'cafe', -20, -47, 0, -20, -44.4);
+  A('c2', 'bench', 'cafe', -3, -57, 0, -3, -54.6);
+  A('c3', 'fence', 'cafe', -4, -62.6, 0, -4, -60.2);
+  A('w1', 'topiary', 'wed', 12.5, -57, 0, 12.5, -54.6, 2);
+  A('w2', 'butterfly', 'wed', 29.5, -55, 0, 29.5, -52.4);
+  A('w3', 'fence', 'wed', 29.5, -61.5, 0, 29.5, -59.2);
+  A('s1', 'statue', 'sunf', -3, -85.5, 0, -3, -82.8);
+  A('s2', 'topiary', 'sunf', -2.5, -71.2, 0, -2.5, -68.7, 1);
+  A('y1', 'topiary', 'city', 12, -80, 0, 12, -77.5, 2);
+  A('y2', 'pond', 'city', 30, -86, 0, 30, -83.4);
+})();
+const DSLM = {}; DSL.forEach(s => { DSLM[s.id] = s; });
+const areaOn = a => a === 'main' ? true : a === 'sera' ? !!(zone2 && !zone2.locked) : a === 'van' ? !!(zone3 && !zone3.locked) : unlockedZ(a);
+/* ---- modeller (tek birleşik geometri) ---- */
+const _dg = {};
+function decParts(type, v) {
+  const P = [], W = 0xffffff, CR = 0xfff3d6, WD = 0x8a5a30, ST = 0xc4bdad, ST2 = 0x9a9486, GR = 0x2fae4a, GR2 = 0x1f8f3a, DK = 0x2d3a45, PK = 0xff7ab0, RD = 0xff3d5a, YL = 0xffd23f;
+  const sp = (c, x, y, z, rx, ry2, rz) => P.push(part(G.sphT, c, x, y, z, rx, ry2 === undefined ? rx : ry2, rz === undefined ? rx : rz));
+  const bx = (c, x, y, z, sx, sy, sz, ry2) => P.push(part(G.box, c, x, y, z, sx, sy, sz, 0, ry2 || 0, 0));
+  const cy = (c, x, y, z, r, h, r2) => P.push(part(G.cylC, c, x, y, z, r, h, r2 === undefined ? r : r2));
+  const FC = [PK, W, RD, YL, 0xc77dff, 0xff8a3c], rnd = rng(type.length * 977 + v * 31);
+  if (type === 'arch') {
+    for (const sx of [-1, 1]) { cy(W, sx * 1.7, 1.7, 0, 0.13, 3.4); bx(0xb08a5a, sx * 1.7, 0.12, 0, 0.5, 0.24, 0.5); for (let k = 0; k < 5; k++) { sp(GR2, sx * 1.7 + (k % 2 ? 0.1 : -0.1), 0.5 + k * 0.62, 0.05, 0.22, 0.2, 0.22); sp(FC[(k + (sx > 0 ? 2 : 0)) % 6], sx * 1.7 + (k % 2 ? -0.12 : 0.12), 0.62 + k * 0.62, 0.15, 0.16); } }
+    for (let i = 0; i <= 16; i++) { const a = i / 16 * Math.PI, x = Math.cos(a) * 1.7, y = 3.3 + Math.sin(a) * 0.95; sp(GR2, x, y - 0.05, 0, 0.26, 0.24, 0.26); sp(FC[i % 6], x, y + 0.05, 0.14, 0.2); if (i % 2) sp(FC[(i + 3) % 6], x, y + 0.2, -0.1, 0.14); }
+  } else if (type === 'lantern') {
+    cy(DK, 0, 0.1, 0, 0.22, 0.2, 0.22); cy(DK, 0, 1.4, 0, 0.06, 2.8, 0.06); bx(DK, 0.22, 2.75, 0, 0.5, 0.06, 0.06); bx(DK, 0.45, 2.75, 0, 0.5, 0.1, 0.5); bx(DK, 0.45, 3.3, 0, 0.6, 0.06, 0.6); P.push(part(G.cone, DK, 0.45, 3.5, 0, 0.45, 0.3, 0.45)); for (let k = 0; k < 4; k++) sp(FC[k], (k % 2 ? 0.28 : -0.28), 0.18, (k < 2 ? 0.26 : -0.26), 0.14);
+  } else if (type === 'statue') {
+    bx(ST2, 0, 0.14, 0, 1.6, 0.28, 1.6); bx(ST, 0, 0.7, 0, 1.15, 0.84, 1.15); bx(ST2, 0, 1.2, 0, 1.4, 0.14, 1.4);
+    P.push(part(G.cone, CR, 0, 1.85, 0, 0.42, 1.2, 0.42)); sp(CR, 0, 2.55, 0, 0.26, 0.28, 0.24); sp(0xf3d9b8, 0, 2.92, 0, 0.2); sp(0x5a3a22, 0, 3.0, -0.04, 0.2, 0.17, 0.2); P.push(part(G.cylC, CR, 0.34, 2.45, 0.1, 0.06, 0.5, 0.06, 0.2, 0, -0.9)); sp(PK, 0.55, 2.85, 0.2, 0.15); sp(YL, 0.55, 2.85, 0.2, 0.06);
+    for (let k = 0; k < 8; k++) { const a = k / 8 * TAU; sp(FC[k % 6], Math.cos(a) * 1.15, 0.12, Math.sin(a) * 1.15, 0.14, 0.12, 0.14); sp(GR2, Math.cos(a) * 1.05, 0.1, Math.sin(a) * 1.05, 0.12, 0.08, 0.12); }
+  } else if (type === 'pond') {
+    for (let k = 0; k < 16; k++) { const a = k / 16 * TAU; bx(k % 2 ? ST : ST2, Math.cos(a) * 1.8, 0.2, Math.sin(a) * 1.8, 0.62, 0.4, 0.5, -a); }
+    cy(0x3fb6ff, 0, 0.17, 0, 1.62, 0.1); cy(0x8dd8ff, 0.3, 0.23, -0.2, 0.9, 0.02);
+    for (const [x, z, r] of [[-0.6, 0.4, 0.38], [0.5, 0.7, 0.3], [0.4, -0.5, 0.34]]) { cy(0x2fae4a, x, 0.24, z, r, 0.03); sp(PK, x + 0.05, 0.3, z, 0.12, 0.09, 0.12); sp(0xffffff, x + 0.05, 0.34, z, 0.05); }
+    for (let k = 0; k < 5; k++) { const a = 0.6 + k * 0.5; cy(GR2, Math.cos(a) * 1.5, 0.6, Math.sin(a) * 1.5, 0.03, 1.0); sp(0x6b3e1d, Math.cos(a) * 1.5, 1.12, Math.sin(a) * 1.5, 0.06, 0.14, 0.06); }
+    sp(ST2, -1.1, 0.3, -1.1, 0.35, 0.28, 0.3); sp(ST, -0.7, 0.28, -1.4, 0.25, 0.2, 0.25);
+  } else if (type === 'bench') {
+    bx(WD, 0, 0.5, 0, 2.0, 0.1, 0.62); bx(WD, 0, 0.9, -0.29, 2.0, 0.5, 0.08); for (const sx of [-0.85, 0.85]) { bx(DK, sx, 0.25, 0, 0.1, 0.5, 0.55); bx(DK, sx, 0.62, -0.29, 0.1, 0.9, 0.1); }
+    for (const sx of [-1.35, 1.35]) { cy(0xc8643c, sx, 0.2, 0, 0.26, 0.4, 0.2); sp(GR, sx, 0.52, 0, 0.3, 0.26, 0.3); sp(FC[sx > 0 ? 0 : 3], sx, 0.78, 0, 0.16); sp(FC[sx > 0 ? 2 : 1], sx + 0.15, 0.7, 0.1, 0.12); }
+  } else if (type === 'butterfly') {
+    for (const [x, z, sx, sz] of [[0, 1.15, 3.4, 0.2], [0, -1.15, 3.4, 0.2], [1.6, 0, 0.2, 2.5], [-1.6, 0, 0.2, 2.5]]) bx(WD, x, 0.22, z, sx, 0.44, sz); bx(0x4a2a14, 0, 0.2, 0, 3.1, 0.3, 2.1);
+    for (let i = 0; i < 34; i++) { const x = (rnd() - 0.5) * 2.8, z = (rnd() - 0.5) * 1.9, h = 0.35 + rnd() * 0.5; cy(GR, x, 0.35 + h / 2, z, 0.02, h); sp(FC[(rnd() * 6) | 0], x, 0.4 + h, z, 0.13, 0.11, 0.13); sp(GR2, x + 0.1, 0.5, z, 0.1, 0.05, 0.1); }
+    cy(WD, 1.55, 0.7, 1.15, 0.04, 1.2); bx(CR, 1.55, 1.3, 1.15, 0.5, 0.3, 0.04);
+  } else if (type === 'fence') {
+    for (let i = 0; i < 8; i++) { const x = -2.1 + i * 0.6; bx(W, x, 0.55, 0, 0.16, 1.1, 0.07); P.push(part(G.cone, W, x, 1.15, 0, 0.1, 0.16, 0.05)); sp(FC[(i + v) % 6], x, 1.34, 0.02, 0.13); if (i < 7) sp(FC[(i + 3) % 6], x + 0.3, 0.88, 0.05, 0.1); sp(GR2, x + 0.1, 0.35, 0.04, 0.12, 0.08, 0.1); }
+    bx(W, 0, 0.35, 0, 4.4, 0.08, 0.06); bx(W, 0, 0.8, 0, 4.4, 0.08, 0.06); bx(W, -2.2, 0.7, 0, 0.2, 1.4, 0.2); bx(W, 2.2, 0.7, 0, 0.2, 1.4, 0.2); sp(GOLD, -2.2, 1.5, 0, 0.14); sp(GOLD, 2.2, 1.5, 0, 0.14);
+  } else if (type === 'topiary') {
+    cy(0xc8643c, 0, 0.22, 0, 0.55, 0.44, 0.45); cy(0xd9784c, 0, 0.46, 0, 0.6, 0.08, 0.6);
+    if (v === 0) { sp(GR2, 0, 1.0, 0, 0.62, 0.5, 0.72); sp(GR, 0, 1.65, 0.38, 0.33); sp(GR2, -0.13, 2.1, 0.3, 0.1, 0.36, 0.1); sp(GR2, 0.13, 2.1, 0.3, 0.1, 0.36, 0.1); sp(GR, 0, 1.1, -0.65, 0.2); sp(0xffd0e2, -0.13, 2.1, 0.33, 0.04, 0.2, 0.04); sp(0xffd0e2, 0.13, 2.1, 0.33, 0.04, 0.2, 0.04); }
+    else if (v === 1) { sp(GR2, 0, 1.05, 0, 0.72, 0.46, 0.5); for (let k = 0; k < 5; k++) sp(GR, 0.5 + k * 0.03, 1.2 + k * 0.28, 0, 0.2 - k * 0.01, 0.2, 0.2); sp(GR, 0.72, 2.7, 0, 0.2, 0.18, 0.18); P.push(part(G.cone, 0xff9a3c, 0.95, 2.68, 0, 0.07, 0.2, 0.07, 0, 0, -1.57)); sp(GR, -0.75, 1.3, 0, 0.26, 0.2, 0.2); sp(GR2, -0.2, 1.25, 0.35, 0.3, 0.25, 0.2); }
+    else { sp(GR2, 0, 1.0, 0, 0.55); sp(GR, 0, 1.75, 0, 0.42); sp(GR2, 0, 2.3, 0, 0.3); sp(GR, 0, 2.7, 0, 0.18); sp(PK, 0, 2.95, 0, 0.1); for (let k = 0; k < 6; k++) { const a = k / 6 * TAU; sp(FC[k], Math.cos(a) * 0.55, 1.0, Math.sin(a) * 0.55, 0.1); } }
+  } else if (type === 'gazebo') {
+    cy(CR, 0, 0.1, 0, 2.7, 0.2); cy(ST, 0, 0.02, 0, 2.9, 0.06);
+    for (let k = 0; k < 6; k++) { const a = k / 6 * TAU, x = Math.cos(a) * 2.3, z = Math.sin(a) * 2.3; cy(W, x, 1.6, z, 0.1, 2.8); for (let q = 0; q < 3; q++) { sp(GR2, x, 0.7 + q * 0.8, z, 0.2, 0.2, 0.2); sp(FC[(k + q) % 6], x + 0.1, 0.8 + q * 0.8, z + 0.1, 0.12); } const a2 = a + TAU / 12, a3 = a + TAU / 6; if (k !== 0) { const mx = (x + Math.cos(a3) * 2.3) / 2, mz = (z + Math.sin(a3) * 2.3) / 2; bx(W, mx, 0.8, mz, 1.15, 0.07, 0.07, -(a + TAU / 12) - Math.PI / 2 + Math.PI / 2 * 0); } }
+    P.push(part(G.cone, v === 1 ? 0x7a5cff : 0xff6fa5, 0, 3.55, 0, 2.95, 1.5, 2.95)); sp(GOLD, 0, 4.4, 0, 0.18); for (let k = 0; k < 14; k++) { const a = k / 14 * TAU; sp(k % 2 ? 0xffffff : (v === 1 ? 0xb9a8ff : 0xffb3d0), Math.cos(a) * 2.9, 2.88, Math.sin(a) * 2.9, 0.26, 0.2, 0.26); }
+    for (const [x, z] of [[1.0, 0.8], [-1.1, 0.4], [0.2, -1.1]]) { cy(WD, x, 0.6, z, 0.05, 0.9); sp(0x2fae4a, x, 0.45, z, 0.35, 0.2, 0.35); }
+    for (let k = 0; k < 3; k++) { const a = k / 3 * TAU + 0.5; cy(0x2a2a2a, Math.cos(a) * 1.4, 3.0, Math.sin(a) * 1.4, 0.015, 0.7); sp(GR, Math.cos(a) * 1.4, 2.55, Math.sin(a) * 1.4, 0.26, 0.2, 0.26); sp(FC[k], Math.cos(a) * 1.4 + 0.1, 2.7, Math.sin(a) * 1.4, 0.12); }
+  }
+  return P;
+}
+const decGeo = (type, v) => _dg[type + v] || (_dg[type + v] = mergeParts(decParts(type, v)));
+const GHOSTM = new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.3, depthWrite: false });
+function makeBfly(cx, cz, r) {
+  if (!HQ) return; const wg = new THREE.PlaneGeometry(0.4, 0.3), cols = [0xffd23f, 0xff7eb6, 0xffffff, 0xff9a3c, 0x9fd0ff]; wg.translate(0.2, 0, 0);
+  for (let i = 0; i < 3; i++) { const g = new THREE.Group(), mt = new THREE.MeshBasicMaterial({ color: lc(cols[(i + (cx | 0)) % cols.length]), side: THREE.DoubleSide }); const w1 = new THREE.Mesh(wg, mt), w2 = new THREE.Mesh(wg, mt); w2.scale.x = -1; g.add(w1, w2); g.userData = { w1, w2 }; scene.add(g); butterflies.push({ g, cx, cz, r: rand(0.8, r), sp: rand(0.5, 1.0), ph: rand(0, 6), h: rand(0.9, 1.9) }); }
+}
+const DEC = {}, DANIM = [], DICON = {};
+DICON.arch = (c, x, y, s) => { c.strokeStyle = '#fff'; c.lineWidth = s * 0.07; c.beginPath(); c.moveTo(x - s * 0.34, y + s * 0.4); c.lineTo(x - s * 0.34, y - s * 0.05); c.arc(x, y - s * 0.05, s * 0.34, Math.PI, 0); c.lineTo(x + s * 0.34, y + s * 0.4); c.stroke(); for (let i = 0; i < 7; i++) { const a = Math.PI + i / 6 * Math.PI; c.fillStyle = i % 2 ? '#ff7ab0' : '#ffd23f'; c.beginPath(); c.arc(x + Math.cos(a) * s * 0.34, y - s * 0.05 + Math.sin(a) * s * 0.34, s * 0.07, 0, TAU); c.fill(); } };
+DICON.lantern = (c, x, y, s) => { c.fillStyle = '#6b7a8a'; c.fillRect(x - s * 0.03, y - s * 0.2, s * 0.06, s * 0.6); c.fillStyle = '#ffe27a'; rrect(c, x - s * 0.16, y - s * 0.42, s * 0.32, s * 0.3, s * 0.05); c.fill(); c.strokeStyle = '#33414f'; c.lineWidth = s * 0.04; c.stroke(); };
+DICON.statue = (c, x, y, s) => { c.fillStyle = '#c4bdad'; c.fillRect(x - s * 0.22, y + s * 0.2, s * 0.44, s * 0.2); c.fillStyle = '#fff3d6'; c.beginPath(); c.moveTo(x, y - s * 0.1); c.lineTo(x + s * 0.18, y + s * 0.2); c.lineTo(x - s * 0.18, y + s * 0.2); c.closePath(); c.fill(); c.fillStyle = '#f3d9b8'; c.beginPath(); c.arc(x, y - s * 0.2, s * 0.1, 0, TAU); c.fill(); };
+DICON.pond = (c, x, y, s) => { c.fillStyle = '#9a9486'; c.beginPath(); c.ellipse(x, y + s * 0.08, s * 0.42, s * 0.24, 0, 0, TAU); c.fill(); c.fillStyle = '#3fb6ff'; c.beginPath(); c.ellipse(x, y + s * 0.06, s * 0.34, s * 0.18, 0, 0, TAU); c.fill(); c.fillStyle = '#2fae4a'; c.beginPath(); c.ellipse(x - s * 0.1, y + s * 0.06, s * 0.09, s * 0.05, 0, 0, TAU); c.fill(); c.fillStyle = '#ff7ab0'; c.beginPath(); c.arc(x + s * 0.1, y + s * 0.02, s * 0.06, 0, TAU); c.fill(); };
+DICON.bench = (c, x, y, s) => { c.fillStyle = '#c98a4a'; c.fillRect(x - s * 0.38, y - s * 0.06, s * 0.76, s * 0.12); c.fillRect(x - s * 0.38, y - s * 0.26, s * 0.76, s * 0.1); c.fillStyle = '#33414f'; c.fillRect(x - s * 0.3, y + s * 0.06, s * 0.06, s * 0.22); c.fillRect(x + s * 0.24, y + s * 0.06, s * 0.06, s * 0.22); };
+DICON.butterfly = (c, x, y, s) => { c.fillStyle = '#ff9a3c'; c.beginPath(); c.ellipse(x - s * 0.17, y - s * 0.08, s * 0.17, s * 0.22, -0.5, 0, TAU); c.ellipse(x + s * 0.17, y - s * 0.08, s * 0.17, s * 0.22, 0.5, 0, TAU); c.fill(); c.fillStyle = '#ff5aa0'; c.beginPath(); c.ellipse(x - s * 0.12, y + s * 0.14, s * 0.1, s * 0.13, 0.4, 0, TAU); c.ellipse(x + s * 0.12, y + s * 0.14, s * 0.1, s * 0.13, -0.4, 0, TAU); c.fill(); c.fillStyle = '#3a2a22'; c.fillRect(x - s * 0.025, y - s * 0.2, s * 0.05, s * 0.42); };
+DICON.fence = (c, x, y, s) => { c.fillStyle = '#fff'; for (let i = 0; i < 5; i++) c.fillRect(x - s * 0.36 + i * s * 0.17, y - s * 0.12, s * 0.1, s * 0.4); c.fillRect(x - s * 0.4, y, s * 0.8, s * 0.06); for (let i = 0; i < 5; i++) { c.fillStyle = i % 2 ? '#ff7ab0' : '#ffd23f'; c.beginPath(); c.arc(x - s * 0.31 + i * s * 0.17, y - s * 0.18, s * 0.065, 0, TAU); c.fill(); } };
+DICON.topiary = (c, x, y, s) => { c.fillStyle = '#c8643c'; c.fillRect(x - s * 0.2, y + s * 0.2, s * 0.4, s * 0.16); c.fillStyle = '#2fae4a'; c.beginPath(); c.ellipse(x, y + s * 0.08, s * 0.25, s * 0.2, 0, 0, TAU); c.arc(x + s * 0.1, y - s * 0.16, s * 0.13, 0, TAU); c.fill(); c.beginPath(); c.ellipse(x + s * 0.05, y - s * 0.36, s * 0.04, s * 0.14, 0, 0, TAU); c.ellipse(x + s * 0.16, y - s * 0.36, s * 0.04, s * 0.14, 0, 0, TAU); c.fill(); };
+DICON.gazebo = (c, x, y, s) => { c.fillStyle = '#ff6fa5'; c.beginPath(); c.moveTo(x, y - s * 0.38); c.lineTo(x + s * 0.42, y - s * 0.08); c.lineTo(x - s * 0.42, y - s * 0.08); c.closePath(); c.fill(); c.fillStyle = '#fff'; for (const k of [-0.32, -0.1, 0.1, 0.32]) c.fillRect(x + k * s - s * 0.025, y - s * 0.06, s * 0.05, s * 0.4); c.fillStyle = '#fff3d6'; c.fillRect(x - s * 0.4, y + s * 0.32, s * 0.8, s * 0.07); };
+function bfEffects() {
+  let l = 0; for (let i = 0; i < BSTEPS.length; i++) if (beautyPts() >= BSTEPS[i].p) l = i + 1; BF.lvl = l;
+  BF.spawn = l >= 4 ? 1.25 : l >= 1 ? 1.1 : 1; BF.vip = l >= 5 ? 0.12 : l >= 3 ? 0.06 : 0; BF.tipP = l >= 5 ? 0.6 : l >= 2 ? 0.45 : 0.25; BF.tipM = l >= 5 ? 2 : l >= 2 ? 1.5 : 1;
+}
+const BSTEPS = [{ p: 25, t: 'Müşteri gelişi +%10' }, { p: 60, t: 'Bahşiş şansı ve tutarı artar' }, { p: 110, t: 'VIP müşteri şansı +%6' }, { p: 170, t: 'Müşteri gelişi +%25' }, { p: 215, t: 'Çiçek Cenneti: VIP +%12, bahşiş x2' }];
+function beautyPts() { let n = 0; for (const id in S.decor) { const s = DSLM[id]; if (s && S.decor[id]) n += DECT[s.type].pts; } return n; }
+const beautyEl = document.getElementById('beauty'), beautyV = document.getElementById('beautyV'), beautyB = document.getElementById('beautyB');
+let _bsig = '';
+function updateBeautyHUD() {
+  const pts = beautyPts(), show = cosOn() || pts > 0; beautyEl.style.display = show ? 'inline-flex' : 'none'; document.getElementById('wardBtn').style.display = show ? 'inline-flex' : 'none';
+  let prev = 0, nxt = BSTEPS.find(q => q.p > pts); for (const q of BSTEPS) if (pts >= q.p) prev = q.p;
+  const sig = pts + '|' + show; if (sig === _bsig) return; _bsig = sig; beautyV.textContent = pts; beautyB.style.width = (nxt ? clamp((pts - prev) / (nxt.p - prev), 0, 1) * 100 : 100) + '%';
+}
+function beautyUp(lvl) {
+  const st = BSTEPS[lvl - 1]; praise('Güzellik ' + lvl + '. Seviye!', true); flash(); sfx('up'); popText(P.group.position.x, 5.2, P.group.position.z, st.t, '#ffd23f'); vib(40);
+  for (let i = 0; i < 6; i++) later(i * 0.25, () => fireworks(P.group.position.x + rand(-6, 6), P.group.position.z + rand(-6, 1))); confetti(P.group.position.x, 3, P.group.position.z, 80); coinBurstUI();
+  toast('Güzellik ' + lvl + '/5: ' + st.t);
+}
+function decorBuild(slot) {
+  const g = new THREE.Group(), m = new THREE.Mesh(decGeo(slot.type, slot.v), vcMat); m.castShadow = true; m.receiveShadow = true; g.add(m);
+  if (slot.type === 'lantern') { const gl = mk(G.sph, LAMPM, 0.2, 0.3, 0.2, 0.45, 3.0, 0); g.add(gl); GLOWS.push([slot.x, slot.z, 3.6]); glowDirty = true; }
+  g.position.set(slot.x, 0, slot.z); g.rotation.y = slot.ry; world.add(g); return g;
+}
+function decorColl(slot) {
+  const x = slot.x, z = slot.z, c = (hx, hz) => addCollider(x - hx, x + hx, z - hz, z + hz);
+  if (slot.type === 'statue') c(0.85, 0.85); else if (slot.type === 'pond') c(1.9, 1.9); else if (slot.type === 'topiary') c(0.6, 0.6); else if (slot.type === 'butterfly') c(1.75, 1.2); else if (slot.type === 'fence') c(2.2, 0.2); else if (slot.type === 'bench') { if (Math.abs(Math.sin(slot.ry)) > 0.5) c(0.4, 1.1); else c(1.1, 0.4); }
+}
+function placeDecor(slot, instant) {
+  if (DEC[slot.id] && DEC[slot.id].obj) return; const o = decorBuild(slot); DEC[slot.id] = DEC[slot.id] || {}; DEC[slot.id].obj = o; decorColl(slot);
+  if (slot.type === 'butterfly') makeBfly(slot.x, slot.z, 1.6);
+  if (instant) return; o.scale.setScalar(0.001); DANIM.push({ o, t: 0, slot });
+  sparkles(slot.x, 1.2, slot.z, 16, 0xfff2a0, 1.2); petals(slot.x, 1.6, slot.z, 0xff7ab0); petals(slot.x, 1.6, slot.z, 0xffffff); for (let i = 0; i < 8; i++) dust(slot.x + rand(-1.5, 1.5), 0.2, slot.z + rand(-1.5, 1.5), 2, 0.8); ring(slot.x, slot.z, 0xff7ab0, 6);
+}
+function buyDecor(slot) {
+  if (S.decor[slot.id]) return; const before = BF.lvl; S.decor[slot.id] = 1; placeDecor(slot, false); bfEffects(); updateBeautyHUD(); saveDirty = true; stats.decor = (stats.decor || 0) + 1;
+  popText(slot.x, 4.6, slot.z, '+' + DECT[slot.type].pts + ' Güzellik', '#ff9ad0'); hearts(slot.x, 3, slot.z, 6); sfx('happy'); panTo(slot.x, slot.z + 2, 0.6, 1.2);
+  if (BF.lvl > before) later(0.9, () => beautyUp(BF.lvl));
+}
+function initDecor() {
+  const gh = document.getElementById('beauty'); gh.addEventListener('click', () => { const pts = beautyPts(), nx = BSTEPS.find(q => q.p > pts); toast('Güzellik ' + pts + (nx ? ' • Sonraki ' + nx.p + ': ' + nx.t : ' • Tamamlandı!')); });
+  for (const s of DSL) {
+    DEC[s.id] = {}; const T = DECT[s.type];
+    DEC[s.id].pad = new CPad({ x: s.px, z: s.pz, w: 2.7, res: 256, color: '#ff7ab0', cost: () => s.cost, vis: () => cosOn() && areaOn(s.area) && !S.decor[s.id],
+      draw: (ctx, w, p) => padCard(ctx, w, p, { icon: DICON[s.type], title: T.n, sub: '+' + T.pts + ' Güzellik', cost: s.cost }), buy: () => buyDecor(s) });
+    if (S.decor[s.id]) placeDecor(s, true);
+  }
+  bfEffects();
+}
+let glowDirty = false;
+function updateDecor(dt, t) {
+  for (let i = DANIM.length - 1; i >= 0; i--) { const a = DANIM[i]; a.t += dt; const k = clamp(a.t / 0.8, 0, 1); a.o.scale.setScalar(Math.max(0.001, easeOutBack(k))); if (k >= 1) { a.o.scale.setScalar(1); DANIM.splice(i, 1); } }
+  GHOSTM.opacity = 0.26 + 0.1 * Math.sin(t * 3);
+  for (const s of DSL) { const d = DEC[s.id]; if (!d || !d.pad) continue; const want = d.pad.group.visible && !S.decor[s.id]; if (want && !d.ghost) { d.ghost = new THREE.Mesh(decGeo(s.type, s.v), GHOSTM); d.ghost.position.set(s.x, 0, s.z); d.ghost.rotation.y = s.ry; d.ghost.renderOrder = 3; world.add(d.ghost); } if (d.ghost) d.ghost.visible = want; }
+  updateBeautyHUD();
+}
+
+function updateC2(dt, t) { updateTiers(dt); updateDecor(dt, t); }
+function initC2() { initTiers(); initDecor(); }
 
 /*C2-END*/
 /* =====================================================================
@@ -3332,7 +3503,7 @@ for (const k in upPads) { const u = upPads[k]; if (!u.done) { u.group.visible = 
 window.__game = {
   get camera() { return camera; },
   measure() { renderer.info.reset(); if (composer) composer.render(0); else renderer.render(scene, camera); return { calls: renderer.info.render.calls, tris: renderer.info.render.triangles }; },
-  get c2() { return { TD, TDM, TK, applyTier, CPADS, S, cosGate, buyTier }; },
+  get c2() { return { TD, TDM, TK, applyTier, CPADS, S, cosGate, buyTier, DSL, DSLM, DECT, DEC, zonesAll: zones, buyDecor, beautyPts, BF, placeDecor }; },
   path(tx, tz) { return findPath(P.group.position.x, P.group.position.z, tx, tz); }, colliders,
   EXTZ, STN, GARD, cafe: () => cafe, wed: () => wed, city: () => city, tractor: () => tractor, give(type, n) { for (let i = 0; i < n; i++) P.stack.add(['orchid', 'lav', 'sun', 'rosep', 'flower'].includes(type) ? makeFlowerItem(0, type === 'flower' ? 'tulip' : type) : makeItemOf(type), type); },
   bot(x, z) { BOT = (x || z) ? { x, z } : null; if (BOT) hideIntro(); }, hideIntro, objective() { objective(_obj); return Object.assign({}, _obj); }, get goal() { return curGoal; }, GOALS, UPG,
