@@ -4085,10 +4085,12 @@ function bonsaiGeo() {
 }
 for (const [k, fn] of [['comb', combGeo], ['honey', honeyGeo], ['bonsai', bonsaiGeo]]) ITEMF[k] = () => { const g = new THREE.Group(); g.add(new THREE.Mesh(fn(), vcMat2)); g.userData.prod = k; return g; };
 function hiveGeo() {
-  return mkProdGeo('x_hive', () => { const P_ = []; for (const [sx, sz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) P_.push(part(G.box, 0x7a4a22, sx * 0.42, 0.18, sz * 0.4, 0.1, 0.36, 0.1));
-    P_.push(part(G.box, 0x8a5a2a, 0, 0.4, 0, 1.05, 0.08, 1.0));
-    for (let i = 0; i < 3; i++) { P_.push(part(G.box, i % 2 ? 0xfff0b0 : 0xf4c542, 0, 0.7 + i * 0.5, 0, 0.9, 0.46, 0.86), part(G.box, 0xc98a1a, 0, 0.93 + i * 0.5 - 0.46 / 2 + 0.2, 0.44, 0.7, 0.03, 0.02)); }
-    P_.push(part(G.box, 0x3a2a10, 0, 0.5, 0.44, 0.5, 0.07, 0.03), part(G.box, 0x7a4a22, 0, 0.5, 0.5, 0.64, 0.05, 0.12), part(G.box, 0x9a5a2a, 0, 2.28, 0, 1.12, 0.1, 1.08), part(G.box, 0xb8703a, 0, 2.36, 0, 0.9, 0.08, 0.86), part(G.sph6, 0xffd23f, 0, 2.45, 0, 0.1, 0.06, 0.1)); return P_; });
+  return mkProdGeo('x_hive2', () => { const P_ = [], Y1 = 0xffd23f, Y2 = 0xf2a31b;
+    P_.push(part(G.cyl, 0x8a5a2a, 0, 0.08, 0, 1.25, 0.16, 1.25), part(G.cyl, 0xb07a3a, 0, 0.19, 0, 1.12, 0.06, 1.12));
+    for (let i = 0; i < 4; i++) { const r = 0.98 - i * 0.12; P_.push(part(G.cyl, i % 2 ? Y2 : Y1, 0, 0.5 + i * 0.4, 0, r, 0.42, r)); }
+    P_.push(part(G.sph6, Y1, 0, 2.02, 0, 0.62, 0.55, 0.62), part(G.sph6, 0x7a4a22, 0, 2.52, 0, 0.12, 0.1, 0.12));
+    P_.push(part(G.sph6, 0x3a2410, 0, 0.62, 0.9, 0.28, 0.24, 0.1), part(G.box, 0xb07a3a, 0, 0.36, 1.08, 0.7, 0.07, 0.34));
+    P_.push(part(G.sph6, 0xffffff, -0.5, 1.5, 0.76, 0.07, 0.07, 0.04), part(G.sph6, 0xff7ab0, 0.5, 1.1, 0.78, 0.09, 0.09, 0.04)); return P_; });
 }
 function beeGeo() {
   return mkProdGeo('x_bee', () => [part(G.sph6, 0xffd23f, 0, 0, 0, 0.075, 0.065, 0.11), part(G.sph6, 0x2a1a0a, 0, 0, 0.03, 0.078, 0.068, 0.025), part(G.sph6, 0x2a1a0a, 0, 0, -0.04, 0.078, 0.068, 0.02), part(G.sph6, 0x2a1a0a, 0, 0.005, 0.11, 0.05, 0.05, 0.05), part(G.sph6, 0xf4faff, -0.07, 0.07, 0, 0.07, 0.01, 0.045, 0, 0, 0.3), part(G.sph6, 0xf4faff, 0.07, 0.07, 0, 0.07, 0.01, 0.045, 0, 0, -0.3)]);
@@ -4112,7 +4114,6 @@ function sakura(g, x, z, sc, rnd) {
   shadowAll(t, true, false); ad(g, t, x, 0, z); return { x, z, y: 2.6 * sc };
 }
 function lantern(g, x, z, sc) {
-  if (1) return; // C4: küçük süs kaldırıldı
   GLOWS.push([x, z, 3.0]); const s = sc || 1, o = new THREE.Group(), st = mat(0xa8a8a4);
   o.add(mk(G.box, st, 0.62 * s, 0.14 * s, 0.62 * s, 0, 0.07 * s, 0), mk(G.cyl, st, 0.13 * s, 0.9 * s, 0.13 * s, 0, 0.6 * s, 0), mk(G.box, st, 0.46 * s, 0.1 * s, 0.46 * s, 0, 1.08 * s, 0), mk(G.box, LAMPM, 0.3 * s, 0.34 * s, 0.3 * s, 0, 1.3 * s, 0), mk(G.cone3, mat(0x8a8a86), 0.62 * s, 0.34 * s, 0.62 * s, 0, 1.64 * s, 0), mk(G.sphT, st, 0.08 * s, 0.08 * s, 0.08 * s, 0, 1.86 * s, 0));
   o.children[4].rotation.y = Math.PI / 4; shadowAll(o, true, false); ad(g, o, x, 0, z);
@@ -4125,6 +4126,7 @@ function torii(g, x, z, ry) {
   o.rotation.y = ry; shadowAll(o, true, false); ad(g, o, x, 0, z);
 }
 const C3 = { hives: [], bees: [], flp: [], petalSrc: [], koi: [], bridge: null };
+function honeyTex() { return cached('honey', () => { const c = cv(128, 128), x = c.getContext('2d'); x.fillStyle = '#f7c548'; x.fillRect(0, 0, 128, 128); x.strokeStyle = '#d9962a'; x.lineWidth = 4; x.fillStyle = '#ffd96a'; const r = 20, dx = r * 1.732; for (let row = -1; row < 7; row++) for (let col = -1; col < 5; col++) { const cx = col * dx * 1 + (row % 2 ? dx / 2 : 0) + 8, cy = row * r * 1.5 + 8; x.beginPath(); for (let k = 0; k < 6; k++) { const a = Math.PI / 6 + k * Math.PI / 3; x[k ? 'lineTo' : 'moveTo'](cx + Math.cos(a) * (r - 2), cy + Math.sin(a) * (r - 2)); } x.closePath(); x.fill(); x.stroke(); } return canvasTex(c, [1, 1]); }); }
 const HIVE_SLOTS = [[-20.5, -103.5], [-13.5, -103.5], [-19, -100.2], [-15, -100.2], [-19, -106.8], [-15, -106.8]];
 const hiveCount = () => Math.min(6, 2 + (S.lv.hiveN || 0));
 function nearFlowerZones() { let n = 0; if (zone2 && !zone2.locked) n++; for (const id of ['lav', 'parf', 'sunf', 'jap']) if (unlockedZ(id)) n++; return n; }
@@ -4135,6 +4137,9 @@ function buildBee() {
   const g0 = mkGroup(z, 0.1), g1 = mkGroup(z, 0.5);
   for (const [px, pz, n] of [[-21.5, -112, 16], [-14.5, -113, 16], [-4, -113.5, 14], [-4, -100, 12], [-7.5, -97.5, 10], [-21, -96.5, 14], [-14, -95.5, 12], [-9, -113, 8]]) patch(g0, rnd, px, pz, n, 2.2, C3.flp);
   decorTree(g0, -22.5, -94.5, 1.1); decorTree(g0, -22.5, -114.5, 1.2); decorTree(g0, 0, -114.5, 1.1); lamp(g0, -2, -94);
+  { const hp = new THREE.Mesh(G.plane, LM({ map: honeyTex() })); hp.rotation.x = -Math.PI / 2; hp.scale.set(15.6, 2.4, 1); hp.material.map.repeat.set(7.5, 1.2); hp.receiveShadow = true; ad(g0, hp, -6.2, 0.04, -102.6);
+    const hq = new THREE.Mesh(G.plane, LM({ map: honeyTex() })); hq.rotation.x = -Math.PI / 2; hq.scale.set(2.4, 7, 1); hq.material.map = hq.material.map.clone(); hq.material.map.needsUpdate = true; hq.material.map.repeat.set(1.2, 3.5); hq.receiveShadow = true; ad(g0, hq, -14, 0.045, -108);
+    const big = new THREE.Mesh(hiveGeo(), vcMat); big.scale.setScalar(2.5); big.castShadow = true; ad(g0, big, -22, 0, -101); addCollider(-23.7, -20.3, -102.7, -99.3, () => !z.locked); }
   // çiçek kutuları + tabela
   for (const sx of [-1, 1]) ad(g0, rbox(2.6, 0.4, 0.7, 0.1, mat(0xc98a4a)), -9 + sx * 4.5, 0.25, -95.5);
   const g1b = g1; const st = buildStation(z, g1b, { id: 'hon', name: 'BAL KAVANOZU', x: -6.2, z: -108, awn: '#ffb703', col: '#ffb703', col2: 0xffc21a, mcol: 0xc98a10, shirt: 0xffd54a, inputs: [{ type: 'comb', n: 2 }], out: 'honey', base: 3.0, hire: 'beeW' });
@@ -4248,7 +4253,7 @@ function buildJapan() {
   addCollider(pd.x - pd.w / 2 - 0.2, pd.x + pd.w / 2 + 0.2, pd.z - pd.d / 2 - 0.3, pd.z - 1.25, () => !z.locked); addCollider(pd.x - pd.w / 2 - 0.2, pd.x + pd.w / 2 + 0.2, pd.z + 1.25, pd.z + pd.d / 2 + 0.3, () => !z.locked);
   // kiraz ağaçları + fenerler + kayalar
   for (const [tx, tz, sc] of [[12.5, -107.5, 0.95], [23.6, -97.2, 0.9], [23.6, -105, 0.95], [31.5, -95.8, 1.0], [31.8, -113.5, 1.05], [11.8, -114, 1.0], [27.2, -108.2, 0.85], [14, -96, 0.8]]) JAP.trees.push(sakura(g0, tx, tz, sc, rnd));
-  for (const [lx, lz] of [[13.2, -103.2], [13.2, -98.8], [22, -102.8], [22, -99.2], [28.5, -104.8], [10.8, -110]]) lantern(g0, lx, lz, 1);
+  for (const [lx, lz] of [[13.3, -104.4], [13.3, -97.6]]) lantern(g0, lx, lz, 1.7);
   for (const [rx, rz, r] of [[27, -110, 0.6], [30.5, -108, 0.5], [31.4, -105.2, 0.35], [26.5, -104.6, 0.3], [22.5, -109.2, 0.4]]) sapGround(g0, rx, rz, r);
   lamp(g0, 10.5, -93.5); lamp(g0, 31.5, -93.5);
   // fidan tarlası (sap) + bonsai atölyesi
@@ -4412,8 +4417,8 @@ function portNew() { const L = S.pt.n, need = portManifest(L); S.pt.cur = { need
 function shipGeo() {
   return mkProdGeo('x_ship', () => {
     const P_ = [];
-    P_.push(part(G.box, 0x7a1616, 0, 0.95, 0, 12.4, 1.9, 5.0), part(G.box, 0x1b2a4a, 0, 0.3, 0, 12.4, 0.6, 4.84), part(G.box, 0xf2f2f2, 0, 1.92, 0, 12.6, 0.12, 5.15), part(G.box, 0xe8142e, 0, 1.5, 0, 12.5, 0.16, 5.06));
-    P_.push(part(new THREE.CylinderGeometry(0.05, 2.5, 3.4, 4), 0x7a1616, -7.9, 0.95, 0, 0.76, 1, 1, 0, 0, Math.PI / 2), part(new THREE.CylinderGeometry(0.05, 2.5, 3.4, 4), 0xf2f2f2, -7.9, 1.93, 0, 0.07, 0.99, 1.02, 0, 0, Math.PI / 2));
+    P_.push(part(G.box, 0x7a1616, 0, 0.95, 0, 12.4, 1.9, 5.0), part(G.box, 0x1b2a4a, 0, 0.3, 0, 12.4, 0.6, 4.84), part(G.box, 0xd9a566, 0, 1.92, 0, 12.6, 0.12, 5.15), part(G.box, 0xe8142e, 0, 1.5, 0, 12.5, 0.16, 5.06));
+    P_.push(part(new THREE.CylinderGeometry(0.05, 2.5, 3.4, 4), 0x7a1616, -7.9, 0.95, 0, 0.76, 1, 1, 0, 0, Math.PI / 2), part(new THREE.CylinderGeometry(0.05, 2.5, 3.4, 4), 0xd9a566, -7.9, 1.93, 0, 0.07, 0.99, 1.02, 0, 0, Math.PI / 2));
     P_.push(part(G.box, 0xf6f6f6, 4.2, 3.5, 0, 2.8, 3.1, 4.3), part(G.box, 0x1d3b66, 2.8, 3.9, 0, 0.06, 0.55, 3.8), part(G.box, 0xf6f6f6, 4.4, 5.6, 0, 2.2, 1.2, 4.0), part(G.box, 0x1d3b66, 3.3, 5.7, 0, 0.06, 0.6, 3.6), part(G.box, 0xe8142e, 4.6, 6.5, 0, 1.0, 0.8, 1.0), part(G.cyl, 0xe8142e, 5.6, 6.2, 0, 0.7, 2.4, 0.7), part(G.cyl, 0x1a1a1a, 5.6, 7.5, 0, 0.74, 0.3, 0.74), part(G.cyl, 0xffd23f, 5.6, 7.0, 0, 0.72, 0.25, 0.72));
     P_.push(part(G.cyl, 0x8a98a8, -3.2, 3.6, 0, 0.1, 3.4, 0.1), part(G.cyl, 0x8a98a8, 2.0, 3.6, 0, 0.1, 3.4, 0.1), part(G.box, 0x8a98a8, -0.6, 5.3, 0, 5.4, 0.1, 0.1), part(G.box, 0xffd23f, -4.9, 2.2, 0, 0.08, 0.5, 5.1), part(G.sph6, 0xffffff, -6.4, 2.3, 0, 0.1, 0.1, 0.1));
     for (const sz of [-2.55, 2.55]) for (let i = 0; i < 8; i++) P_.push(part(G.cyl, 0xffd23f, -5.2 + i * 1.6, 2.2, sz, 0.05, 0.6, 0.05));
@@ -4427,7 +4432,13 @@ function buildPort() {
   PORT.z = z;
   // deniz
   const sc = cv(128, 128), sx = sc.getContext('2d'); sx.fillStyle = '#2a8fc4'; sx.fillRect(0, 0, 128, 128); sx.strokeStyle = 'rgba(255,255,255,.35)'; sx.lineWidth = 3; for (let i = 0; i < 10; i++) { const y = i * 13 + 4; sx.beginPath(); sx.moveTo(0, y); sx.bezierCurveTo(30, y - 6, 60, y + 6, 128, y); sx.stroke(); } const stx = canvasTex(sc, [14, 2.2]);
-  const sea = new THREE.Mesh(G.plane, LM({ map: stx, transparent: true, opacity: 0.94 })); sea.rotation.x = -Math.PI / 2; sea.scale.set(80, 11, 1); ad(g0, sea, -38, 0.045, -136.5); sea.renderOrder = 1; PORT.sea = stx;
+  const seaM = LM({ map: stx, transparent: true, opacity: 0.95 }); PORT.uT = { value: 0 }; seaM.customProgramCacheKey = () => 'sea6';
+  seaM.onBeforeCompile = sh => { sh.uniforms.uT = PORT.uT; sh.vertexShader = 'uniform float uT;\n' + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n transformed.z += sin(position.x * 44.0 + uT * 1.5) * 0.05 + sin(position.y * 17.0 + position.x * 30.0 + uT * 1.2) * 0.04;');
+    sh.fragmentShader = 'uniform float uT;\n' + sh.fragmentShader.replace('#include <map_fragment>', '#include <map_fragment>\n float w1 = sin(vUv.x * 3.0 + uT * 1.7) * sin(vUv.y * 6.0 - uT * 1.3); diffuseColor.rgb += vec3(0.08, 0.13, 0.15) * smoothstep(0.3, 0.9, w1); diffuseColor.rgb *= 0.93 + 0.07 * sin(vUv.y * 2.0 + uT);'); };
+  const sea = new THREE.Mesh(new THREE.PlaneGeometry(1, 1, 72, 8), seaM); sea.rotation.x = -Math.PI / 2; sea.scale.set(80, 11, 1); ad(g0, sea, -38, 0.045, -136.5); sea.renderOrder = 1; sea.userData.dyn = true; sea.receiveShadow = true; PORT.sea = stx;
+  { const fc = cv(256, 32), fx = fc.getContext('2d'); fx.fillStyle = 'rgba(255,255,255,.0)'; fx.clearRect(0, 0, 256, 32); fx.fillStyle = '#fff'; for (let i = 0; i < 9; i++) { fx.beginPath(); fx.ellipse(14 + i * 28 + (i % 2) * 5, 16 + Math.sin(i * 1.7) * 5, 13 + (i % 3) * 3, 4, 0, 0, TAU); fx.fill(); }
+    const ft = canvasTex(fc, [5, 1]); const foam = new THREE.Mesh(G.plane, new THREE.MeshBasicMaterial({ map: ft, transparent: true, opacity: 0.75, depthWrite: false, fog: false })); foam.rotation.x = -Math.PI / 2; foam.scale.set(26, 0.9, 1); ad(g0, foam, -11, 0.07, -132.6); foam.renderOrder = 2; foam.userData.dyn = true; PORT.foam = ft; PORT.foamM = foam.material; }
+  { const gm = new THREE.InstancedMesh(mkProdGeo('x_gull', () => [part(G.sph6, 0xffffff, 0, 0, 0, 0.1, 0.09, 0.3), part(G.sph6, 0xffffff, 0, 0.04, 0.28, 0.075, 0.075, 0.085), part(G.sph6, 0xffb02e, 0, 0.03, 0.38, 0.03, 0.025, 0.06), part(G.sph6, 0xffffff, 0, 0, -0.3, 0.07, 0.03, 0.14), part(G.sph6, 0xf4f8ff, -0.42, 0.03, 0.02, 0.5, 0.018, 0.15, 0, 0, 0.12), part(G.sph6, 0xf4f8ff, 0.42, 0.03, 0.02, 0.5, 0.018, 0.15, 0, 0, -0.12), part(G.sph6, 0x56616e, -0.82, 0.05, 0.03, 0.14, 0.02, 0.12), part(G.sph6, 0x56616e, 0.82, 0.05, 0.03, 0.14, 0.02, 0.12)]), vcMat, 4); gm.frustumCulled = false; gm.userData.dyn = true; gm.visible = false; scene.add(gm); PORT.gull = gm; }
   // dok + kıyı
   ad(g0, rbox(21.6, 0.3, 6.6, 0.06, mat(0xb98a55)), -10, 0.15, -128.3);
   for (let i = 0; i < 11; i++) ad(g0, mk(G.box, mat(i % 2 ? 0xc99a65 : 0xad7f4c), 21.4, 0.02, 0.5), -10, 0.32, -125.2 - i * 0.6);
@@ -4491,8 +4502,18 @@ function portReturn() {
     praise('Gemi döndü! +' + fmt(v), true); flash(); sfx('up'); coinBurstUI(); for (let i = 0; i < 8; i++) later(i * 0.2, () => fireworks(-8 + rand(-8, 8), -128 + rand(-5, 3))); confetti(-6, 4, -128, 90); toast('Sözleşme tamamlandı! Parayı iskeleden topla (' + (S.pt.n + 1) + '. sözleşme büyüdü)'); });
   later(5, () => { portNew(); portShipPlace(); writeSave(); });
 }
+const _gM = new THREE.Matrix4(), _gQ = new THREE.Quaternion(), _gQ2 = new THREE.Quaternion(), _gV = new THREE.Vector3(), _gS = new THREE.Vector3(), _gZ = new THREE.Vector3(0, 0, 1);
+function portFx(dt, t) { // dalga/köpük, martılar, baca dumanı
+  PORT.uT.value = t; if (PORT.foam) { PORT.foam.offset.x -= dt * 0.04; PORT.foamM.opacity = 0.55 + 0.25 * Math.sin(t * 1.3); }
+  const near = nearD(-10, -130, 60), gm = PORT.gull; gm.visible = near; if (!near) return;
+  for (let i = 0; i < 4; i++) { const a = t * (0.34 + i * 0.05) * (i % 2 ? -1 : 1) + i * 1.9, R = 7 + i * 1.7, x = -9 + (i - 1.5) * 4 + Math.cos(a) * R, zz = -134 + Math.sin(a) * R * 0.5, y = 8.5 + i * 0.9 + Math.sin(t * 0.8 + i) * 0.5, dir = i % 2 ? 1 : -1;
+    const yaw = Math.atan2(Math.sin(a) * R * dir, -Math.cos(a) * R * 0.5 * dir); _gQ.setFromAxisAngle(_Y, yaw); _gQ2.setFromAxisAngle(_gZ, Math.sin(t * 1.1 + i) * 0.35 * dir); _gQ.multiply(_gQ2);
+    _gM.compose(_gV.set(x, y, zz), _gQ, _gS.set(1.05, 1.05 * (1 + 0.18 * Math.sin(t * 9 + i * 2)), 1.05)); gm.setMatrixAt(i, _gM); }
+  gm.instanceMatrix.needsUpdate = true;
+  const sh = PORT.ship; if (sh && sh.visible) { PORT.smk = (PORT.smk || 0) - dt; if (PORT.smk <= 0) { PORT.smk = 0.32; const ry = sh.rotation.y, ox = 5.6, sx = sh.position.x + ox * Math.cos(ry), sz = sh.position.z - ox * Math.sin(ry); emit({ x: sx, y: 8.0, z: sz, vx: 0.5, vy: 1.4, vz: rand(-0.2, 0.2), life: 1.6, size: 0.55, c: 0xe9edf2, a: 0.7, grav: -0.3, drag: 0.6, shrink: false, grow: 1.6 }); } }
+}
 function updatePort(dt, t) {
-  const z = PORT.z; if (!z || z.locked) return; const c = S.pt.cur; if (!c) return;
+  const z = PORT.z; if (!z || z.locked) return; portFx(dt, t); const c = S.pt.cur; if (!c) return;
   if (PORT.sea) PORT.sea.offset.x += dt * 0.012;
   const sh = PORT.ship; PORT.t += dt;
   if (c.st === 'load') {
@@ -4630,6 +4651,7 @@ function buildFest() {
     flag(10.6, -139.6, 10.6, -122.5); flag(31.8, -139.6, 31.8, -122.5); flag(10.6, -122.5, 31.8, -122.5); for (let i = 0; i < 12; i++) { const k = i / 11, x = lerp(10.6, 31.8, k), y = 4.6 - Math.sin(k * Math.PI) * 0.8; ad(g2, mk(G.sphT, GLOWM, 0.11, 0.11, 0.11), x, y - 0.1, -131); GLOWS.push([x, -131, 2.4]); } }
   // çiçek kemeri (giriş)
   { const a = new THREE.Group(); for (const sz of [-2.4, 2.4]) a.add(mk(G.cyl, mat(0xffffff), 0.2, 5.0, 0.2, 0, 2.5, sz)); for (let i = 0; i < 14; i++) { const t = i / 13 * Math.PI; a.add(mk(G.sphT, mat(FCOLS[i % 6]), 0.36, 0.36, 0.36, 0, 5.0 + Math.sin(t) * 1.0, Math.cos(t) * 2.4)); } for (const sz of [-2.4, 2.4]) for (let k = 0; k < 4; k++) a.add(mk(G.sphT, mat(FCOLS[(k + 2) % 6]), 0.3, 0.3, 0.3, 0.1, 0.6 + k, sz)); shadowAll(a, true, false); ad(g2, a, 10.5, 0, -130.5); }
+  for (const [bx, bz] of [[11.9, -136.6], [30.2, -136.6], [11.9, -124.2], [30.2, -124.2]]) { const b = new THREE.Group(); b.add(mk(G.box, mat(0x8a5a30), 0.5, 0.3, 0.5, 0, 0.15, 0), mk(G.cyl, mat(0xffffff), 0.035, 2.6, 0.035, 0, 1.5, 0)); [[0, 3.6, 0, 0xff4f93], [0.6, 3.2, 0.1, 0xffd23f], [-0.55, 3.3, -0.1, 0x4fe3ff], [0.1, 4.3, 0.2, 0x9dff6a], [-0.25, 3.9, 0.45, 0xc77dff]].forEach(([dx, dy, dz, c]) => b.add(mk(G.sphT, mat(c), 0.48, 0.58, 0.48, dx, dy, dz))); shadowAll(b, true, false); ad(g2, b, bx, 0, bz); }
   decorTree(g0, 11.8, -140.6, 1.1); decorTree(g0, 31.4, -140.6, 1.1); decorTree(g0, 11.5, -120.5, 1.1); lamp(g0, 10.6, -125); lamp(g0, 31.8, -125); lamp(g0, 21, -141);
   // balonlar (dinamik) + kalabalık
   { const bm = new THREE.InstancedMesh(new THREE.SphereGeometry(0.5, 10, 8), LM({ color: 0xffffff }), 16); bm.frustumCulled = false; bm.userData.dyn = true; bm.visible = false; scene.add(bm); const cl = [0xff4f93, 0xffd23f, 0x4fe3ff, 0x9dff6a, 0xc77dff, 0xff7a1a]; FEST.bal = []; for (let i = 0; i < 16; i++) { bm.setColorAt(i, new THREE.Color(cl[i % 6])); FEST.bal.push({ x: 12 + rnd() * 18, z: -139 + rnd() * 16, y: 3.5 + rnd() * 3, ph: rnd() * 6 }); } FEST.balloons = bm; }
@@ -4686,11 +4708,18 @@ function buildMuseum() {
   const SPX = [-18.8, -16.2, -13.6, -11.0, -8.4, -6.2]; MUS.pos = [];
   for (let r = 0; r < 3; r++) for (let c = 0; c < 6; c++) { const x = SPX[c], zz = [-151.7, -157.8, -162.2][r] + (r === 1 ? -0.2 : 0); ad(g1, rbox(1.4, 1.0, 1.4, 0.08, mat(0xf0e8d8)), x, 0.95, zz); ad(g1, rbox(1.5, 0.12, 1.5, 0.04, mat(GOLD)), x, 1.5, zz); ad(g1, mk(G.cyl, mat(0x20202a), 0.55, 0.08, 0.55), x, 1.58, zz); MUS.pos.push([x, zz, c, r]); addCollider(x - 0.75, x + 0.75, zz - 0.75, zz + 0.75, () => !z.locked); }
   for (let i = 0; i < 3; i++) { const x = -15 + i * 4.6; ad(g1, mk(G.cyl, mat(GOLD), 0.04, 0.9, 0.04), x, 4.5, -157); ad(g1, mk(G.sphT, GLOWM, 0.3, 0.2, 0.3), x, 3.9, -157); for (let k = 0; k < 6; k++) { const a = k / 6 * TAU; ad(g1, mk(G.sphT, mat(0xdff4ff), 0.07, 0.14, 0.07), x + Math.cos(a) * 0.4, 3.9, -157 + Math.sin(a) * 0.4); } GLOWS.push([x, -157, 3.2]); }
+  // sütunlu ön cephe (güney) + alınlık + kapı sütunları
+  { const cm = mat(0xf7f3ea), gd = mat(GOLD), zc = Z1 + 0.55; const XS = []; for (let i = 0; i < 6; i++) XS.push(X0 + 2.4 + i * 2.84);
+    for (const x of XS) { ad(g2, mk(G.cyl, cm, 0.42, 4.9, 0.42), x, 2.9, zc); ad(g2, mk(G.box, cm, 1.05, 0.28, 1.05), x, 0.46, zc); ad(g2, mk(G.box, gd, 1.1, 0.22, 1.1), x, 5.45, zc); addCollider(x - 0.5, x + 0.5, zc - 0.5, zc + 0.5, () => !z.locked); }
+    ad(g2, mk(G.box, cm, XS[5] - XS[0] + 2.4, 0.55, 1.3), cx - 0.2, 5.8, zc); ad(g2, mk(G.box, gd, XS[5] - XS[0] + 2.55, 0.12, 1.4), cx - 0.2, 6.15, zc);
+    [[10.2, 6.5], [8.0, 7.0], [5.8, 7.5], [3.2, 8.0]].forEach(([w, y], k) => ad(g2, mk(G.box, k % 2 ? gd : cm, w, 0.5, 1.2), cx - 0.2, y, zc)); ad(g2, mk(G.sphT, gd, 0.5, 0.5, 0.5), cx - 0.2, 8.5, zc);
+    for (const zz of [-157.6, -152.0]) { ad(g2, mk(G.cyl, cm, 0.34, 4.6, 0.34), X1 + 1.6, 2.7, zz); ad(g2, mk(G.box, gd, 0.9, 0.2, 0.9), X1 + 1.6, 5.1, zz); }
+    ad(g2, mk(G.box, cm, 0.8, 0.45, 6.6), X1 + 1.6, 5.4, -154.8); }
   // dış bahçe + basamak
   for (let i = 0; i < 3; i++) ad(g2, rbox(1.2 - i * 0.2, 0.18 + i * 0.1, 3.4, 0.05, mat(0xcfd6e2)), X1 + 0.6 + (2 - i) * 0.55, 0.12 + i * 0.05, -154.8);
   decorTree(g0, -22.8, -146, 1.1); decorTree(g0, -22.8, -166, 1.1); decorTree(g0, 0.5, -166, 1.1); decorTree(g0, 0.6, -146.5, 1.0); lamp(g0, -2.2, -151); lamp(g0, -2.2, -159); lamp(g0, -12, -147);
   for (const [px, pz] of [[-1.5, -148.5], [-1.5, -161.5]]) for (let i = 0; i < 4; i++) wildflower(g0, px + (i % 2) * 0.8, pz + (i >> 1) * 0.6, FPAL[(i + 2) % 6]);
-  const sb = makeBoard('BOTANİK MÜZESİ', 5.6, 1.2, 'wood'); sb.rotation.y = CFG.yaw; ad(g2, sb, cx, 6.6, Z1 + 0.6); MUS.spr = makeSprite(384, 150, () => {}, 4.2, 1.64, false); MUS.spr.position.set(-1.6 - z.cx, 4.6, -152.4 - z.cz); g2.add(MUS.spr);
+  const sb = makeBoard('BOTANİK MÜZESİ', 7.4, 1.15, 'wood'); ad(g2, sb, cx - 0.2, 5.95, Z1 + 1.45); MUS.spr = makeSprite(384, 150, () => {}, 4.2, 1.64, false); MUS.spr.position.set(-1.6 - z.cx, 4.6, -152.4 - z.cz); g2.add(MUS.spr);
   // colliders (duvarlar; kapı açık)
   addCollider(X0 - 0.3, X1 + 0.3, Z0 - 0.3, Z0 + 0.1, () => !z.locked); addCollider(X0 - 0.3, X1 + 0.3, Z1 - 0.1, Z1 + 0.3, () => !z.locked); addCollider(X0 - 0.3, X0 + 0.1, Z0, Z1, () => !z.locked); addCollider(X1 - 0.1, X1 + 0.3, Z0, -156.2, () => !z.locked); addCollider(X1 - 0.1, X1 + 0.3, -153.4, Z1, () => !z.locked);
   // sergi örnekleri (dinamik, instancing)
