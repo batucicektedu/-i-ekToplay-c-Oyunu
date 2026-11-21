@@ -220,10 +220,11 @@ function rm(o) { if (o && o.parent) o.parent.remove(o); }
 let fountainWater = null, clouds = [], butterflies = [];
 let LOADED_X = null, carpet1 = null, carpet2 = null;
 const MAIN_UNLOCKS = { bed: 1, helper: 1, cashier: 1, carrier: 1, sera: 1, van: 1 };
-const S = { money: 0, lv: { cap: 0, speed: 0, pack: 0, bed: 0, helper: 0, cashier: 0, carrier: 0, cashSpd: 0, carSpd: 0, carCap: 0, helpSpd: 0, sera: 0, van: 0, lav: 0, lavW: 0, keseSpd: 0, parf: 0, parfW: 0, parfSpd: 0, cafe: 0, cafeW: 0, teaSpd: 0, wed: 0, wedBonus: 0, sunf: 0, sunW: 0, sbqSpd: 0, city: 0, cityW: 0, citySpd: 0, stars: 0 }, tut: 0, tier: { pack: 0, flo: 0, pot: 0, van: 0, kese: 0, parf: 0, tea: 0, wed: 0, city: 0 }, decor: {}, cos: { hat: 'straw', fit: 0, uni: 0, floor: 0, own: [] }, dn: 0 };
+const S = { money: 0, lv: { cap: 0, speed: 0, pack: 0, bed: 0, helper: 0, cashier: 0, carrier: 0, cashSpd: 0, carSpd: 0, carCap: 0, helpSpd: 0, sera: 0, van: 0, lav: 0, lavW: 0, keseSpd: 0, parf: 0, parfW: 0, parfSpd: 0, cafe: 0, cafeW: 0, teaSpd: 0, wed: 0, wedBonus: 0, sunf: 0, sunW: 0, sbqSpd: 0, city: 0, cityW: 0, citySpd: 0, stars: 0, bee: 0, beeW: 0, hiveN: 0, hiveSpd: 0, honSpd: 0, jap: 0, bonW: 0, bonSpd: 0, coll: 0, port: 0, portW: 0, portBonus: 0, fest: 0, festBonus: 0, mus: 0, musTkt: 0 }, tut: 0, tier: { pack: 0, flo: 0, pot: 0, van: 0, kese: 0, parf: 0, tea: 0, wed: 0, city: 0, hon: 0, bon: 0 }, decor: {}, cos: { hat: 'straw', fit: 0, uni: 0, floor: 0, own: [] }, dn: 0,
+  cb: {}, cs: [], pt: { n: 0, cur: null }, fe: { n: 0, t: 420 }, q: { a: [], n: 0 }, bx: 0, ts: 0, op: 0, mv: 0 };
 let saveDirty = false, saveTimer = 0;
 let introDone = false, curGoal = null, curGoalIdx = -1, lastGoalIdx = -2;
-const SAVE_VER = 3, BAK_KEY = SAVE_KEY + '_bak', TMP_KEY = SAVE_KEY + '_tmp';
+const SAVE_VER = 4, BAK_KEY = SAVE_KEY + '_bak', TMP_KEY = SAVE_KEY + '_tmp';
 let SAVE_BLOCKED = false; // okuma bozuk/başarısızsa eski kaydın üzerine yazma
 function readSaveKey(k) { try { const r = localStorage.getItem(k); if (r === null) return { none: true }; const o = JSON.parse(r); return o && typeof o === 'object' && !Array.isArray(o) ? { o, raw: r } : { bad: true, raw: r }; } catch (e) { return { bad: true }; } }
 const hasProgress = o => !!o && (+o.money > 0 || (o.lv && Object.keys(o.lv).some(k => +o.lv[k] > 0)) || +o.tut > 0);
@@ -231,6 +232,7 @@ function migrateSave(s) { // ver alanı yoksa 1 sayılır; sadece alan ekler, hi
   if (!s.lv || typeof s.lv !== 'object') s.lv = {};
   const v = Math.floor(+s.ver) || 1; if (v < 2) { /* v1 -> v2: geçici işçi durumları artık kaydedilmez/yok sayılır */ }
   if (v < 3) { /* v2 -> v3: tier, decor, cos, dn alanları eklendi; eksikse yüklemede varsayılanla dolar */ }
+  if (v < 4) { /* v3 -> v4 (C3): cb, cs, pt, fe, q, bx, ts, op, mv ve yeni lv/tier anahtarları eklendi; eksikse varsayılan */ }
   s.ver = SAVE_VER; return s;
 }
 (function loadSave() {
@@ -243,12 +245,19 @@ function migrateSave(s) { // ver alanı yoksa 1 sayılır; sadece alan ekler, hi
     if (s) {
       s = migrateSave(s);
       const m = Math.floor(+s.money); S.money = isFinite(m) ? Math.max(0, m) : 0;
-      for (const k in S.lv) { const v = Math.floor(+(s.lv && s.lv[k])); S.lv[k] = clamp(isFinite(v) ? v : 0, 0, UPG[k] ? UPG[k].costs.length : 7); }
+      for (const k in S.lv) { const v = Math.floor(+(s.lv && s.lv[k])); S.lv[k] = clamp(isFinite(v) ? v : 0, 0, UPG[k] ? UPG[k].costs.length : 12); }
       S.tut = clamp(Math.floor(+s.tut) || 0, 0, 12);
       if (s.tier && typeof s.tier === 'object') for (const k in S.tier) S.tier[k] = clamp(Math.floor(+s.tier[k]) || 0, 0, 2);
       if (s.decor && typeof s.decor === 'object') for (const k in s.decor) if (s.decor[k]) S.decor[k] = 1;
       if (s.cos && typeof s.cos === 'object') { const c = s.cos; if (typeof c.hat === 'string') S.cos.hat = c.hat.slice(0, 20); for (const k of ['fit', 'uni', 'floor']) S.cos[k] = clamp(Math.floor(+c[k]) || 0, 0, 20); if (Array.isArray(c.own)) S.cos.own = c.own.filter(q => typeof q === 'string').map(q => q.slice(0, 24)).slice(0, 200); }
       S.dn = isFinite(+s.dn) ? Math.max(0, +s.dn) : 0;
+      { const n0 = (v, a, b, d) => { v = Math.floor(+v); return isFinite(v) ? clamp(v, a, b) : d; };
+        if (s.cb && typeof s.cb === 'object') for (const k in s.cb) { const v = n0(s.cb[k], 0, 9999, 0); if (v > 0) S.cb[String(k).slice(0, 24)] = v; }
+        if (Array.isArray(s.cs)) S.cs = s.cs.filter(q => typeof q === 'string').map(q => q.slice(0, 24)).slice(0, 40);
+        if (s.pt && typeof s.pt === 'object') { S.pt.n = n0(s.pt.n, 0, 99999, 0); S.pt.cur = s.pt.cur && typeof s.pt.cur === 'object' ? s.pt.cur : null; }
+        if (s.fe && typeof s.fe === 'object') { S.fe.n = n0(s.fe.n, 0, 99999, 0); S.fe.t = isFinite(+s.fe.t) ? clamp(+s.fe.t, 0, 3600) : 420; }
+        if (s.q && typeof s.q === 'object') { S.q.n = n0(s.q.n, 0, 99999, 0); if (Array.isArray(s.q.a)) S.q.a = s.q.a.filter(q => q && typeof q === 'object').slice(0, 3); }
+        S.bx = n0(s.bx, 0, 1e6, 0); S.mv = n0(s.mv, 0, 1e9, 0); S.op = n0(s.op, 0, 1e12, 0); S.ts = isFinite(+s.ts) ? Math.max(0, +s.ts) : 0; }
       LOADED_X = s.x && typeof s.x === 'object' ? s.x : null;
     }
   } catch (e) { SAVE_BLOCKED = true; }
@@ -256,7 +265,7 @@ function migrateSave(s) { // ver alanı yoksa 1 sayılır; sadece alan ekler, hi
 function writeSave() {
   saveDirty = false; if (window.__resetting || SAVE_BLOCKED) return;
   try {
-    const o = JSON.parse(JSON.stringify(S)); o.ver = SAVE_VER; try { o.x = snapshot(); } catch (e) {}
+    S.ts = Date.now(); const o = JSON.parse(JSON.stringify(S)); o.ver = SAVE_VER; try { o.x = snapshot(); } catch (e) {}
     if (!isFinite(o.money)) return; const str = JSON.stringify(o);
     const cur = readSaveKey(SAVE_KEY);
     if (!hasProgress(o) && cur.o && hasProgress(cur.o)) return; // boş oyun iyi kaydın üstüne yazılmaz
@@ -821,7 +830,8 @@ function leafParts(type) {
 }
 const ORCH_COLS = [0x9b30e8, 0xffffff, 0xe0219a, 0xc9a0ff];
 const LAV_COLS = [0x8f5be0, 0xb07cf0, 0x7a3fd0, 0xc9a0ff], SUN_COLS = [0xffc800, 0xffb000, 0xffd633, 0xffa800], ROSEP_COLS = [0xe0001c, 0xff1f8e, 0xff6fa5, 0xc2185b];
-const colsFor = t => t === 'orchid' ? ORCH_COLS : t === 'lav' ? LAV_COLS : t === 'sun' ? SUN_COLS : t === 'rosep' ? ROSEP_COLS : FLOWER_COLS;
+const SAP_COLS = [0xffa6c9, 0xff8fb8, 0xffc4dc, 0xf7b3d0];
+const colsFor = t => t === 'orchid' ? ORCH_COLS : t === 'lav' ? LAV_COLS : t === 'sun' ? SUN_COLS : t === 'rosep' ? ROSEP_COLS : t === 'sap' ? SAP_COLS : FLOWER_COLS;
 function orchidBloom(c) {
   const P_ = [], pts = [[0, 0.02], [0.03, 0.14], [0.08, 0.25], [0.15, 0.33]];
   for (let i = 0; i < 3; i++) { const a = pts[i], b = pts[i + 1], len = Math.hypot(b[0] - a[0], b[1] - a[1]); P_.push(part(G.sph6, GREEN, (a[0] + b[0]) / 2, (a[1] + b[1]) / 2, 0, 0.014, len / 2, 0.014, 0, 0, -Math.atan2(b[0] - a[0], b[1] - a[1]))); }
@@ -845,7 +855,8 @@ function sunBloom(c) {
   P_.push(part(G.sph6, 0x5a3414, 0, 0.2, 0.012, 0.1, 0.1, 0.03), part(G.sph6, 0x7a4a1c, 0, 0.2, 0.03, 0.06, 0.06, 0.012));
   return P_;
 }
-const bloomParts = (type, c) => type === 'tulip' ? tulipBloom(c) : (type === 'rose' || type === 'rosep') ? roseBloom(c) : type === 'lav' ? lavBloom(c) : type === 'sun' ? sunBloom(c) : orchidBloom(c);
+function sapBloom(c) { return [part(G.cyl, 0x7a5230, 0, 0.1, 0, 0.03, 0.26, 0.03, 0, 0, 0.12), part(G.sph6, 0x2f8f4a, -0.03, 0.2, 0, 0.1, 0.07, 0.09), part(G.sph6, c, 0.04, 0.3, 0.01, 0.13, 0.09, 0.12), part(G.sph6, shade(c, 0.15), -0.05, 0.37, -0.02, 0.09, 0.07, 0.08)]; }
+const bloomParts = (type, c) => type === 'sap' ? sapBloom(c) : type === 'tulip' ? tulipBloom(c) : (type === 'rose' || type === 'rosep') ? roseBloom(c) : type === 'lav' ? lavBloom(c) : type === 'sun' ? sunBloom(c) : orchidBloom(c);
 const _gc = {};
 function withLOD(l, fn) { const o = LOD; LOD = l; try { return fn(); } finally { LOD = o; } }
 function stemGeo(type) { return withLOD(2, () => stemGeoRaw(type)); }
@@ -1954,7 +1965,7 @@ function potsPossible() { return zone2 && !zone2.locked && (potStock() > 0 || S.
 function stockOf(t) { if (t === 'pot') return lane(t).length + potStock(); if (t === 'bouquet') return lane(t).length + outputPile.length + P.stack.count('bouquet') + (carrier ? carrier.stack.count('bouquet') : 0); const o = srcOf(t); return lane(t).length + (o ? o.length : 0) + P.stack.count(t) + (carrier ? carrier.stack.count(t) : 0); }
 function prodOK(t) { if (t === 'bouquet') return true; if (t === 'pot') return potsPossible() && S.lv.sera > 0 && (stockOf('pot') > 0 || potM.working || potInput.length > 0 || Math.random() < 0.12); const z = PZ[t]; return !!(z && !z.locked && z.st && ((z.st.made > 0 || (z.hire && z.hire())) && (stockOf(t) > 0 || z.st.working || z.st.ins.some(q => q.stack.length > 0) || Math.random() < 0.12))); }
 function pickProduct() { const l = PROD_LIST.filter(prodOK); if (l.length === 1) return l[0]; const w = l.map((t, i) => t === 'bouquet' ? 3 : 1.5 + 1.2 * i); let r = Math.random() * w.reduce((a, b) => a + b, 0); for (let i = 0; i < l.length; i++) { r -= w[i]; if (r <= 0) return l[i]; } return l[0]; }
-const maxWant = t => t === 'bouquet' ? 6 : t === 'perfume' ? 2 : 3;
+const maxWant = t => t === 'bouquet' ? 6 : t === 'perfume' || t === 'bonsai' ? 2 : 3;
 function leaveSad(c) {
   const qi = queue.indexOf(c); if (qi >= 0) queue.splice(qi, 1);
   c.state = 'leaving'; setBubble(c, 'sad'); c.hideBubble = 1.4; c.path = [[12.4, -0.3], [12.4, 12.5], [10, 18], [10, 40]]; sfx('drop');
@@ -2030,7 +2041,7 @@ function removeCustomer(i) {
 /* =====================================================================
    11. GAMEPLAY ACTIONS
    ===================================================================== */
-const GROW = { orchid: 18, lav: 12, sun: 15, rosep: 10 }, ITYPE = { orchid: 'orchid', lav: 'lav', sun: 'sun', rosep: 'rosep' };
+const GROW = { orchid: 18, lav: 12, sun: 15, rosep: 10, sap: 14 }, ITYPE = { orchid: 'orchid', lav: 'lav', sun: 'sun', rosep: 'rosep', sap: 'sap' };
 /* ---- işçi talepleri (claim): sahipli; sahibi artık hedeflemiyorsa talep geçersiz sayılır ---- */
 const claimOK = f => f.t >= f.gt && !(f.ban > T) && (!f.claimed || !f.owner || f.owner.target !== f);
 function claimF(f, who) { f.claimed = true; f.owner = who; who.target = f; }
@@ -2042,7 +2053,7 @@ function watchdog(h, dt, pos, extra, home, reset) {
   const w = h.wd || (h.wd = { sig: '', t: 0, c: 0 }); w.c += dt; if (w.c < 0.5) return; const el = w.c; w.c = 0;
   const sig = h.state + '|' + Math.round(pos.x * 5) + '|' + Math.round(pos.z * 5) + '|' + extra + '|' + (h.stack ? h.stack.length : 0) + '|' + (h.incoming || 0);
   if (sig !== w.sig) { w.sig = sig; w.t = 0; return; }
-  w.t += el; if (w.t < 10) return; w.t = 0;
+  w.t += el; if (w.t < 10) return; w.t = 0; stats.stalls = (stats.stalls || 0) + 1; (window.__wdLog = window.__wdLog || []).length < 60 && window.__wdLog.push([Math.round(T), h.kind || (h.spec && h.spec.type) || h.state, h.state, Math.round(pos.x), Math.round(pos.z), h.stack ? h.stack.length : 0]);
   if (h.target && h.target.t !== undefined) h.target.ban = T + 30;
   if (h.incoming > 0) h.incoming = 0;
   dropTarget(h); reset(h);
@@ -2105,7 +2116,7 @@ const MONEY_MS = [100, 400, 1000, 2500, 6000, 15000, 40000]; let moneyMs = 0;
 function addMoney(v) { S.money += v; stats.earned += v; gainAcc += v; saveDirty = true; if (moneyMs < MONEY_MS.length && stats.earned >= MONEY_MS[moneyMs]) { moneyMs++; if (introDone) praise(pick(PRAISE)); } }
 
 function updatePacking(dt, t) {
-  const m = machine, interval = packInterval() / tierMul('pack');
+  const m = machine, interval = packInterval() / tierMul('pack') / spdBonus();
   if (!m.working && inputPile.length > 0 && outputPile.length + m.pendingOut < CFG.outputCap) {
     const it = inputPile.takeLast('flower');
     fly(it.mesh, out => { out.set(m.x, TABLE_Y + 1.5, m.z); return 0; }, 0.15, 0.6, () => { rm(it.mesh); sfx('pack'); });
@@ -2250,7 +2261,7 @@ const TUT = [
   { done: () => stats.harvested >= 4 }, { done: () => stats.dropped >= 3 }, { done: () => stats.picked >= 1 },
   { done: () => (stats.delivered || 0) >= 1 }, { done: () => stats.collected >= 1 }, { done: () => stats.upgrades >= 1 }
 ];
-const LABELS = { drop: 'Bırak', take: 'Al', tea: 'Çayı ver', wed: 'Siparişi ver', city: 'Şubeye sat', harvest: 'Çiçekleri topla', pack: 'Paketle', out: 'Buketleri al', counter: 'Müşteriye sat', money: 'Parayı topla', pad: 'Geliştir!', pot: 'Saksıya bırak', potOut: 'Saksıları al' };
+const LABELS = { comb: 'Petekleri al', ship: 'Gemiye yükle', drop: 'Bırak', take: 'Al', tea: 'Çayı ver', wed: 'Siparişi ver', city: 'Şubeye sat', harvest: 'Çiçekleri topla', pack: 'Paketle', out: 'Buketleri al', counter: 'Müşteriye sat', money: 'Parayı topla', pad: 'Geliştir!', pot: 'Saksıya bırak', potOut: 'Saksıları al' };
 const goalEl = document.getElementById('goal'), goalN = document.getElementById('goalN'), goalF = document.getElementById('goalF'), goalP = document.getElementById('goalP'), goalIc = document.getElementById('goalIc');
 const introEl = document.getElementById('intro'), praiseEl = document.getElementById('praise'), flashEl = document.getElementById('flash'), fxEl = document.getElementById('fx');
 const PRAISE = ['Harika!', 'Süper!', 'Müthiş!', 'Bravo!', 'Muhteşem!'], PRAISE_COL = ['#ffe14a', '#7dff7a', '#ff9ad0', '#8fe0ff', '#ffb04a'];
@@ -2305,7 +2316,7 @@ const trailMesh = (function () {
 const _tq = new THREE.Quaternion(), _tq2 = new THREE.Quaternion(), _tM = new THREE.Matrix4(), _tp = new THREE.Vector3(), _ts = new THREE.Vector3(), _tY = new THREE.Vector3(0, 1, 0), _tX = new THREE.Vector3(1, 0, 0);
 const sstep = (a, b, v) => { const k = clamp((v - a) / (b - a), 0, 1); return k * k * (3 - 2 * k); };
 /* ---- yol bulma (A*): iz ve bot için ---- */
-const PG = { x0: -27, z0: -94, c: 0.75, w: 100, h: 172, blocked: null, sig: '', open: [], g: null, from: null };
+const PG = { x0: -27, z0: -172, c: 0.75, w: 100, h: 276, blocked: null, sig: '', open: [], g: null, from: null };
 function pgBuild() {
   const sig = colliders.map(c => (c.active && !c.active()) ? 0 : 1).join(''); if (sig === PG.sig && PG.blocked) return; PG.sig = sig;
   const bl = PG.blocked = new Uint8Array(PG.w * PG.h);
@@ -2375,7 +2386,8 @@ function objective(out) {
   if (moneyPile.length + (moneyPile.extra || 0) > 0) return set(moneyZone.x, 0.8, moneyZone.z + 1.0, 'money');
   if (zone3 && !zone3.locked && vanPile.length + (vanPile.extra || 0) > 0) return set(vanMoneyZone.x, 0.8, vanMoneyZone.z, 'money');
   for (const sn of STATIONS) { if (sn.zone.locked || sn.id === 'tea' && !cafe.tables.some(q => q.guest && q.guest.state === 'wait')) continue; if (sn.out.length >= 3 && P.free() > 0 && hold(sn.o.out) < 10) return set(sn.outZone.x, 0.4, sn.outZone.z, 'take'); }
-  if (outputPile.length >= 4 && P.free() > 0) { const need = [['lav', 'lavW', () => STN.kese.ins[0]], ['rosep', 'parfW', () => STN.parf.ins[0]], ['lav', 'lavW', () => STN.parf.ins[1]], ['sun', 'sunW', () => STN.sbq.ins[0]]]; for (const [ty, hk, gi] of need) { const sn = ty === 'lav' ? (gi() === STN.kese.ins[0] ? EXTZ.lav : EXTZ.parf) : ty === 'rosep' ? EXTZ.parf : EXTZ.sunf; if (!sn || sn.locked || S.lv[hk] > 0 || gi().stack.length >= 5) continue; let best = null, bd = 1e9; for (const b of (ty === 'lav' ? EXTZ.lav : sn).beds) for (const f of b.flowers) if (f.t >= f.gt) { const d = (f.x - P.group.position.x) ** 2 + (f.z - P.group.position.z) ** 2; if (d < bd) { bd = d; best = f; } } if (best && P.free() > 0 && !prodHeld) return set(best.x, 1.2, best.z, 'harvest'); } }
+  { const co = c3Objective(set, hold, prodHeld); if (co) return co; }
+  if (outputPile.length >= 4 && P.free() > 0) { const need = [['lav', 'lavW', () => STN.kese.ins[0]], ['rosep', 'parfW', () => STN.parf.ins[0]], ['lav', 'lavW', () => STN.parf.ins[1]], ['sun', 'sunW', () => STN.sbq.ins[0]], ['sap', 'bonW', () => STN.bon.ins[0]]]; for (const [ty, hk, gi] of need) { const sn = ty === 'lav' ? (gi() === STN.kese.ins[0] ? EXTZ.lav : EXTZ.parf) : ty === 'rosep' ? EXTZ.parf : ty === 'sap' ? EXTZ.jap : EXTZ.sunf; if (!sn || sn.locked || S.lv[hk] > 0 || gi().stack.length >= 5) continue; let best = null, bd = 1e9; for (const b of (ty === 'lav' ? EXTZ.lav : sn).beds) for (const f of b.flowers) if (f.t >= f.gt) { const d = (f.x - P.group.position.x) ** 2 + (f.z - P.group.position.z) ** 2; if (d < bd) { bd = d; best = f; } } if (best && P.free() > 0 && !prodHeld) return set(best.x, 1.2, best.z, 'harvest'); } }
   const thr = Math.min(P.capFn(), 20), fl = P.free() > 0 && nF < thr ? ripe() : null, canPack = nF > 0 && inputPile.length + (inputPile.pend || 0) < CFG.inputCap;
   if (canPack && (nF >= thr || (!fl && nF > 0))) return set(packZone.x, 0.4, packZone.z, 'pack');
   if (outputPile.length >= 3 && P.free() > 0 && nB < (wed && wed.ord ? 24 : 12)) return set(outZone.x, 0.4, outZone.z, 'out');
@@ -2426,7 +2438,7 @@ function movePlayer(dt) {
   const gp = P.group.position; gp.x += P.vel.x * dt; gp.z += P.vel.z * dt;
   const B = CFG.bounds, north = gp.z < -11.5, anyExt = EXTLIST.some(q => !q.locked);
   gp.x = clamp(gp.x, north ? -25 : B.x0, Math.max(north ? 34 : 0, zone2 && !zone2.locked ? 44.5 : B.x1, zone3 && !zone3.locked ? 24.2 : 0)); if (zone3 && !zone3.locked) B.z1 = 31.5; else B.z1 = cosOn() ? 21 : 16;
-  gp.z = clamp(gp.z, (anyExt || (gp.x > 1.5 && gp.x < 9.3)) ? -92 : B.z0, B.z1);
+  gp.z = clamp(gp.z, (anyExt || (gp.x > 1.5 && gp.x < 9.3)) ? -172 : B.z0, B.z1);
   const r = 0.45;
   for (const c of colliders) {
     if (c.active && !c.active()) continue;
@@ -2505,7 +2517,7 @@ function update(dt) {
   updateZoneActions(dt);
   updateGoalState(); updateUpgrades(dt); updateExpansion(dt, T);
   updatePacking(dt, T);
-  updateHelper(dt, T); updateCashier(dt, T); updateCarrier(dt, T); updatePotting(dt, T); updateSera(dt); updateVan(dt, T); updateAmbient(dt, T); updateC2(dt, T);
+  updateHelper(dt, T); updateCashier(dt, T); updateCarrier(dt, T); updatePotting(dt, T); updateSera(dt); updateVan(dt, T); updateAmbient(dt, T); updateC2(dt, T); updateC3(dt, T);
   // customers spawning
   spawnT -= dt;
   if (queue.length < 3 && spawnT > CFG.spawnShortEvery) spawnT = CFG.spawnShortEvery;
@@ -2761,7 +2773,7 @@ function drawStationSign(st, i) {
 }
 function updateStation(st, dt, t) {
   const z = st.zone; if (z.locked || (z.popT !== undefined && z.popT < 1.5)) return;
-  const o = st.o, interval = o.base * Math.pow(0.78, S.lv[o.id + 'Spd'] || 0) / (o.id === 'kese' || o.id === 'parf' ? tierMul(o.id) : 1);
+  const o = st.o, interval = o.base * Math.pow(0.78, S.lv[o.id + 'Spd'] || 0) / ((o.id === 'kese' || o.id === 'parf' || o.id === 'hon' || o.id === 'bon' ? tierMul(o.id) : 1) * spdBonus());
   for (let i = 0; i < st.ins.length; i++) drawStationSign(st, i);
   if (!st.working && st.out.length + st.pendingOut < 16) {
     let take = null;
@@ -2845,9 +2857,9 @@ function lamp(g, x, z) { GLOWS.push([x, z, 3.4]); const o = new THREE.Group(); o
 let cafe = null, wed = null, city = null, tractor = null;
 function buildExpansion() {
   // sokak
-  { const m = new THREE.Mesh(G.plane, LM({ map: cobbleTex(), polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 })); m.rotation.x = -Math.PI / 2; m.scale.set(3.6, 82, 1); m.position.set(5.4, 0.02, -52); m.receiveShadow = true; world.add(m); m.material.map.repeat.set(3.6 * 14 / 25.7, 82 * 9.5 / 17.7); FLOORM.push({ m: m.material, rep: [3.6 * 14 / 25.7, 82 * 9.5 / 17.7], k: 0 });
-    for (const sx of [3.6, 7.2]) { const cu = rbox(0.25, 0.2, 82, 0.09, mat(0xf1e4c3)); cu.position.set(sx, 0.08, -52); world.add(cu); }
-    for (let zz = -20; zz > -92; zz -= 12) { lamp(world, 3.2, zz); lamp(world, 7.6, zz - 6); } }
+  { const m = new THREE.Mesh(G.plane, LM({ map: cobbleTex(), polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 })); m.rotation.x = -Math.PI / 2; m.scale.set(3.6, 161, 1); m.position.set(5.4, 0.02, -91.5); m.receiveShadow = true; world.add(m); m.material.map.repeat.set(3.6 * 14 / 25.7, 161 * 9.5 / 17.7); FLOORM.push({ m: m.material, rep: [3.6 * 14 / 25.7, 161 * 9.5 / 17.7], k: 0 });
+    for (const sx of [3.6, 7.2]) { const cu = rbox(0.25, 0.2, 161, 0.09, mat(0xf1e4c3)); cu.position.set(sx, 0.08, -91.5); world.add(cu); }
+    for (let zz = -20; zz > -172; zz -= 12) { lamp(world, 3.2, zz); lamp(world, 7.6, zz - 6); } }
   addCollider(-20.6, 1.6, -12.6, -11.8); addCollider(9.2, 20.6, -12.6, -11.8);
   const WEST = { x0: -24, x1: 1.6 }, EAST = { x0: 9.2, x1: 33 };
   /* ----- Lavanta + Kese ----- */
@@ -2936,11 +2948,12 @@ function buildExpansion() {
     EXTAPPLY.cityW = i => { const c = makeChar({ shirt: 0xffffff, pants: 0x222833, hair: 0x2a1a10, hairStyle: 'short', outfit: 'apron', apron: 0x2f7bff, skin: 0xf0b98a }); c.group.position.set(cx + 1.5, 0, cz - 1.1); c.yaw = 0; c.group.rotation.y = 0; scene.add(c.group); city.cashier = c; popInWorker(c, i); };
   }
   /* ----- Yıldızlar ----- */
-  { extPad('stars', 'Dükkan Yıldızları', geo(ECON.stars, 5), 15.0, 7.2, iconStar, null);
-    EXTAPPLY.stars = i => { if (!i) { starFx(); } updateStars(); }; priceMul = () => 1 + 0.2 * S.lv.stars; }
+  { extPad('stars', 'Dükkan Yıldızları', geo(ECON.stars, 10), 15.0, 7.2, iconStar, () => S.lv.stars < 5 || unlockedZ('mus'));
+    EXTAPPLY.stars = i => { if (!i) { starFx(); } updateStars(); }; priceMul = () => 1 + starPct() / 100; }
   }
-function updateStars() { const e = document.getElementById('stars'); if (!e) return; e.style.display = S.lv.stars > 0 ? 'inline-flex' : 'none'; e.textContent = '★' + S.lv.stars + ' +' + (S.lv.stars * 20) + '%'; }
-function starFx() { praise('★ ' + S.lv.stars + '. Yıldız! Tüm fiyatlar +%' + (S.lv.stars * 20), true); flash(); for (let i = 0; i < 8; i++) later(i * 0.22, () => fireworks(P.group.position.x + rand(-6, 6), P.group.position.z + rand(-6, 2))); }
+const starPct = () => { const n = S.lv.stars; return Math.min(n, 5) * 20 + Math.max(0, n - 5) * 10; };
+function updateStars() { const e = document.getElementById('stars'); if (!e) return; e.style.display = S.lv.stars > 0 ? 'inline-flex' : 'none'; e.textContent = '★' + S.lv.stars + ' +' + starPct() + '%'; }
+function starFx() { praise('★ ' + S.lv.stars + '. Yıldız! Tüm fiyatlar +%' + starPct(), true); flash(); for (let i = 0; i < 8; i++) later(i * 0.22, () => fireworks(P.group.position.x + rand(-6, 6), P.group.position.z + rand(-6, 2))); }
 function fireworks(x, z) {
   const col = pick([0xff3d7f, 0xffd400, 0x7dff7a, 0x4dc3ff, 0xff9a3c, 0xc77dff]), cy = rand(7, 11); sfx('up');
   for (let i = 0; i < 46; i++) { const a = rand(0, TAU), b = rand(-1, 1), r = Math.sqrt(1 - b * b), s = rand(3.5, 6.5); emit({ x, y: cy, z, vx: Math.cos(a) * r * s, vy: b * s, vz: Math.sin(a) * r * s, life: rand(0.9, 1.5), size: rand(0.35, 0.6), c: col, type: 1, grav: 3, drag: 1.2 }); }
@@ -3443,7 +3456,7 @@ function bfEffects() {
   BF.spawn = l >= 4 ? 1.25 : l >= 1 ? 1.1 : 1; BF.vip = l >= 5 ? 0.12 : l >= 3 ? 0.06 : 0; BF.tipP = l >= 5 ? 0.6 : l >= 2 ? 0.45 : 0.25; BF.tipM = l >= 5 ? 2 : l >= 2 ? 1.5 : 1;
 }
 const BSTEPS = [{ p: 25, t: 'Müşteri gelişi +%10' }, { p: 60, t: 'Bahşiş şansı ve tutarı artar' }, { p: 110, t: 'VIP müşteri şansı +%6' }, { p: 170, t: 'Müşteri gelişi +%25' }, { p: 215, t: 'Çiçek Cenneti: VIP +%12, bahşiş x2' }];
-function beautyPts() { let n = 0; for (const id in S.decor) { const s = DSLM[id]; if (s && S.decor[id]) n += DECT[s.type].pts; } return n; }
+function beautyPts() { let n = S.bx || 0; for (const id in S.decor) { const s = DSLM[id]; if (s && S.decor[id]) n += DECT[s.type].pts; } return n; }
 const beautyEl = document.getElementById('beauty'), beautyV = document.getElementById('beautyV'), beautyB = document.getElementById('beautyB');
 let _bsig = '', _wardBtn = null;
 function updateBeautyHUD() {
@@ -3523,7 +3536,7 @@ function uniOpts(c) {
   const o = Object.assign({}, o0, { shirt: u.shirt }); if (o0.outfit === 'apron') o.apron = u.apron; if (o0.hat === 'cap' || o0.hat === 'straw' || !o0.hat) { o.hat = 'cap'; o.hatColor = u.hatC; } return o;
 }
 function allWorkers() {
-  const a = [helper, cashier, carrier, machine && machine.worker, potM && potM.worker, city && city.cashier, cafe && cafe.waiter]; STATIONS.forEach(s => a.push(s.worker)); GARD.forEach(g => a.push(g)); return a.filter(Boolean);
+  const a = [helper, cashier, carrier, machine && machine.worker, potM && potM.worker, city && city.cashier, cafe && cafe.waiter]; STATIONS.forEach(s => a.push(s.worker)); GARD.forEach(g => a.push(g)); C3W.forEach(g => a.push(g)); return a.filter(Boolean);
 }
 let _cosT = 0;
 function applyCosmetics(force) {
@@ -3682,6 +3695,324 @@ function updateC2(dt, t) { updateTiers(dt); updateDecor(dt, t); updateCos(dt); u
 function initC2() { initTiers(); initDecor(); initCos(); initDN(); }
 
 /*C2-END*/
+/*C3-BEGIN*/
+/* =====================================================================
+   18. C3 – ARICILIK / JAPON BAHÇESİ / NADİR ÇİÇEKLER / İHRACAT / FESTİVAL / MÜZE / GÖREVLER / ÇEVRİMDIŞI
+   Yeni kayıt alanları (hepsi eklenen): S.lv.{bee..musTkt}, S.tier.{hon,bon}, S.cb, S.cs, S.pt, S.fe, S.q, S.bx, S.ts, S.op, S.mv
+   ===================================================================== */
+const E3 = { bee: 70000, beeW: 9000, hiveN: 8000, hiveSpd: 6500, honSpd: 5000, jap: 160000, bonW: 22000, bonSpd: 9000, coll: 150000, port: 330000, portW: 45000, portBonus: 30000, fest: 520000, festBonus: 60000, mus: 900000, musTkt: 100000 };
+PRICE.honey = 420; PRICE.bonsai = 1100;
+const C3W = [];            // C3 çalışanları (üniforma/kozmetik için)
+const C3S = { bees: null, beeN: 0, petals: [], koi: null };
+const spdBonus = () => 1 + collBonus('spd');
+const nearD = (x, z, r) => Math.abs(P.group.position.x - x) < r && Math.abs(P.group.position.z - z) < r;
+/* ---- ikonlar ---- */
+function hexPath(ctx, x, y, r) { ctx.beginPath(); for (let i = 0; i < 6; i++) { const a = i / 6 * TAU + TAU / 12; ctx[i ? 'lineTo' : 'moveTo'](x + Math.cos(a) * r, y + Math.sin(a) * r); } ctx.closePath(); }
+function iconComb(ctx, cx, cy, s) {
+  ctx.lineJoin = 'round'; ctx.lineWidth = s * 0.04; ctx.strokeStyle = '#8a5a00'; const r = s * 0.17;
+  const cells = [[0, 0]]; for (let k = 0; k < 6; k++) cells.push([Math.cos(k / 6 * TAU) * r * 1.75, Math.sin(k / 6 * TAU) * r * 1.75]);
+  cells.forEach((c, i) => { ctx.fillStyle = i === 0 ? '#ffd45a' : i % 2 ? '#f5b82e' : '#ffc94a'; hexPath(ctx, cx + c[0], cy + c[1], r); ctx.fill(); ctx.stroke(); });
+  ctx.fillStyle = '#e8a21a'; ctx.beginPath(); ctx.ellipse(cx + r * 0.6, cy + s * 0.46, s * 0.05, s * 0.07, 0, 0, TAU); ctx.fill();
+}
+function iconHoney(ctx, cx, cy, s) {
+  ctx.lineJoin = 'round'; ctx.lineWidth = s * 0.05; ctx.strokeStyle = '#7a4a00';
+  ctx.fillStyle = '#ffb81c'; rrect(ctx, cx - s * 0.3, cy - s * 0.18, s * 0.6, s * 0.6, s * 0.14); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#c98a1a'; rrect(ctx, cx - s * 0.34, cy - s * 0.34, s * 0.68, s * 0.2, s * 0.06); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#fff3d0'; rrect(ctx, cx - s * 0.2, cy + s * 0.02, s * 0.4, s * 0.24, s * 0.04); ctx.fill(); hexPath(ctx, cx, cy + s * 0.14, s * 0.07); ctx.fillStyle = '#f5a31a'; ctx.fill();
+  ctx.fillStyle = '#fff'; ctx.globalAlpha = 0.5; ctx.fillRect(cx - s * 0.23, cy - s * 0.1, s * 0.05, s * 0.34); ctx.globalAlpha = 1;
+}
+function iconBee(ctx, cx, cy, s) {
+  ctx.lineJoin = 'round'; ctx.lineWidth = s * 0.04; ctx.strokeStyle = '#3a2a10';
+  ctx.fillStyle = 'rgba(210,235,255,.9)'; for (const sx of [-1, 1]) { ctx.beginPath(); ctx.ellipse(cx + sx * s * 0.16, cy - s * 0.26, s * 0.16, s * 0.1, sx * 0.6, 0, TAU); ctx.fill(); ctx.stroke(); }
+  ctx.fillStyle = '#ffd23f'; ctx.beginPath(); ctx.ellipse(cx, cy + s * 0.02, s * 0.3, s * 0.24, 0, 0, TAU); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#3a2a10'; for (const dx of [-0.12, 0.06]) ctx.fillRect(cx + dx * s, cy - s * 0.2, s * 0.07, s * 0.44);
+  ctx.beginPath(); ctx.arc(cx + s * 0.3, cy, s * 0.1, 0, TAU); ctx.fill();
+}
+function iconHive(ctx, cx, cy, s) {
+  ctx.lineJoin = 'round'; ctx.lineWidth = s * 0.045; ctx.strokeStyle = '#5a3a10';
+  ctx.fillStyle = '#7a4a22'; ctx.beginPath(); ctx.moveTo(cx - s * 0.4, cy - s * 0.22); ctx.lineTo(cx, cy - s * 0.46); ctx.lineTo(cx + s * 0.4, cy - s * 0.22); ctx.closePath(); ctx.fill(); ctx.stroke();
+  for (let i = 0; i < 3; i++) { ctx.fillStyle = i % 2 ? '#fff0b0' : '#f4c542'; rrect(ctx, cx - s * 0.33, cy - s * 0.22 + i * s * 0.22, s * 0.66, s * 0.22, s * 0.03); ctx.fill(); ctx.stroke(); }
+  ctx.fillStyle = '#3a2a10'; rrect(ctx, cx - s * 0.1, cy + s * 0.3, s * 0.2, s * 0.08, s * 0.03); ctx.fill();
+}
+function iconSap(ctx, cx, cy, s) {
+  ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.strokeStyle = '#7a5230'; ctx.lineWidth = s * 0.07; ctx.beginPath(); ctx.moveTo(cx, cy + s * 0.4); ctx.quadraticCurveTo(cx + s * 0.1, cy + s * 0.1, cx, cy - s * 0.1); ctx.stroke();
+  ctx.lineWidth = s * 0.035; ctx.strokeStyle = '#8a3a5a'; for (const [x, y, r, c] of [[-0.14, -0.04, 0.17, '#2f8f4a'], [0.14, -0.1, 0.19, '#ff9ec0'], [0, -0.26, 0.17, '#ffc4dc']]) { ctx.fillStyle = c; ctx.beginPath(); ctx.arc(cx + x * s, cy + y * s, r * s, 0, TAU); ctx.fill(); ctx.stroke(); }
+  ctx.fillStyle = '#8a5a30'; rrect(ctx, cx - s * 0.2, cy + s * 0.34, s * 0.4, s * 0.12, s * 0.03); ctx.fill();
+}
+function iconBonsai(ctx, cx, cy, s) {
+  ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.strokeStyle = '#5a3a1a'; ctx.lineWidth = s * 0.08; ctx.beginPath(); ctx.moveTo(cx - s * 0.05, cy + s * 0.3); ctx.bezierCurveTo(cx - s * 0.2, cy + s * 0.1, cx + s * 0.2, cy + s * 0.05, cx, cy - s * 0.12); ctx.stroke();
+  ctx.lineWidth = s * 0.035; ctx.strokeStyle = '#1f5f30'; for (const [x, y, r, c] of [[-0.2, -0.02, 0.2, '#2f8f4a'], [0.22, 0.0, 0.18, '#3fa85a'], [0, -0.25, 0.22, '#ff9ec0']]) { ctx.fillStyle = c; ctx.beginPath(); ctx.ellipse(cx + x * s, cy + y * s, r * s * 1.1, r * s * 0.8, 0, 0, TAU); ctx.fill(); ctx.stroke(); }
+  ctx.fillStyle = '#3a5a8a'; ctx.strokeStyle = '#1d3557'; ctx.lineWidth = s * 0.04; rrect(ctx, cx - s * 0.32, cy + s * 0.28, s * 0.64, s * 0.16, s * 0.04); ctx.fill(); ctx.stroke();
+}
+function iconTorii(ctx, cx, cy, s) {
+  ctx.lineJoin = 'round'; ctx.lineWidth = s * 0.04; ctx.strokeStyle = '#6a1408'; ctx.fillStyle = '#e03a22';
+  for (const sx of [-0.26, 0.26]) { ctx.fillRect(cx + sx * s - s * 0.045, cy - s * 0.2, s * 0.09, s * 0.62); ctx.strokeRect(cx + sx * s - s * 0.045, cy - s * 0.2, s * 0.09, s * 0.62); }
+  ctx.beginPath(); ctx.moveTo(cx - s * 0.46, cy - s * 0.18); ctx.quadraticCurveTo(cx, cy - s * 0.3, cx + s * 0.46, cy - s * 0.18); ctx.lineTo(cx + s * 0.4, cy - s * 0.32); ctx.quadraticCurveTo(cx, cy - s * 0.44, cx - s * 0.4, cy - s * 0.32); ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.fillRect(cx - s * 0.34, cy - s * 0.04, s * 0.68, s * 0.08); ctx.strokeRect(cx - s * 0.34, cy - s * 0.04, s * 0.68, s * 0.08);
+  ctx.fillStyle = '#ff9ec0'; for (const [x, y] of [[-0.4, 0.3], [0.38, 0.35], [0.3, 0.22]]) { ctx.beginPath(); ctx.arc(cx + x * s, cy + y * s, s * 0.05, 0, TAU); ctx.fill(); }
+}
+function iconBook(ctx, cx, cy, s) {
+  ctx.lineJoin = 'round'; ctx.lineWidth = s * 0.045; ctx.strokeStyle = '#3a1a5a'; ctx.fillStyle = '#7a4ad0'; rrect(ctx, cx - s * 0.32, cy - s * 0.4, s * 0.64, s * 0.8, s * 0.06); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#fff3d6'; rrect(ctx, cx - s * 0.26, cy - s * 0.34, s * 0.5, s * 0.68, s * 0.04); ctx.fill(); ctx.stroke();
+  ctx.save(); ctx.translate(cx, cy - s * 0.02); iconFlower(ctx, 0, 0, s * 0.36, '#ffc21a'); ctx.restore();
+  ctx.fillStyle = '#ffc21a'; ctx.beginPath(); ctx.arc(cx + s * 0.16, cy + s * 0.22, s * 0.07, 0, TAU); ctx.fill();
+}
+function iconShip(ctx, cx, cy, s) {
+  ctx.lineJoin = 'round'; ctx.lineWidth = s * 0.045; ctx.strokeStyle = '#13294b';
+  ctx.fillStyle = '#e8142e'; ctx.beginPath(); ctx.moveTo(cx - s * 0.44, cy + s * 0.05); ctx.lineTo(cx + s * 0.44, cy + s * 0.05); ctx.lineTo(cx + s * 0.3, cy + s * 0.3); ctx.lineTo(cx - s * 0.32, cy + s * 0.3); ctx.closePath(); ctx.fill(); ctx.stroke();
+  const cols = ['#ffc21a', '#2f7bff', '#3fbf4a']; for (let i = 0; i < 3; i++) { ctx.fillStyle = cols[i]; ctx.fillRect(cx - s * 0.34 + i * s * 0.22, cy - s * 0.12, s * 0.2, s * 0.17); ctx.strokeRect(cx - s * 0.34 + i * s * 0.22, cy - s * 0.12, s * 0.2, s * 0.17); }
+  ctx.fillStyle = '#fff'; ctx.fillRect(cx + s * 0.12, cy - s * 0.34, s * 0.2, s * 0.22); ctx.strokeRect(cx + s * 0.12, cy - s * 0.34, s * 0.2, s * 0.22);
+  ctx.fillStyle = '#6ec6ff'; ctx.beginPath(); ctx.ellipse(cx, cy + s * 0.38, s * 0.46, s * 0.07, 0, 0, TAU); ctx.fill();
+}
+function iconFest(ctx, cx, cy, s) {
+  ctx.lineJoin = 'round'; ctx.lineWidth = s * 0.045; ctx.strokeStyle = '#6a1040';
+  for (let i = 0; i < 4; i++) { ctx.fillStyle = i % 2 ? '#fff' : '#ff4f93'; ctx.beginPath(); ctx.moveTo(cx - s * 0.4 + i * s * 0.2, cy - s * 0.02); ctx.lineTo(cx - s * 0.4 + (i + 1) * s * 0.2, cy - s * 0.02); ctx.lineTo(cx, cy - s * 0.42); ctx.closePath(); ctx.fill(); ctx.stroke(); }
+  ctx.fillStyle = '#fff0d6'; ctx.fillRect(cx - s * 0.36, cy - s * 0.02, s * 0.72, s * 0.4); ctx.strokeRect(cx - s * 0.36, cy - s * 0.02, s * 0.72, s * 0.4);
+  ctx.fillStyle = '#ffc21a'; ctx.beginPath(); ctx.arc(cx, cy + s * 0.18, s * 0.1, 0, TAU); ctx.fill(); ctx.stroke();
+}
+function iconMuseum(ctx, cx, cy, s) {
+  ctx.lineJoin = 'round'; ctx.lineWidth = s * 0.045; ctx.strokeStyle = '#13486a';
+  ctx.fillStyle = '#cfeeff'; ctx.beginPath(); ctx.arc(cx, cy - s * 0.04, s * 0.38, Math.PI, 0); ctx.lineTo(cx + s * 0.38, cy + s * 0.3); ctx.lineTo(cx - s * 0.38, cy + s * 0.3); ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.strokeStyle = '#13486a'; ctx.beginPath(); ctx.moveTo(cx, cy - s * 0.42); ctx.lineTo(cx, cy + s * 0.3); ctx.moveTo(cx - s * 0.2, cy - s * 0.34); ctx.lineTo(cx - s * 0.2, cy + s * 0.3); ctx.moveTo(cx + s * 0.2, cy - s * 0.34); ctx.lineTo(cx + s * 0.2, cy + s * 0.3); ctx.stroke();
+  ctx.save(); ctx.translate(cx, cy + s * 0.08); iconFlower(ctx, 0, 0, s * 0.34, '#ff4f93'); ctx.restore(); ctx.fillStyle = '#8a98b0'; ctx.fillRect(cx - s * 0.46, cy + s * 0.3, s * 0.92, s * 0.1);
+}
+function iconClip(ctx, cx, cy, s) {
+  ctx.lineJoin = 'round'; ctx.lineWidth = s * 0.045; ctx.strokeStyle = '#3a2a10'; ctx.fillStyle = '#c98a4a'; rrect(ctx, cx - s * 0.3, cy - s * 0.38, s * 0.6, s * 0.78, s * 0.06); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#fff'; rrect(ctx, cx - s * 0.23, cy - s * 0.28, s * 0.46, s * 0.62, s * 0.03); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#9a9aa8'; rrect(ctx, cx - s * 0.12, cy - s * 0.44, s * 0.24, s * 0.12, s * 0.03); ctx.fill(); ctx.stroke();
+  ctx.strokeStyle = '#2fc43a'; ctx.lineWidth = s * 0.06; ctx.lineCap = 'round'; for (let i = 0; i < 3; i++) { ctx.beginPath(); ctx.moveTo(cx - s * 0.16, cy - s * 0.12 + i * s * 0.18); ctx.lineTo(cx - s * 0.1, cy - s * 0.06 + i * s * 0.18); ctx.lineTo(cx - s * 0.02, cy - s * 0.18 + i * s * 0.18); ctx.stroke(); ctx.strokeStyle = '#8a98b0'; ctx.lineWidth = s * 0.04; ctx.beginPath(); ctx.moveTo(cx + s * 0.04, cy - s * 0.1 + i * s * 0.18); ctx.lineTo(cx + s * 0.17, cy - s * 0.1 + i * s * 0.18); ctx.stroke(); ctx.strokeStyle = '#2fc43a'; ctx.lineWidth = s * 0.06; }
+}
+function iconGem(ctx, cx, cy, s, col, col2) {
+  ctx.lineJoin = 'round'; ctx.lineWidth = s * 0.05; ctx.strokeStyle = '#2a2a50'; ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(cx, cy - s * 0.4); ctx.lineTo(cx + s * 0.34, cy - s * 0.1); ctx.lineTo(cx, cy + s * 0.4); ctx.lineTo(cx - s * 0.34, cy - s * 0.1); ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = col2; ctx.beginPath(); ctx.moveTo(cx, cy - s * 0.4); ctx.lineTo(cx + s * 0.34, cy - s * 0.1); ctx.lineTo(cx, cy - s * 0.1); ctx.closePath(); ctx.fill();
+}
+Object.assign(ICONF, { comb: iconComb, honey: iconHoney, sap: iconSap, bonsai: iconBonsai });
+/* ---- ürün modelleri ---- */
+function combGeo() {
+  return mkProdGeo('x_comb', () => {
+    const P_ = [], hx = (x, z, r, c, y, h) => P_.push(part(new THREE.CylinderGeometry(r, r, h, 6), c, x, y, z, 1, 1, 1));
+    hx(0, 0, 0.21, 0xf2a81d, 0.07, 0.14); hx(0.36, 0.0, 0.21, 0xf5b82e, 0.07, 0.14); hx(0.18, 0.31, 0.21, 0xe8a21a, 0.07, 0.14);
+    hx(0, 0, 0.13, 0xffd45a, 0.15, 0.04); hx(0.36, 0, 0.13, 0xffe08a, 0.15, 0.04); hx(0.18, 0.31, 0.13, 0xffd45a, 0.15, 0.04);
+    P_.push(part(G.sph6, 0xffc21a, 0.18, 0.02, 0.58, 0.05, 0.09, 0.05)); return P_.map(q => ({ g: q.g, c: q.c, m: new THREE.Matrix4().makeTranslation(-0.18, 0, -0.1).multiply(q.m) }));
+  });
+}
+function honeyGeo() {
+  return mkProdGeo('x_honey', () => [part(G.cyl, 0xffb81c, 0, 0.2, 0, 0.21, 0.4, 0.21), part(G.cyl, 0xffd45a, 0, 0.42, 0, 0.19, 0.04, 0.19), part(G.cyl, 0xb9792a, 0, 0.5, 0, 0.23, 0.1, 0.23), part(G.cyl, 0xfff3d0, 0, 0.2, 0.205, 0.17, 0.18, 0.015), part(G.sph6, 0xf5a31a, 0, 0.2, 0.22, 0.06, 0.06, 0.012), part(G.cyl, 0xffe9a0, -0.12, 0.2, 0.1, 0.03, 0.3, 0.03), part(G.cyl, 0xffd45a, 0, 0.02, 0, 0.24, 0.04, 0.24)]);
+}
+function bonsaiGeo() {
+  return mkProdGeo('x_bonsai', () => [part(G.box, 0x3a5a8a, 0, 0.07, 0, 0.62, 0.14, 0.44), part(G.box, 0x4a6aa0, 0, 0.15, 0, 0.56, 0.04, 0.38), part(G.cyl, 0x5a3a20, 0, 0.17, 0, 0.5, 0.03, 0.34), part(G.cyl, 0x6a4a2a, -0.02, 0.32, 0, 0.05, 0.3, 0.05, 0, 0, 0.35), part(G.cyl, 0x6a4a2a, 0.08, 0.5, 0, 0.04, 0.26, 0.04, 0, 0, -0.5),
+    part(G.sph6, 0x2f8f4a, -0.2, 0.52, 0.02, 0.2, 0.1, 0.17), part(G.sph6, 0x3fa85a, 0.18, 0.66, 0, 0.19, 0.1, 0.16), part(G.sph6, 0xff9ec0, 0.0, 0.8, 0, 0.17, 0.1, 0.15), part(G.sph6, 0xffc4dc, 0.06, 0.88, 0.02, 0.09, 0.06, 0.08), part(G.sph6, 0x2a7a3a, -0.05, 0.42, 0.04, 0.14, 0.07, 0.12)]);
+}
+for (const [k, fn] of [['comb', combGeo], ['honey', honeyGeo], ['bonsai', bonsaiGeo]]) ITEMF[k] = () => { const g = new THREE.Group(); g.add(new THREE.Mesh(fn(), vcMat2)); g.userData.prod = k; return g; };
+function hiveGeo() {
+  return mkProdGeo('x_hive', () => { const P_ = []; for (const [sx, sz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) P_.push(part(G.box, 0x7a4a22, sx * 0.42, 0.18, sz * 0.4, 0.1, 0.36, 0.1));
+    P_.push(part(G.box, 0x8a5a2a, 0, 0.4, 0, 1.05, 0.08, 1.0));
+    for (let i = 0; i < 3; i++) { P_.push(part(G.box, i % 2 ? 0xfff0b0 : 0xf4c542, 0, 0.7 + i * 0.5, 0, 0.9, 0.46, 0.86), part(G.box, 0xc98a1a, 0, 0.93 + i * 0.5 - 0.46 / 2 + 0.2, 0.44, 0.7, 0.03, 0.02)); }
+    P_.push(part(G.box, 0x3a2a10, 0, 0.5, 0.44, 0.5, 0.07, 0.03), part(G.box, 0x7a4a22, 0, 0.5, 0.5, 0.64, 0.05, 0.12), part(G.box, 0x9a5a2a, 0, 2.28, 0, 1.12, 0.1, 1.08), part(G.box, 0xb8703a, 0, 2.36, 0, 0.9, 0.08, 0.86), part(G.sph6, 0xffd23f, 0, 2.45, 0, 0.1, 0.06, 0.1)); return P_; });
+}
+function beeGeo() {
+  return mkProdGeo('x_bee', () => [part(G.sph6, 0xffd23f, 0, 0, 0, 0.075, 0.065, 0.11), part(G.sph6, 0x2a1a0a, 0, 0, 0.03, 0.078, 0.068, 0.025), part(G.sph6, 0x2a1a0a, 0, 0, -0.04, 0.078, 0.068, 0.02), part(G.sph6, 0x2a1a0a, 0, 0.005, 0.11, 0.05, 0.05, 0.05), part(G.sph6, 0xf4faff, -0.07, 0.07, 0, 0.07, 0.01, 0.045, 0, 0, 0.3), part(G.sph6, 0xf4faff, 0.07, 0.07, 0, 0.07, 0.01, 0.045, 0, 0, -0.3)]);
+}
+function koiGeo() {
+  return mkProdGeo('x_koi', () => [part(G.sph6, 0xffffff, 0, 0, 0, 0.1, 0.07, 0.3), part(G.sph6, 0xff7a1a, 0, 0.03, 0.06, 0.085, 0.05, 0.12), part(G.sph6, 0xff7a1a, 0, 0, -0.34, 0.09, 0.015, 0.12, 0, 0.4, 0), part(G.sph6, 0xff7a1a, 0, 0, -0.38, 0.09, 0.015, 0.1, 0, -0.4, 0), part(G.sph6, 0xffffff, 0.12, 0, 0.1, 0.07, 0.012, 0.04, 0, 0, 0.3), part(G.sph6, 0xffffff, -0.12, 0, 0.1, 0.07, 0.012, 0.04, 0, 0, -0.3)]);
+}
+function sapGround(g, x, z, r) { /* küçük kaya */ ad(g, mk(G.sphT, mat(0x9a9a98), r, r * 0.6, r * 0.8), x, r * 0.3, z); }
+/* ---- ortak: bölge kurma ---- */
+function c3Ext(id, name, label, west, band) {
+  const z1 = -92 - 26 * (band - 4);
+  return makeExt({ id, name, label, R: { x0: west ? -24 : 9.2, x1: west ? 1.6 : 33, z0: z1 - 24, z1 } });
+}
+const FPAL = [0xffffff, 0xffd23f, 0xff7ab0, 0xc77dff, 0xff8a3c, 0xff3d7f];
+function wildflower(g, x, z, c) { ad(g, mk(G.cyl, mat(0x2f8f3a), 0.03, 0.4, 0.03), x, 0.2, z); ad(g, mk(G.sphT, mat(c), 0.13, 0.1, 0.13), x, 0.45, z); }
+function patch(g, rnd, cx, cz, n, r, list) { for (let i = 0; i < n; i++) { const a = rnd() * TAU, d = Math.sqrt(rnd()) * r, x = cx + Math.cos(a) * d, zz = cz + Math.sin(a) * d * 0.8; wildflower(g, x, zz, FPAL[(rnd() * FPAL.length) | 0]); if (list) list.push([x, zz]); } }
+function sakura(g, x, z, sc, rnd) {
+  const t = new THREE.Group(); t.add(mk(G.cyl, mat(0x5a3a28), 0.28 * sc, 1.8 * sc, 0.28 * sc, 0, 0.9 * sc, 0)); const br = mk(G.cyl, mat(0x5a3a28), 0.14 * sc, 1.2 * sc, 0.14 * sc, 0.5 * sc, 1.9 * sc, 0); br.rotation.z = -0.9; t.add(br);
+  const cs = [0xffb3cf, 0xff9ec0, 0xffc9dc, 0xffa8c6, 0xffd5e4];
+  for (let i = 0; i < 6; i++) { const a = i / 6 * TAU + rnd(), d = i ? 1.1 * sc : 0; t.add(mk(G.sphT, mat(cs[i % cs.length]), 1.15 * sc, 0.85 * sc, 1.15 * sc, Math.cos(a) * d, (2.5 + (i % 2) * 0.35) * sc, Math.sin(a) * d)); }
+  shadowAll(t, true, false); ad(g, t, x, 0, z); return { x, z, y: 2.6 * sc };
+}
+function lantern(g, x, z, sc) {
+  GLOWS.push([x, z, 3.0]); const s = sc || 1, o = new THREE.Group(), st = mat(0xa8a8a4);
+  o.add(mk(G.box, st, 0.62 * s, 0.14 * s, 0.62 * s, 0, 0.07 * s, 0), mk(G.cyl, st, 0.13 * s, 0.9 * s, 0.13 * s, 0, 0.6 * s, 0), mk(G.box, st, 0.46 * s, 0.1 * s, 0.46 * s, 0, 1.08 * s, 0), mk(G.box, LAMPM, 0.3 * s, 0.34 * s, 0.3 * s, 0, 1.3 * s, 0), mk(G.cone3, mat(0x8a8a86), 0.62 * s, 0.34 * s, 0.62 * s, 0, 1.64 * s, 0), mk(G.sphT, st, 0.08 * s, 0.08 * s, 0.08 * s, 0, 1.86 * s, 0));
+  o.children[4].rotation.y = Math.PI / 4; shadowAll(o, true, false); ad(g, o, x, 0, z);
+}
+function torii(g, x, z, ry) {
+  const o = new THREE.Group(), red = mat(0xd8321e), blk = mat(0x241a16);
+  for (const sx of [-1, 1]) { o.add(mk(G.cyl, red, 0.3, 5.0, 0.3, sx * 2.2, 2.5, 0), mk(G.cyl, blk, 0.36, 0.5, 0.36, sx * 2.2, 0.25, 0)); }
+  const kas = mk(G.box, blk, 6.6, 0.32, 0.5, 0, 5.2, 0); o.add(kas); const k2 = mk(G.box, red, 6.2, 0.22, 0.42, 0, 5.42, 0); o.add(k2); for (const sx of [-1, 1]) { const tip = mk(G.box, blk, 0.9, 0.3, 0.5, sx * 3.5, 5.36, 0); tip.rotation.z = sx * 0.35; o.add(tip); }
+  o.add(mk(G.box, red, 4.6, 0.24, 0.28, 0, 4.2, 0), mk(G.box, red, 0.24, 0.9, 0.28, 0, 4.6, 0));
+  o.rotation.y = ry; shadowAll(o, true, false); ad(g, o, x, 0, z);
+}
+const C3 = { hives: [], bees: [], flp: [], petalSrc: [], koi: [], bridge: null };
+const HIVE_SLOTS = [[-20.5, -103.5], [-13.5, -103.5], [-19, -100.2], [-15, -100.2], [-19, -106.8], [-15, -106.8]];
+const hiveCount = () => Math.min(6, 2 + (S.lv.hiveN || 0));
+function nearFlowerZones() { let n = 0; if (zone2 && !zone2.locked) n++; for (const id of ['lav', 'parf', 'sunf', 'jap']) if (unlockedZ(id)) n++; return n; }
+const hiveInterval = () => 12 / (1 + 0.25 * nearFlowerZones()) / Math.pow(1.3, S.lv.hiveSpd || 0);
+let beek = null, beeZone = null;
+function buildBee() {
+  const z = c3Ext('bee', 'Arıcılık', 'ARICILIK', true, 4), rnd = rng(77);
+  const g0 = mkGroup(z, 0.1), g1 = mkGroup(z, 0.5);
+  for (const [px, pz, n] of [[-21.5, -112, 16], [-14.5, -113, 16], [-4, -113.5, 14], [-4, -100, 12], [-7.5, -97.5, 10], [-21, -96.5, 14], [-14, -95.5, 12], [-9, -113, 8]]) patch(g0, rnd, px, pz, n, 2.2, C3.flp);
+  decorTree(g0, -22.5, -94.5, 1.1); decorTree(g0, -22.5, -114.5, 1.2); decorTree(g0, 0, -114.5, 1.1); lamp(g0, -2, -94);
+  // çiçek kutuları + tabela
+  for (const sx of [-1, 1]) ad(g0, rbox(2.6, 0.4, 0.7, 0.1, mat(0xc98a4a)), -9 + sx * 4.5, 0.25, -95.5);
+  const g1b = g1; const st = buildStation(z, g1b, { id: 'hon', name: 'BAL KAVANOZU', x: -6.2, z: -108, awn: '#ffb703', col: '#ffb703', col2: 0xffc21a, mcol: 0xc98a10, shirt: 0xffd54a, inputs: [{ type: 'comb', n: 2 }], out: 'honey', base: 3.0, hire: 'beeW' });
+  beeZone = new Zone({ x: -17, z: -103.5, w: 9.5, d: 9, color: '#ffb703', draw: drawZoneIcon(iconComb, 0.42) }); beeZone.group.visible = false;
+  // kovanlar (dinamik; sahne düzeyinde)
+  HIVE_SLOTS.forEach(([hx, hz], i) => {
+    const m = new THREE.Mesh(hiveGeo(), vcMat); m.scale.setScalar(1.15); m.position.set(hx, 0, hz); m.castShadow = true; m.receiveShadow = true; m.visible = false; scene.add(m);
+    const stk = new Stack(scene, (k, out) => out.set(hx + (k - 1.5) * 0.42, 0.18, hz + 1.15), 4); stk.pend = 0;
+    const hv = { x: hx, z: hz, mesh: m, stack: stk, t: rand(0, 6), on: false, pop: 0 }; hv.col = addCollider(hx - 0.7, hx + 0.7, hz - 0.7, hz + 0.7, () => hv.on); C3.hives.push(hv);
+  });
+  const bm = new THREE.InstancedMesh(beeGeo(), vcMat, 18); bm.frustumCulled = false; bm.userData.dyn = true; bm.count = 0; scene.add(bm); C3S.bees = bm;
+  for (let i = 0; i < 18; i++) C3.bees.push({ i, st: 3, t: rand(0, 3), dur: 1, from: [0, 0, 0], to: [0, 0, 0], ph: rand(0, 6) });
+  z.onShow = () => { st.ins[0].zone.group.visible = true; beeZone.group.visible = true; hivesRefresh(false); };
+  extPad('bee', 'Arıcılık', [E3.bee], 5.4, -95.0, iconHive, null);
+  extPad('beeW', 'Arıcı', [E3.beeW], -8.5, -94.6, iconBee, () => unlockedZ('bee'));
+  extPad('hiveN', 'Yeni Kovan', geo(E3.hiveN, 4), -13.5, -94.6, iconHive, () => unlockedZ('bee'));
+  extPad('hiveSpd', 'Kovan Hızı', geo(E3.hiveSpd, 5), -18.5, -94.6, iconBolt, () => unlockedZ('bee'));
+  extPad('honSpd', 'Bal Hızı', geo(E3.honSpd, 7), -3.5, -94.6, iconBolt, () => unlockedZ('bee'));
+  EXTAPPLY.bee = i => unlockExt(z, i); EXTAPPLY.beeW = i => spawnBeekeeper(i); EXTAPPLY.hiveN = i => hivesRefresh(!i);
+}
+function hivesRefresh(instant) {
+  if (!unlockedZ('bee')) return; const n = hiveCount();
+  C3.hives.forEach((hv, i) => { const on = i < n; if (on && !hv.on) { hv.on = true; hv.mesh.visible = true; if (!instant) { hv.pop = 0.001; hv.mesh.scale.setScalar(0.01); sparkles(hv.x, 1.2, hv.z, 14, 0xffe08a, 1.0); dust(hv.x, 0.3, hv.z, 6, 0.8); ring(hv.x, hv.z, 0xffc21a, 4); sfx('pack'); } else hv.mesh.scale.setScalar(1.15); } });
+  C3S.beeN = Math.min(18, n * 2 + nearFlowerZones() + 1);
+}
+function spawnBeekeeper(instant) {
+  if (beek) return; const c = makeChar({ shirt: 0xfff4c2, pants: 0x6a4a1a, hair: 0x2a1a10, hairStyle: 'short', outfit: 'apron', apron: 0xffb703, hat: 'sun', hatColor: 0xfff3d6, skin: 0xe8b88a });
+  c.group.position.set(-9, 0, -102.5); attachBackStack(c, () => 8); scene.add(c.group); c.state = 'seek'; c.target = null; c.cd = 0; c.idle = 0; c.kind = 'beek'; popInWorker(c, instant); beek = c; C3W.push(c);
+}
+function updateBeek(dt, t) {
+  const h = beek; if (!h) return; workerPop(h, dt); const gp = h.group.position, spd = 4.8 * (1 + 0.08 * (S.lv.hiveSpd || 0)); let tx = null, tz = null; h.cd -= dt;
+  const full = h.stack.length + h.incoming >= 8;
+  if (h.state === 'seek') {
+    if (full) h.state = 'deliver';
+    else {
+      let best = null, bd = 1e9; for (const q of C3.hives) { if (!q.on || q.stack.length === 0) continue; const d = (q.x - gp.x) ** 2 + (q.z - gp.z) ** 2 - q.stack.length * 6; if (d < bd) { bd = d; best = q; } }
+      if (best) { h.hv = best; tx = best.x; tz = best.z + 1.5; h.idle = 0; } else { h.hv = null; tx = -10; tz = -102; h.idle += dt; if (h.idle > 1.5 && h.stack.length > 0) h.state = 'deliver'; }
+    }
+  } else { const d = STN.hon.ins[0].zone; tx = d.x; tz = d.z; if (h.stack.length === 0 && h.incoming === 0) h.state = 'seek'; }
+  let mv = 0, dx = 0, dz = 0;
+  if (tx !== null) { dx = tx - gp.x; dz = tz - gp.z; const d = Math.hypot(dx, dz); if (d > 0.35) { const s2 = Math.min(d, spd * dt); gp.x += dx / d * s2; gp.z += dz / d * s2; h.vel.set(dx / d * spd, 0, dz / d * spd); mv = 1; } else h.vel.set(0, 0, 0); } else h.vel.set(0, 0, 0);
+  if (mv) faceChar(h, dx, dz, dt);
+  if (h.state === 'seek' && h.hv && h.cd <= 0 && Math.hypot(h.hv.x - gp.x, h.hv.z + 1.5 - gp.z) < 1.2 && h.free() > 0 && h.hv.stack.length > 0) { const it = h.hv.stack.takeLast(); if (it) { sendToBack(h, it.mesh, 'comb', 1.4); h.cd = 0.15; sfx('pick'); } }
+  if (h.state === 'deliver' && h.cd <= 0) { const d = STN.hon.ins[0]; if (d.zone.contains(gp.x, gp.z) && h.stack.count('comb') > 0 && d.stack.length + (d.stack.pend || 0) < 24) { dropTo(d.stack, h, 'comb'); h.cd = 0.1; } }
+  watchdog(h, dt, gp, (h.hv ? 1 : 0) + '' + C3.hives.reduce((a, q) => a + q.stack.length, 0), [-9, -102.5], resetWalker);
+  updateSway(h, dt); animChar(h, dt, mv, t); h.stack.update(dt, t);
+}
+function updateBees(dt, t) {
+  const bm = C3S.bees; if (!bm || !unlockedZ('bee')) return;
+  const iv = hiveInterval(); // kovan üretimi (oyuncu uzakta da çalışır)
+  for (const hv of C3.hives) {
+    if (!hv.on) continue; if (hv.pop > 0) { hv.pop += dt; hv.mesh.scale.setScalar(Math.max(0.01, 1.15 * easeOutBack(hv.pop / 0.7))); if (hv.pop >= 0.7) { hv.pop = 0; hv.mesh.scale.setScalar(1.15); } }
+    if (hv.stack.length < 4) { hv.t += dt; if (hv.t >= iv) { hv.t = 0; const m = makeItemOf('comb'); m.position.set(hv.x, 0.6, hv.z + 1.2); scene.add(m); hv.stack.add(m, 'comb'); if (nearD(hv.x, hv.z, 40)) sparkles(hv.x, 0.9, hv.z + 1.2, 3, 0xffe08a, 0.3); } } else hv.t = Math.min(hv.t, iv);
+  }
+  const on = nearD(-11, -104, 60); bm.visible = on; if (!on) return;
+  // arılar
+  const n = C3S.beeN, act = C3.hives.filter(q => q.on); if (!act.length || !C3.flp.length) { bm.count = 0; return; } bm.count = n;
+  const M = new THREE.Matrix4(), Q = new THREE.Quaternion(), V = new THREE.Vector3(), Sc = new THREE.Vector3(), Y = _Y;
+  for (let i = 0; i < n; i++) {
+    const b = C3.bees[i], hv = act[i % act.length]; b.t += dt; let x, y, zz, yaw = b.yaw || 0, vis = 1;
+    if (b.st === 3) { vis = 0; x = hv.x; y = 0.9; zz = hv.z + 0.6; if (b.t > b.dur) { b.st = 0; b.t = 0; const f = C3.flp[(Math.random() * C3.flp.length) | 0]; b.from = [hv.x, 0.9, hv.z + 0.6]; b.to = [f[0], 0.7, f[1]]; b.dur = Math.max(1.2, Math.hypot(f[0] - hv.x, f[1] - hv.z) / 3.2); } }
+    if (b.st === 0 || b.st === 2) {
+      const k = clamp(b.t / b.dur, 0, 1), e = k * k * (3 - 2 * k), A = b.from, B = b.to; x = lerp(A[0], B[0], e); zz = lerp(A[2], B[2], e); y = lerp(A[1], B[1], e) + Math.sin(k * Math.PI) * 1.6 + Math.sin(t * 11 + b.ph) * 0.1; yaw = Math.atan2(B[0] - A[0], B[2] - A[2]); b.yaw = yaw;
+      if (k >= 1) { if (b.st === 0) { b.st = 1; b.t = 0; b.dur = rand(1.0, 2.0); } else { b.st = 3; b.t = 0; b.dur = rand(0.4, 2.6); } }
+    } else if (b.st === 1) {
+      const A = b.to; x = A[0] + Math.cos(t * 3 + b.ph) * 0.3; zz = A[2] + Math.sin(t * 3 + b.ph) * 0.3; y = 0.75 + Math.sin(t * 9 + b.ph) * 0.07; yaw = t * 3 + b.ph;
+      if (b.t > b.dur) { if (Math.random() < 0.35) sparkles(A[0], 0.8, A[2], 1, 0xffe14a, 0.15); b.st = 2; b.t = 0; b.from = [A[0], 0.7, A[2]]; b.to = [hv.x, 0.9, hv.z + 0.6]; b.dur = Math.max(1.2, Math.hypot(A[0] - hv.x, A[2] - hv.z) / 3.2); }
+    }
+    const sc = vis ? 2.4 : 0.001; Q.setFromAxisAngle(Y, yaw); M.compose(V.set(x, y, zz), Q, Sc.set(sc, sc * (1 + 0.15 * Math.sin(t * 40 + b.ph)), sc)); bm.setMatrixAt(i, M);
+  }
+  bm.instanceMatrix.needsUpdate = true;
+}
+function beeZoneActions(dt) {
+  if (!beeZone || !beeZone.inside) return; beeZone.tk = (beeZone.tk || 0) - dt; if (beeZone.tk > 0 || P.free() <= 0) return;
+  let best = null; for (const q of C3.hives) if (q.on && q.stack.length > 0 && (!best || q.stack.length > best.stack.length)) best = q;
+  if (best) { const it = best.stack.takeLast(); if (it) { sendToBack(P, it.mesh, 'comb', 1.5); sfx('pick'); beeZone.tk = 0.06; } }
+}
+/* bot / ipucu yönlendirmesi (objective içinden çağrılır) */
+function c3Objective(set, hold, prodHeld) {
+  if (beeZone && unlockedZ('bee') && S.lv.beeW === 0 && P.free() > 0 && !prodHeld && C3.hives.reduce((a, q) => a + (q.on ? q.stack.length : 0), 0) >= 3) return set(beeZone.x, 0.4, beeZone.z, 'comb');
+  return c3Obj2 ? c3Obj2(set, hold, prodHeld) : null;
+}
+var c3Obj2 = null;
+/* ---- JAPON BAHÇESİ ---- */
+const JAP = { pond: { x: 17.5, z: -101, w: 6, d: 8 }, trees: [], koi: [], bridgeY: null };
+function gravelTex() { return cached('gravel', () => { const c = cv(128, 128), x = c.getContext('2d'); x.fillStyle = '#e9dfc6'; x.fillRect(0, 0, 128, 128); x.strokeStyle = 'rgba(150,130,95,.45)'; x.lineWidth = 2; for (let i = 0; i < 16; i++) { x.beginPath(); x.moveTo(0, i * 8 + 4); x.bezierCurveTo(40, i * 8 + 1, 80, i * 8 + 7, 128, i * 8 + 4); x.stroke(); } for (let i = 0; i < 120; i++) { x.fillStyle = 'rgba(255,255,255,.35)'; x.fillRect(rand(0, 128), rand(0, 128), 2, 2); } const t = canvasTex(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(2, 2); return t; }); }
+function buildJapan() {
+  const z = c3Ext('jap', 'Japon Bahçesi', 'JAPON BAHÇESİ', false, 4), rnd = rng(1203);
+  const g0 = mkGroup(z, 0.1), g1 = mkGroup(z, 0.5), g2 = mkGroup(z, 0.8), pd = JAP.pond;
+  // zemin: çakıl bahçe + taş yol
+  { const gm = new THREE.Mesh(G.plane, LM({ map: gravelTex() })); gm.rotation.x = -Math.PI / 2; gm.scale.set(7, 6, 1); gm.material.map.repeat.set(2.2, 2); gm.receiveShadow = true; ad(g0, gm, 29.5, 0.035, -106.8); }
+  { const dm = new THREE.Mesh(G.plane, LM({ color: lc(0xd9cdb0) })); dm.rotation.x = -Math.PI / 2; dm.scale.set(5, 2.6, 1); dm.receiveShadow = true; ad(g0, dm, 11.8, 0.03, -101); }
+  for (let i = 0; i < 9; i++) { const sx = 22.5 + i * 0.9 + (i > 4 ? 0.2 : 0), st = mk(G.cyl, mat(0x9a9a96), 0.4, 0.06, 0.34, 0, 0, 0); st.rotation.y = rnd(); ad(g0, st, sx > 24.5 ? sx : sx, 0.05, -101 + Math.sin(i * 1.7) * 0.25); }
+  torii(g0, 11, -101, Math.PI / 2);
+  // havuz
+  const wm = LM({ color: lc(0x3fb6c4), transparent: true, opacity: 0.88, roughness: 0.25 }); const water = new THREE.Mesh(G.plane, wm); water.rotation.x = -Math.PI / 2; water.scale.set(pd.w + 0.4, pd.d + 0.4, 1); ad(g2, water, pd.x, 0.07, pd.z); JAP.water = water;
+  for (let i = 0; i < 26; i++) { const a = i / 26 * TAU, rx = pd.w / 2 + 0.25, rz = pd.d / 2 + 0.25, s = 0.35 + rnd() * 0.25; ad(g2, mk(G.sphT, mat(rnd() < 0.5 ? 0x8a8a86 : 0xa6a6a0), s, s * 0.6, s * 0.85), pd.x + Math.cos(a) * rx, s * 0.28, pd.z + Math.sin(a) * rz); }
+  for (const [lx, lz, r] of [[16.2, -103.3, 0.5], [18.8, -98.6, 0.45], [17.5, -105.4, 0.4]]) { const lp = mk(G.cyl, mat(0x2f9a4a), r, 0.03, r, 0, 0, 0); ad(g2, lp, lx, 0.1, lz); ad(g2, mk(G.sphT, mat(0xff9ec0), 0.12, 0.08, 0.12), lx + 0.1, 0.16, lz); }
+  // köprü (kırmızı kemer) x: 14.5 -> 20.5, z=-101
+  { const br = mat(0xd8321e), wd = mat(0x8a5a30), n = 9; for (let i = 0; i < n; i++) { const k = i / (n - 1), x = pd.x - 3.4 + k * 6.8, y = 0.2 + Math.sin(k * Math.PI) * 0.5; ad(g2, mk(G.box, wd, 0.85, 0.14, 2.0, 0, 0, 0), x, y, -101); }
+    for (const sz of [-1, 1]) { for (let i = 0; i < 5; i++) { const k = i / 4, x = pd.x - 3.2 + k * 6.4, y = 0.2 + Math.sin(k * Math.PI) * 0.5; ad(g2, mk(G.cyl, br, 0.07, 0.8, 0.07, 0, 0, 0), x, y + 0.45, -101 + sz * 0.95); ad(g2, mk(G.sphT, mat(0xffd23f), 0.1, 0.1, 0.1, 0, 0, 0), x, y + 0.9, -101 + sz * 0.95); }
+      for (let i = 0; i < 8; i++) { const k0 = i / 8, k1 = (i + 1) / 8, x0 = pd.x - 3.2 + k0 * 6.4, x1 = pd.x - 3.2 + k1 * 6.4, y0 = 0.2 + Math.sin(k0 * Math.PI) * 0.5 + 0.85, y1 = 0.2 + Math.sin(k1 * Math.PI) * 0.5 + 0.85, len = Math.hypot(x1 - x0, y1 - y0), r = mk(G.box, br, len + 0.02, 0.07, 0.07, 0, 0, 0); r.rotation.z = Math.atan2(y1 - y0, x1 - x0); ad(g2, r, (x0 + x1) / 2, (y0 + y1) / 2, -101 + sz * 0.95); } }
+    JAP.bridgeY = x => 0.2 + Math.sin(clamp((x - (pd.x - 3.4)) / 6.8, 0, 1) * Math.PI) * 0.5 + 0.1; }
+  // havuz çarpışma: köprü koridoru açık
+  addCollider(pd.x - pd.w / 2 - 0.2, pd.x + pd.w / 2 + 0.2, pd.z - pd.d / 2 - 0.3, pd.z - 1.25, () => !z.locked); addCollider(pd.x - pd.w / 2 - 0.2, pd.x + pd.w / 2 + 0.2, pd.z + 1.25, pd.z + pd.d / 2 + 0.3, () => !z.locked);
+  // kiraz ağaçları + fenerler + kayalar
+  for (const [tx, tz, sc] of [[12.5, -107.5, 0.95], [23.6, -97.2, 0.9], [23.6, -105, 0.95], [31.5, -95.8, 1.0], [31.8, -113.5, 1.05], [11.8, -114, 1.0], [27.2, -108.2, 0.85], [14, -96, 0.8]]) JAP.trees.push(sakura(g0, tx, tz, sc, rnd));
+  for (const [lx, lz] of [[13.2, -103.2], [13.2, -98.8], [22, -102.8], [22, -99.2], [28.5, -104.8], [10.8, -110]]) lantern(g0, lx, lz, 1);
+  for (const [rx, rz, r] of [[27, -110, 0.6], [30.5, -108, 0.5], [31.4, -105.2, 0.35], [26.5, -104.6, 0.3], [22.5, -109.2, 0.4]]) sapGround(g0, rx, rz, r);
+  lamp(g0, 10.5, -93.5); lamp(g0, 31.5, -93.5);
+  // fidan tarlası (sap) + bonsai atölyesi
+  buildField(z, g1, 29.5, -101.2, 'sap', 6, 4);
+  buildStation(z, g1, { id: 'bon', name: 'BONSAİ ATÖLYESİ', x: 20.5, z: -111, flip: true, awn: '#e8587a', col: '#ff7aa8', col2: 0xff9ec0, mcol: 0x6b8a4a, shirt: 0xffb3cf, inputs: [{ type: 'sap', n: 2 }], out: 'bonsai', base: 3.8, hire: 'bonW' });
+  // koi (dinamik)
+  { const km = new THREE.InstancedMesh(koiGeo(), vcMat, 7); km.frustumCulled = false; km.userData.dyn = true; km.visible = false; scene.add(km); for (let i = 0; i < 7; i++) { km.setColorAt(i, new THREE.Color().setHSL(i % 3 === 0 ? 0.0 : 0.07 + (i % 2) * 0.03, 0.9, i % 2 ? 0.7 : 0.55)); JAP.koi.push({ a: rand(0, TAU), sp: rand(0.25, 0.5) * (i % 2 ? 1 : -1), rx: rand(1.0, 2.4), rz: rand(1.4, 3.3), ph: rand(0, 6) }); } JAP.koiM = km; }
+  z.onShow = () => { JAP.koiM.visible = true; };
+  extPad('jap', 'Japon Bahçesi', [E3.jap], 5.4, -98.5, iconTorii, null);
+  extPad('bonW', 'Bonsai Ustası', [E3.bonW], 14, -94.6, iconHelper, () => unlockedZ('jap'));
+  extPad('bonSpd', 'Bonsai Hızı', geo(E3.bonSpd, 7), 18.5, -94.6, iconBolt, () => unlockedZ('jap'));
+  EXTAPPLY.jap = i => unlockExt(z, i); EXTAPPLY.bonW = i => spawnGardener({ type: 'sap', shirt: 0xffb3cf, spdKey: 'bonSpd', beds: () => EXTZ.jap.beds, sx: 25, sz: -104.5, dest: () => STN.bon.ins[0] }, i);
+}
+let _petT = 0;
+function updateJapan(dt, t) {
+  const km = JAP.koiM; if (!km || !unlockedZ('jap')) return; const near = nearD(21, -104, 50); km.visible = near; if (!near) { return; }
+  const pd = JAP.pond, M = new THREE.Matrix4(), Q = new THREE.Quaternion(), V = new THREE.Vector3(), Sc = new THREE.Vector3(1.8, 1.8, 1.8);
+  JAP.koi.forEach((k, i) => { k.a += k.sp * dt; const x = pd.x + Math.cos(k.a) * k.rx, zz = pd.z + Math.sin(k.a) * k.rz, vx = -Math.sin(k.a) * k.rx * Math.sign(k.sp), vz = Math.cos(k.a) * k.rz * Math.sign(k.sp); Q.setFromAxisAngle(_Y, Math.atan2(vx, vz) + Math.sin(t * 3 + k.ph) * 0.12); M.compose(V.set(x, 0.1, zz), Q, Sc); km.setMatrixAt(i, M); });
+  km.instanceMatrix.needsUpdate = true;
+  _petT -= dt; if (_petT <= 0) { _petT = 0.22; const tr = JAP.trees[(Math.random() * JAP.trees.length) | 0]; emit({ x: tr.x + rand(-1.6, 1.6), y: tr.y + rand(-0.3, 0.6), z: tr.z + rand(-1.6, 1.6), vx: rand(-0.5, 0.2), vy: rand(-0.2, 0.2), vz: rand(-0.4, 0.4), life: rand(3.2, 4.4), size: rand(0.16, 0.26), c: pick([0xffb3cf, 0xffc9dc, 0xffffff, 0xff9ec0]), grav: 0.55, drag: 0.5, shrink: false, a: 0.9 }); }
+  // köprüde oyuncu yükselir
+  const gp = P.group.position, onB = JAP.bridgeY && Math.abs(gp.z + 101) < 1.25 && gp.x > pd.x - 3.4 && gp.x < pd.x + 3.4; P.group.position.y = damp(gp.y, onB ? JAP.bridgeY(gp.x) : 0, 18, dt);
+}
+/* ---- veri: mekan seviyeleri, dekor yuvaları, hedef sırası ---- */
+GEN('hon', 'Bal', 'hız', 'BAL KAVANOZU', iconHoney, 0xffb703, ['#ffb703', '#ffffff'], [60000, 240000], [-3.2, -101.4], () => unlockedZ('bee'), -6.2, -108);
+GEN('bon', 'Bonsai', 'hız', 'BONSAİ ATÖLYESİ', iconBonsai, 0xe8587a, ['#e8587a', '#ffffff'], [110000, 440000], [27.5, -96.2], () => unlockedZ('jap'), 20.5, -111);
+Object.assign(AREA_MUL, { bee: 3, jap: 3, port: 3.5, fest: 3.5, mus: 4 });
+[['b1', 'butterfly', 'bee', -4.5, -100.5, 0, -4.5, -98.0], ['b2', 'lantern', 'bee', 0.6, -106.5, 0, 0.6, -104.2], ['b3', 'bench', 'bee', -23, -108.5, Math.PI / 2, -21.2, -110.4], ['b4', 'gazebo', 'bee', -8.5, -115, 0, -8.5, -112.4],
+ ['j1', 'bench', 'jap', 24, -95.2, 0, 24, -93.2], ['j2', 'statue', 'jap', 27.5, -95.0, 0, 27.5, -93.0], ['j3', 'topiary', 'jap', 14.5, -114.5, 0, 14.5, -112.2, 0], ['j4', 'lantern', 'jap', 25.6, -104.4, 0, 25.6, -106.2]
+].forEach(([id, type, area, x, z, ry, px, pz, v]) => { const s = { id, type, area, x, z, ry, px, pz, v: v || 0, cost: Math.round(DECT[type].base * AREA_MUL[area] / 100) * 100 }; DSL.push(s); DSLM[id] = s; });
+(function () { // C3 hedefleri, eski kuyruğun arasına serpiştirilir
+  const i = GOALS.findIndex(q => q.key === 'citySpd' && q.lv === 2) + 1; GOALS.splice(i);
+  const g = (k, l) => ({ key: k, lv: l });
+  GOALS.push(g('bee', 1), g('beeW', 1), g('hiveSpd', 1), g('honSpd', 1), g('hiveN', 1), g('honSpd', 2), g('hiveSpd', 2), g('stars', 4), g('hiveN', 2), g('honSpd', 3), g('sbqSpd', 5), g('hiveSpd', 3), g('citySpd', 3), g('honSpd', 4), g('hiveN', 3), g('sbqSpd', 6), g('hiveSpd', 4), g('citySpd', 4), g('honSpd', 5), g('hiveN', 4),
+    g('jap', 1), g('bonW', 1), g('bonSpd', 1), g('bonSpd', 2), g('honSpd', 6), g('stars', 5), g('bonSpd', 3), g('hiveSpd', 5), g('sbqSpd', 7), g('bonSpd', 4), g('honSpd', 7), g('citySpd', 5), g('bonSpd', 5), g('bonSpd', 6), g('citySpd', 6), g('bonSpd', 7), g('citySpd', 7));
+  for (const k in GFIRST) delete GFIRST[k]; GOALS.forEach((q, j) => { if (GFIRST[q.key] === undefined) GFIRST[q.key] = j; });
+  Object.assign(MAIN_UNLOCKS, { bee: 1, beeW: 1, jap: 1, bonW: 1, coll: 1, port: 1, portW: 1, fest: 1, mus: 1 });
+})();
+/* ---- kurma / başlatma / güncelleme ---- */
+function buildC3() {
+  PROD_LIST.push('honey', 'bonsai');
+  const ct = POS.counter; for (const [t, sy, x0, n, dx] of [['honey', 2.2, ct.x + 0.2, 3, 0.5], ['bonsai', 2.2, ct.x + 1.8, 2, 0.55]]) { const l = new Stack(scene, (i, out) => out.set(x0 + (i % n) * dx, sy + 0.06, ct.z - 0.9), n); l.pend = 0; LANES[t] = l; EXTSTACKS.push(l); }
+  world.add(mk(G.box, mat(0xe8a850), 0.9, 0.07, 0.4, ct.x + 2.45, 2.2, ct.z - 0.9));
+  buildBee(); buildJapan();
+}
+function initC3() { hivesRefresh(true); }
+function updateC3(dt, t) {
+  updateBees(dt, t); updateBeek(dt, t); beeZoneActions(dt); updateJapan(dt, t);
+}
+function collBonus(k) { return 0; }
+/*C3-END*/
 /* =====================================================================
    15. INIT
    ===================================================================== */
@@ -3696,7 +4027,7 @@ for (const [x, z, s] of [[-18, -9, 1], [-6, -9.5, 1.2], [0.5, -9, 1], [13, -8.5,
 for (const [x, z, s] of [[-24, 3, 1.3], [-24, 14, 1.6], [-15, 19, 1.4], [-26, -3, 1.6], [-23, -9, 1.5]]) buildTree(x, z, s);
 buildDecorFlowers();
 for (let i = 0; i < 3; i++) buildBed(i);
-buildStations(); buildDecor(); buildSera(); buildVan(); buildZones(); buildPlayer(); LANES.bouquet = shelfB; LANES.pot = shelfP; buildExpansion(); buildLanes(); finalizeWorld();
+buildStations(); buildDecor(); buildSera(); buildVan(); buildZones(); buildPlayer(); LANES.bouquet = shelfB; LANES.pot = shelfP; buildExpansion(); buildLanes(); buildC3(); finalizeWorld();
 // restore progress
 for (const k in S.lv) if (upPads[k]) S.lv[k] = Math.min(S.lv[k], upPads[k].max());
 if (S.lv.bed > 0) { unlockBed(beds[2], true); upPads.bed.done = true; upPads.bed.group.visible = false; }
@@ -3709,7 +4040,7 @@ for (const k in EXTAPPLY) if (S.lv[k] > 0) EXTAPPLY[k](true);
 for (const k in upPads) { const u = upPads[k]; if (S.lv[k] >= u.max()) { u.done = true; u.group.visible = false; } else { u.group.visible = padVisible(u); u.redraw(); } }
 restoreExtras(LOADED_X); for (const k in upPads) if (!upPads[k].done) upPads[k].redraw();
 for (let i = 0; i < 3; i++) { spawnCustomer(CFG.queueZ0 + i * CFG.queueGap); const c = customers[customers.length - 1]; c.group.position.x = CFG.queueX; c.yaw = 0; c.group.rotation.y = Math.PI; c.yaw = Math.PI; c.atSlot = true; }
-initC2(); buildAmbient(); setupPost(); onResize();
+initC2(); initC3(); buildAmbient(); setupPost(); onResize();
 introDone = !(S.tut === 0 && S.money === 0 && !Object.keys(S.lv).some(k => S.lv[k] > 0));
 if (!introDone) introEl.style.display = 'block';
 curGoalIdx = goalIndex(); curGoal = curGoalIdx >= 0 ? GOALS[curGoalIdx] : null; lastGoalIdx = curGoalIdx; drawGoalIcon();
@@ -3723,7 +4054,7 @@ window.__game = {
   EXTZ, STN, GARD, cafe: () => cafe, wed: () => wed, city: () => city, tractor: () => tractor, give(type, n) { for (let i = 0; i < n; i++) P.stack.add(['orchid', 'lav', 'sun', 'rosep', 'flower'].includes(type) ? makeFlowerItem(0, type === 'flower' ? 'tulip' : type) : makeItemOf(type), type); },
   bot(x, z) { BOT = (x || z) ? { x, z } : null; if (BOT) hideIntro(); }, hideIntro, objective() { objective(_obj); return Object.assign({}, _obj); }, get goal() { return curGoal; }, GOALS, UPG,
   S, stats, P: () => P, queue, beds, machine, inputPile, outputPile, moneyPile, get shelf() { return shelfB; }, get shelfP() { return shelfP; }, get potInput() { return potInput; }, get potOutput() { return potOutput; }, get zone2() { return zone2; }, get zone3() { return zone3; }, VAN, get vanLoad() { return vanLoad; }, get vanPile() { return vanPile; }, get cashier() { return cashier; }, get carrier() { return carrier; }, upPads, zones, customers, CFG, POS,
-  helper: () => helper,
+  helper: () => helper, get c3() { return { C3, JAP, E3, beek: () => beek, beeZone, hiveInterval, nearFlowerZones }; },
   carry(n) { while (P.stack.length) P.stack.items.pop(); for (let i = 0; i < n; i++) P.stack.add(makeFlowerItem(0, "tulip"), "flower"); },
   tp(x, z) { P.group.position.set(x, 0, z); P.vel.set(0, 0, 0); camInit = false; },
   sim(sec) { const n = Math.round(sec * 30); for (let i = 0; i < n; i++) update(1 / 30); },
