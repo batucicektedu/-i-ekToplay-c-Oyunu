@@ -2,7 +2,7 @@
 const h=require('./h.js');
 (async()=>{const bad=[];const {b,page,errs}=await h.open({q:'low',w:300,h:500,wait:1000});
 await page.evaluate(()=>{window.__resetting=false;window.__freeze=true;__game.hideIntro()});
-await page.evaluate(()=>{window.__chunk=(sec)=>{const g=__game;for(let i=0;i<sec*10;i++){g.bot(0,0);const o=g.objective();const p=g.P().group.position;let dx=0,dz=0;if(o&&o.ok){const pa=g.path(o.x,o.z);let k=1;while(k<pa.length-1&&Math.hypot(pa[k][0]-p.x,pa[k][1]-p.z)<0.5)k++;const w=pa[Math.min(k,pa.length-1)]||[o.x,o.z];dx=w[0]-p.x;dz=w[1]-p.z;const L=Math.hypot(dx,dz);if(L>0.15){dx/=L;dz/=L}else dx=dz=0}g.bot(dx||1e-6,dz||1e-6);g.sim(0.1)}g.bot(0,0);return Math.round(g.S.money)}});
+await page.evaluate(()=>{window.__chunk=(sec)=>{const g=__game;for(let i=0;i<sec*10;i++){g.bot(0,0);const o=g.objective();const p=g.P().group.position;let dx=0,dz=0;if(o&&o.ok){const pa=g.path(o.x,o.z);let k=1;while(k<pa.length-1&&Math.hypot(pa[k][0]-p.x,pa[k][1]-p.z)<0.5)k++;const w=pa[Math.min(k,pa.length-1)]||[o.x,o.z];dx=w[0]-p.x;dz=w[1]-p.z;const L=Math.hypot(dx,dz);if(L>(o.kind==='harvest'?0.7:0.15)){dx/=L;dz/=L}else dx=dz=0}g.bot(dx||1e-6,dz||1e-6);g.sim(0.1)}g.bot(0,0);return Math.round(g.S.money)}});
 for(let i=0;i<18;i++)await page.evaluate(()=>window.__chunk(10));
 const st=await page.evaluate(()=>{dispatchEvent(new Event('pagehide'));const lv=__game.S.lv;return {money:__game.S.money,up:Object.keys(lv).filter(k=>lv[k]>0),stats:__game.stats,raw:!!localStorage.getItem('bolum2_sahil'),old:!!localStorage.getItem('cicek_bahcesi_v1')}});
 console.log(JSON.stringify(st));if(!st.raw)bad.push('save missing');if(st.old)bad.push('ch1 key used');if(!st.up.length)bad.push('no upgrades in 3 min');if(!st.stats.sold)bad.push('nothing sold');
