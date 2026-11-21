@@ -3002,7 +3002,7 @@ function updateCafe(dt, t) {
 /* ---- düğün ---- */
 function makeOrder() {
   const k = wed.done, it = {}; it.bouquet = 12 + 4 * k;
-  if (S.lv.sera > 0) it.pot = 6 + 2 * k; if (unlockedZ('parf')) it.perfume = 2 + k; if (unlockedZ('lav')) it.sachet = 6 + 2 * k; if (unlockedZ('sunf')) it.sbq = 3 + k;
+  if (S.lv.sera > 0) it.pot = 6 + 2 * k; if (unlockedZ('parf')) it.perfume = 2 + k; if (unlockedZ('lav')) it.sachet = 6 + 2 * k; if (unlockedZ('sunf')) it.sbq = 3 + k; if (unlockedZ('bee')) it.honey = 2 + k; if (unlockedZ('jap')) it.bonsai = 1 + (k >> 1);
   let val = 0; for (const t in it) val += it[t] * PRICE[t];
   wed.ord = { need: it, got: {}, time: 480, reward: Math.round(val * 14 * priceMul() * tierMul('wed') * (1 + 0.15 * (S.lv.wedBonus || 0))) }; wed.state = 'active'; wed.sig = '';
   praise('Yeni düğün siparişi!', true);
@@ -3597,8 +3597,8 @@ function renderWard() {
       const own = isOwned(k, it), sel = S.cos[k] === it.id, card = document.createElement('div'); card.className = 'wc' + (sel ? ' sel' : '');
       const cvs = document.createElement('canvas'); cvs.width = cvs.height = 96; drawWardPreview(cvs.getContext('2d'), k, it); card.appendChild(cvs);
       const nm = document.createElement('div'); nm.textContent = it.n; card.appendChild(nm);
-      const pr = document.createElement('div'); pr.className = 'wp' + (sel ? ' own' : own ? ' own' : S.money < it.cost ? ' no' : ''); pr.textContent = sel ? 'Seçili' : own ? 'Seç' : '$ ' + fmt(it.cost); card.appendChild(pr);
-      card.addEventListener('click', () => { if (own) { selectCos(k, it); return; } if (S.money < it.cost) { toast('Yetersiz para'); sfx('drop'); return; } S.money -= it.cost; S.cos.own.push(k + ':' + it.id); saveDirty = true; selectCos(k, it); sfx('up'); confetti(P.group.position.x, 2.5, P.group.position.z, 40); sparkles(P.group.position.x, 1.5, P.group.position.z, 14, 0xfff2a0, 0.8); writeSave(); });
+      const pr = document.createElement('div'); pr.className = 'wp' + (sel ? ' own' : own ? ' own' : S.money < it.cost ? ' no' : ''); pr.textContent = sel ? 'Seçili' : own ? 'Seç' : it.excl ? 'Festival ödülü' : '$ ' + fmt(it.cost); card.appendChild(pr);
+      card.addEventListener('click', () => { if (own) { selectCos(k, it); return; } if (it.excl) { toast('Festival ödülü: Çiçek Festivali etkinliklerini tamamla'); sfx('drop'); return; } if (S.money < it.cost) { toast('Yetersiz para'); sfx('drop'); return; } S.money -= it.cost; S.cos.own.push(k + ':' + it.id); saveDirty = true; selectCos(k, it); sfx('up'); confetti(P.group.position.x, 2.5, P.group.position.z, 40); sparkles(P.group.position.x, 1.5, P.group.position.z, 14, 0xfff2a0, 0.8); writeSave(); });
       wGrid.appendChild(card);
     }
   }
@@ -4105,9 +4105,9 @@ function initColl() {
   document.getElementById('bBook').addEventListener('click', openBook); document.getElementById('bClose').addEventListener('click', () => { document.getElementById('book').style.display = 'none'; });
   document.getElementById('bSell').addEventListener('click', sellDupes);
   const c = document.querySelector('#bBook canvas').getContext('2d'); iconBook(c, 30, 30, 50);
-  rareInit();
 }
 function buildColl() {
+  rareInit();
   const pm0 = priceMul; priceMul = () => pm0() * (1 + collBonus('price'));
   extPad('coll', 'Koleksiyon Defteri', [E3.coll], -8.6, 13.3, iconBook, null);
   EXTAPPLY.coll = i => { document.getElementById('bBook').style.display = 'flex'; if (!i) { praise('Nadir Çiçekler!', true); flash(); sfx('up'); toast('Yataklarda nadir çiçekler belirecek: parıltılı mücevheri topla!'); } };
@@ -4276,18 +4276,274 @@ function portPersistLoad() { // yükleme: kayıtlı sözleşmeyi temizle, süre 
 }
 C3EARLY.push(set => { if (PORT.z && !PORT.z.locked && PORT.pile.length + (PORT.pile.extra || 0) > 0) return set(PORT.mz.x, 0.8, PORT.mz.z, 'money'); return null; });
 C3OBJ.push((set, hold) => { if (!PORT.z || PORT.z.locked || S.lv.portW > 0) return null; for (const t of portNeeds()) if (hold(t) >= 5) return set(PORT.zone.x, 0.4, PORT.zone.z, 'ship'); return null; });
+/* ---- ÇİÇEK FESTİVALİ ---- */
+const FEST = { z: null, spr: null, ev: null, balloons: null, crowd: [], sig: '', lights: [], on: 0 };
+const ssum = () => { let n = 0; for (const k in stats) if (k.indexOf('s_') === 0) n += stats[k]; return n; };
+const FKINDS = [
+  { k: 'bouquet', txt: n => n + ' buket sat', ctr: () => stats.s_bouquet || 0, base: 40, step: 8, req: () => true, ic: iconBouquet },
+  { k: 'honey', txt: n => n + ' bal kavanozu sat', ctr: () => stats.s_honey || 0, base: 30, step: 6, req: () => unlockedZ('bee'), ic: iconHoney },
+  { k: 'bonsai', txt: n => n + ' bonsai sat', ctr: () => stats.s_bonsai || 0, base: 14, step: 3, req: () => unlockedZ('jap'), ic: iconBonsai },
+  { k: 'perfume', txt: n => n + ' parfüm sat', ctr: () => stats.s_perfume || 0, base: 28, step: 5, req: () => unlockedZ('parf'), ic: iconPerfume },
+  { k: 'any', txt: n => n + ' ürün sat', ctr: ssum, base: 110, step: 20, req: () => true, ic: iconSmile },
+  { k: 'sbq', txt: n => n + ' ayçiçeği buketi sat', ctr: () => stats.s_sbq || 0, base: 26, step: 5, req: () => unlockedZ('sunf'), ic: iconSbq }
+];
+function festPick() { const l = FKINDS.filter(q => q.req()); return l[S.fe.n % l.length]; }
+function festStart() {
+  const k = festPick(), n = k.base + k.step * Math.min(S.fe.n, 12), rate = incomeRate(), reward = Math.round(Math.max(12000, rate * 240) * (1 + 0.25 * (S.lv.festBonus || 0)) * (1 + 0.08 * Math.min(S.fe.n, 10)));
+  FEST.ev = { k, n, base: k.ctr(), left: 180, reward }; FEST.sig = ''; praise('Çiçek Festivali başladı!', true); flash(); sfx('up'); vib(30); toast('3 dk\'da ' + k.txt(n) + '!'); confetti(P.group.position.x, 3, P.group.position.z, 50);
+  for (let i = 0; i < 4; i++) later(i * 0.3, () => fireworks(P.group.position.x + rand(-6, 6), P.group.position.z + rand(-5, 1)));
+}
+function festEnd(win) {
+  const ev = FEST.ev; FEST.ev = null; document.getElementById('evt').style.display = 'none'; FEST.sig = '';
+  if (!win) { S.fe.t = 200; toast('Festival süresi doldu — bir sonraki etkinlikte tekrar dene'); sfx('drop'); return; }
+  const n = S.fe.n; S.fe.n++; S.fe.t = 300; stats.fests = (stats.fests || 0) + 1; saveDirty = true;
+  S.money += ev.reward; stats.earned += ev.reward; gainAcc += ev.reward; beautyAdd(3 + Math.min(n, 4));
+  praise('Festival Başarılı! +' + fmt(ev.reward), true); flash(); sfx('up'); vib(50); coinBurstUI(); popText(P.group.position.x, 4.5, P.group.position.z, '+' + fmt(ev.reward) + ' • +' + (3 + Math.min(n, 4)) + ' Güzellik', '#ffd23f');
+  for (let i = 0; i < 10; i++) later(i * 0.22, () => fireworks(P.group.position.x + rand(-8, 8), P.group.position.z + rand(-7, 1))); confetti(P.group.position.x, 3, P.group.position.z, 120);
+  const ex = n === 0 ? ['hat:fest', 'Festival Şapkası'] : n === 2 ? ['fit:6', 'Festival Elbisesi'] : null; if (ex && !S.cos.own.includes(ex[0])) { S.cos.own.push(ex[0]); later(1.2, () => { toast('Yeni kozmetik: ' + ex[1] + ' (Gardırop)'); praise(ex[1] + '!', true); }); }
+  writeSave();
+}
+function festProgress() { const ev = FEST.ev; return ev ? clamp(ev.k.ctr() - ev.base, 0, ev.n) : 0; }
+function buildFest() {
+  const z = c3Ext('fest', 'Çiçek Festivali', 'ÇİÇEK FESTİVALİ', false, 5), g0 = mkGroup(z, 0.1), g1 = mkGroup(z, 0.5), g2 = mkGroup(z, 0.8), rnd = rng(909); FEST.z = z;
+  { const tm = LM({ map: tileTex('#ffd6e4', '#fff3d6', 6) }); tm.map = tm.map.clone(); tm.map.needsUpdate = true; tm.map.repeat.set(18 / 3, 15 / 3); const f = new THREE.Mesh(G.plane, tm); f.rotation.x = -Math.PI / 2; f.scale.set(18, 15, 1); f.receiveShadow = true; ad(g0, f, 21, 0.035, -131.5); }
+  // sahne
+  ad(g1, rbox(14, 1.1, 5.2, 0.08, mat(0x7a1c4a)), 21, 0.55, -138.6); ad(g1, rbox(14.2, 0.12, 5.4, 0.04, mat(0xffd23f)), 21, 1.14, -138.6);
+  ad(g1, rbox(14, 6.6, 0.4, 0.05, mat(0x3a1050)), 21, 4.4, -141.0); for (const sx of [-1, 1]) { ad(g1, rbox(1.4, 6.0, 5.0, 0.05, mat(0xc2185b)), 21 + sx * 6.9, 4.1, -138.6); ad(g1, rbox(1.3, 3.4, 1.3, 0.06, mat(0x20202a)), 21 + sx * 5.2, 2.8, -136.6); ad(g1, mk(G.cyl, mat(0x444), 0.4, 0.2, 0.4), 21 + sx * 5.2, 4.6, -136.6); }
+  ad(g1, rbox(14.4, 0.45, 0.45, 0.05, mat(0x2d3a45)), 21, 7.9, -136.6); for (let i = 0; i < 6; i++) { const lx = 21 + (i - 2.5) * 2.4, cc = [0xff4f93, 0xffd23f, 0x4fe3ff, 0x9dff6a, 0xc77dff, 0xff7a1a][i]; ad(g1, mk(G.cyl, mat(0x20202a), 0.25, 0.5, 0.25), lx, 7.55, -136.6); ad(g1, mk(G.sphT, new THREE.MeshBasicMaterial({ color: lc(cc) }), 0.2, 0.2, 0.2), lx, 7.2, -136.6); }
+  for (let i = 0; i < 9; i++) for (const [fx, fy] of [[-6.2 + i * 1.55, 2.6], [-6.2 + i * 1.55 + 0.7, 3.6]]) ad(g1, mk(G.sphT, mat(FCOLS[(i + (fy > 3 ? 2 : 0)) % 6]), 0.34, 0.3, 0.2), 21 + fx, fy, -140.7);
+  const bn = makeBoard('ÇİÇEK FESTİVALİ', 8.4, 1.3, 'chalk'); ad(g1, bn, 21, 6.2, -140.6); STREF.festBoard = bn;
+  FEST.spr = makeSprite(512, 300, () => {}, 7.2, 4.2, false); FEST.spr.position.set(21 - z.cx, 3.5, -134.2 - z.cz); g2.add(FEST.spr);
+  // çadırlar
+  [[13.8, -127.6, 0xff4f93, 0xffffff], [28.2, -127.6, 0x2f7bff, 0xffffff], [21, -122.6, 0xffc21a, 0xff4f93]].forEach(([tx, tz, c1, c2], i) => {
+    const t = new THREE.Group(); for (const [px, pz] of [[-1.7, -1.7], [1.7, -1.7], [-1.7, 1.7], [1.7, 1.7]]) t.add(mk(G.cyl, mat(0xffffff), 0.08, 3.0, 0.08, px, 1.5, pz));
+    const roof = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 2.9, 1.5, 4, 1), LM({ map: stripeTex(hexs(c1), hexs(c2), 2) })); roof.rotation.y = Math.PI / 4; roof.position.y = 3.75; roof.castShadow = true; t.add(roof);
+    t.add(mk(G.box, mat(0xfff0d6), 3.0, 0.8, 1.2, 0, 0.45, 0), mk(G.box, mat(c1), 3.1, 0.1, 1.3, 0, 0.88, 0)); for (let k = 0; k < 5; k++) t.add(mk(G.sphT, mat(FCOLS[(k + i) % 6]), 0.17, 0.17, 0.17, -1.1 + k * 0.55, 1.05, 0.0));
+    shadowAll(t, true, false); ad(g1, t, tx, 0, tz); addCollider(tx - 1.6, tx + 1.6, tz - 0.8, tz + 0.8, () => !z.locked);
+  });
+  // flama + ışık dizisi
+  { const pts = [[10.6, -139.6], [10.6, -122.5], [31.8, -139.6], [31.8, -122.5]]; for (const [x, zz] of pts) ad(g2, mk(G.cyl, mat(0xffffff), 0.1, 4.6, 0.1), x, 2.3, zz); const flag = (x0, z0, x1, z1) => { for (let i = 0; i < 22; i++) { const k = i / 21, x = lerp(x0, x1, k), zz = lerp(z0, z1, k), y = 4.4 - Math.sin(k * Math.PI) * 0.9; const f = mk(G.cone3, mat(FCOLS[i % 6]), 0.34, 0.5, 0.03); f.rotation.x = Math.PI; ad(g2, f, x, y, zz); } };
+    flag(10.6, -139.6, 10.6, -122.5); flag(31.8, -139.6, 31.8, -122.5); flag(10.6, -122.5, 31.8, -122.5); for (let i = 0; i < 12; i++) { const k = i / 11, x = lerp(10.6, 31.8, k), y = 4.6 - Math.sin(k * Math.PI) * 0.8; ad(g2, mk(G.sphT, GLOWM, 0.11, 0.11, 0.11), x, y - 0.1, -131); GLOWS.push([x, -131, 2.4]); } }
+  // çiçek kemeri (giriş)
+  { const a = new THREE.Group(); for (const sz of [-2.4, 2.4]) a.add(mk(G.cyl, mat(0xffffff), 0.2, 5.0, 0.2, 0, 2.5, sz)); for (let i = 0; i < 14; i++) { const t = i / 13 * Math.PI; a.add(mk(G.sphT, mat(FCOLS[i % 6]), 0.36, 0.36, 0.36, 0, 5.0 + Math.sin(t) * 1.0, Math.cos(t) * 2.4)); } for (const sz of [-2.4, 2.4]) for (let k = 0; k < 4; k++) a.add(mk(G.sphT, mat(FCOLS[(k + 2) % 6]), 0.3, 0.3, 0.3, 0.1, 0.6 + k, sz)); shadowAll(a, true, false); ad(g2, a, 10.5, 0, -130.5); }
+  decorTree(g0, 11.8, -140.6, 1.1); decorTree(g0, 31.4, -140.6, 1.1); decorTree(g0, 11.5, -120.5, 1.1); lamp(g0, 10.6, -125); lamp(g0, 31.8, -125); lamp(g0, 21, -141);
+  // balonlar (dinamik) + kalabalık
+  { const bm = new THREE.InstancedMesh(new THREE.SphereGeometry(0.5, 10, 8), LM({ color: 0xffffff }), 16); bm.frustumCulled = false; bm.userData.dyn = true; bm.visible = false; scene.add(bm); const cl = [0xff4f93, 0xffd23f, 0x4fe3ff, 0x9dff6a, 0xc77dff, 0xff7a1a]; FEST.bal = []; for (let i = 0; i < 16; i++) { bm.setColorAt(i, new THREE.Color(cl[i % 6])); FEST.bal.push({ x: 12 + rnd() * 18, z: -139 + rnd() * 16, y: 3.5 + rnd() * 3, ph: rnd() * 6 }); } FEST.balloons = bm; }
+  for (let i = 0; i < 5; i++) { const fem = i % 2 === 0, c = makeChar({ shirt: pick(SHIRTS), pants: pick([0x3b4a6b, 0x5b4636, 0x2f6f5f]), hair: pick(HAIRS), skin: pick(SKINS), hairStyle: fem ? pick(['bob', 'long', 'ponytail', 'bun']) : 'short', dress: fem ? pick(SHIRTS) : 0, shoe: 0x3a2a22 }); c.group.position.set(15 + i * 2.4, 0, -133.5 + (i % 2) * 1.2); c.group.visible = false; c.ph = i * 1.3; scene.add(c.group); FEST.crowd.push(c); }
+  z.onShow = () => { };
+  extPad('fest', 'Çiçek Festivali', [E3.fest], 5.4, -124.5, iconFest, null);
+  extPad('festBonus', 'Festival Ödülü', geo(E3.festBonus, 4), 14, -120.6, iconStar, () => unlockedZ('fest'));
+  EXTAPPLY.fest = i => { unlockExt(z, i); if (!i) S.fe.t = Math.min(S.fe.t, 60); }; if (S.fe.t > 480) S.fe.t = 420;
+}
+function updateFest(dt, t) {
+  const z = FEST.z; if (!z || z.locked) return; const near = nearD(21, -131, 55), ev = FEST.ev;
+  if (!ev) { S.fe.t -= dt; if (S.fe.t <= 0 && introDone && !document.getElementById('offc').style.display.includes('flex')) festStart(); }
+  else { ev.left -= dt; const p = festProgress(); if (p >= ev.n) festEnd(true); else if (ev.left <= 0) festEnd(false); }
+  const on = !!FEST.ev; FEST.on = damp(FEST.on, on ? 1 : 0, 3, dt);
+  // HUD
+  const el = document.getElementById('evt'), e2 = FEST.ev;
+  if (e2) { const p = festProgress(), sig = p + '|' + Math.ceil(e2.left); if (sig !== FEST.hsig) { FEST.hsig = sig; el.style.display = 'flex'; document.getElementById('evtN').textContent = 'Festival: ' + e2.k.txt(e2.n) + ' • ' + Math.floor(e2.left / 60) + ':' + String(Math.floor(e2.left % 60)).padStart(2, '0'); const pc = Math.round(p / e2.n * 100); document.getElementById('evtF').style.width = pc + '%'; document.getElementById('evtP').textContent = p + '/' + e2.n; const c = el.querySelector('canvas').getContext('2d'); c.clearRect(0, 0, 60, 60); e2.k.ic(c, 30, 30, 48); } } else FEST.hsig = '';
+  if (!near) { FEST.balloons.visible = false; for (const c of FEST.crowd) c.group.visible = false; return; }
+  const bm = FEST.balloons; bm.visible = FEST.on > 0.05; const M = new THREE.Matrix4(), V = new THREE.Vector3(), Q = new THREE.Quaternion(), Sc = new THREE.Vector3();
+  if (bm.visible) { FEST.bal.forEach((b, i) => { const k = FEST.on; Sc.setScalar(Math.max(0.01, k)); M.compose(V.set(b.x + Math.sin(t * 0.7 + b.ph) * 0.6, b.y * k + Math.sin(t * 1.3 + b.ph) * 0.3, b.z), Q, Sc); bm.setMatrixAt(i, M); }); bm.instanceMatrix.needsUpdate = true; }
+  for (const c of FEST.crowd) { c.group.visible = FEST.on > 0.3; if (c.group.visible) { c.group.position.y = Math.abs(Math.sin(t * 5 + c.ph)) * 0.18; c.group.rotation.y = 3.14 + Math.sin(t * 2 + c.ph) * 0.4; animChar(c, dt, 0, t); c.armL.rotation.x = -2.4 + Math.sin(t * 8 + c.ph) * 0.5; c.armR.rotation.x = -2.4 + Math.cos(t * 8 + c.ph) * 0.5; } }
+  if (FEST.on > 0.5 && Math.random() < dt * 3) { emit({ x: 21 + rand(-6, 6), y: 8, z: -136.6, vx: rand(-1, 1), vy: rand(-1, 0), vz: rand(0.3, 2), life: 1.2, size: 0.4, c: pick([0xff4f93, 0xffd23f, 0x4fe3ff]), type: 1, grav: 0.5, drag: 0.4 }); if (Math.random() < 0.3) confetti(21 + rand(-5, 5), 6, -135, 3); }
+  const sig = (FEST.ev ? festProgress() + '|' + Math.ceil(FEST.ev.left / 2) : 'cd' + Math.ceil(S.fe.t / 5)) + '|' + S.fe.n; if (sig !== FEST.sig) { FEST.sig = sig; drawFestBoard(); }
+}
+function drawFestBoard() {
+  redrawSprite(FEST.spr, (ctx, w, h) => {
+    ctx.fillStyle = 'rgba(40,6,36,.94)'; ctx.strokeStyle = '#ff7ab0'; ctx.lineWidth = 10; rrect(ctx, 8, 8, w - 16, h - 16, 40); ctx.fill(); ctx.stroke(); const ev = FEST.ev;
+    if (!ev) { iconFest(ctx, 100, 150, 130); otext(ctx, 'Sonraki festival', 330, 100, 38, '#ffd400', '#05071a'); const s = Math.max(0, Math.ceil(S.fe.t)); otext(ctx, Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'), 330, 170, 72, '#fff', '#05071a'); otext(ctx, 'Tamamlanan: ' + S.fe.n, 330, 240, 32, '#ff9ad0', '#05071a'); }
+    else { ev.k.ic(ctx, 90, 110, 100); otext(ctx, ev.k.txt(ev.n), 320, 80, 36, '#fff', '#05071a'); const p = festProgress(); ctx.fillStyle = 'rgba(0,0,0,.5)'; rrect(ctx, 150, 120, 320, 34, 17); ctx.fill(); ctx.fillStyle = '#ffb000'; rrect(ctx, 150, 120, Math.max(8, 320 * p / ev.n), 34, 17); ctx.fill(); otext(ctx, p + '/' + ev.n, 310, 138, 28, '#fff', '#05071a'); const s = Math.ceil(ev.left); otext(ctx, Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'), 120, 210, 60, '#fff', '#05071a'); iconBill(ctx, 270, 215, 50); otext(ctx, fmt(ev.reward), 400, 215, 42, '#6dff6a', '#0c1a0c'); }
+  });
+}
+/* ---- BOTANİK MÜZESİ ---- */
+const MUS = { z: null, ex: [], visitors: [], t: 3, specs: [], halo: null, dome: null, sig: '', virt: 0, spr: null };
+const musTicket = () => Math.round(90 * (1 + 3 * collCount() / 18) * (1 + 0.25 * (S.lv.musTkt || 0)) * priceMul());
+const musInterval = () => 9 / (1 + collCount() / 18);
+function buildMuseum() {
+  const z = c3Ext('mus', 'Botanik Müzesi', 'BOTANİK MÜZESİ', true, 6), g0 = mkGroup(z, 0.1), g1 = mkGroup(z, 0.5), g2 = mkGroup(z, 0.8), rnd = rng(31); MUS.z = z;
+  const X0 = -21, X1 = -4, Z0 = -165, Z1 = -149, cx = (X0 + X1) / 2, cz = (Z0 + Z1) / 2, W = X1 - X0, D = Z1 - Z0;
+  const fm = mat(0xf4f7fb), gm = new THREE.MeshLambertMaterial({ color: 0xbfe8ff, transparent: true, opacity: 0.2, side: THREE.DoubleSide, depthWrite: false });
+  { const tm = LM({ map: tileTex('#f2efe8', '#c9d3e2', 8) }); tm.map = tm.map.clone(); tm.map.needsUpdate = true; tm.map.repeat.set(W / 4, D / 4); const f = new THREE.Mesh(G.plane, tm); f.rotation.x = -Math.PI / 2; f.scale.set(W, D, 1); f.receiveShadow = true; ad(g0, f, cx, 0.04, cz); const cp = new THREE.Mesh(G.plane, LM({ color: lc(0x8a1f3a) })); cp.rotation.x = -Math.PI / 2; cp.scale.set(W - 1.2, 2.4, 1); ad(g0, cp, cx, 0.06, -154.8); }
+  ad(g0, rbox(W + 0.8, 0.5, D + 0.8, 0.08, mat(0xcfd6e2)), cx, 0.18, cz); ad(g0, rbox(W, 0.1, D, 0.03, mat(0xf2efe8)), cx, 0.45, cz);
+  // çerçeveler
+  for (let i = 0; i <= 8; i++) for (const zz of [Z0, Z1]) ad(g1, mk(G.box, fm, 0.22, 4.6, 0.22), X0 + i * W / 8, 2.7, zz); for (let i = 0; i <= 8; i++) for (const xx of [X0, X1]) if (i % 2 === 0 && i > 0 && i < 8) ad(g1, mk(G.box, fm, 0.22, 4.6, 0.22), xx, 2.7, Z0 + i * D / 8); for (const [xx, zz] of [[X0, Z0], [X0, Z1], [X1, Z0], [X1, Z1]]) ad(g1, mk(G.box, fm, 0.3, 4.6, 0.3), xx, 2.7, zz);
+  for (const zz of [Z0, Z1]) ad(g1, mk(G.box, fm, W + 0.3, 0.2, 0.24), cx, 5.0, zz); for (const xx of [X0, X1]) ad(g1, mk(G.box, fm, 0.24, 0.2, D + 0.3), xx, 5.0, cz);
+  // cam duvarlar
+  for (const zz of [Z0, Z1]) { const w = new THREE.Mesh(G.plane, gm); w.scale.set(W, 4.5, 1); w.renderOrder = 6; ad(g1, w, cx, 2.75, zz); }
+  { const w = new THREE.Mesh(G.plane, gm); w.rotation.y = Math.PI / 2; w.scale.set(D, 4.5, 1); w.renderOrder = 6; ad(g1, w, X0, 2.75, cz); for (const [a, b] of [[Z0, -156.2], [-153.4, Z1]]) { const e = new THREE.Mesh(G.plane, gm); e.rotation.y = Math.PI / 2; e.scale.set(b - a, 4.5, 1); e.renderOrder = 6; ad(g1, e, X1, 2.75, (a + b) / 2); } ad(g1, mk(G.box, fm, 0.3, 4.6, 0.3), X1, 2.7, -156.2); ad(g1, mk(G.box, fm, 0.3, 4.6, 0.3), X1, 2.7, -153.4); ad(g1, mk(G.box, fm, 0.3, 0.7, 3.2), X1, 4.8, -154.8); }
+  // beşik tonoz çatı
+  { const rf = new THREE.Mesh(new THREE.CylinderGeometry(W / 2, W / 2, D, 18, 1, true, Math.PI / 2, Math.PI), gm); rf.rotation.x = Math.PI / 2; rf.scale.set(1, 1, 0.42); rf.renderOrder = 6; ad(g1, rf, cx, 5.0, cz); }
+  for (let i = 0; i <= 8; i++) { const a = new THREE.Mesh(new THREE.TorusGeometry(W / 2, 0.07, 5, 16, Math.PI), fm); a.scale.set(1, 0.42, 1); ad(g1, a, cx, 5.0, Z0 + i * D / 8); }
+  ad(g1, mk(G.box, fm, 0.2, 0.2, D), cx, 5.0 + W / 2 * 0.42, cz);
+  // vitrinler
+  const SPX = [-18.8, -16.2, -13.6, -11.0, -8.4, -6.2]; MUS.pos = [];
+  for (let r = 0; r < 3; r++) for (let c = 0; c < 6; c++) { const x = SPX[c], zz = [-151.7, -157.8, -162.2][r] + (r === 1 ? -0.2 : 0); ad(g1, rbox(1.4, 1.0, 1.4, 0.08, mat(0xf0e8d8)), x, 0.95, zz); ad(g1, rbox(1.5, 0.12, 1.5, 0.04, mat(GOLD)), x, 1.5, zz); ad(g1, mk(G.cyl, mat(0x20202a), 0.55, 0.08, 0.55), x, 1.58, zz); MUS.pos.push([x, zz, c, r]); addCollider(x - 0.75, x + 0.75, zz - 0.75, zz + 0.75, () => !z.locked); }
+  for (let i = 0; i < 3; i++) { const x = -15 + i * 4.6; ad(g1, mk(G.cyl, mat(GOLD), 0.04, 0.9, 0.04), x, 4.5, -157); ad(g1, mk(G.sphT, GLOWM, 0.3, 0.2, 0.3), x, 3.9, -157); for (let k = 0; k < 6; k++) { const a = k / 6 * TAU; ad(g1, mk(G.sphT, mat(0xdff4ff), 0.07, 0.14, 0.07), x + Math.cos(a) * 0.4, 3.9, -157 + Math.sin(a) * 0.4); } GLOWS.push([x, -157, 3.2]); }
+  // dış bahçe + basamak
+  for (let i = 0; i < 3; i++) ad(g2, rbox(1.2 - i * 0.2, 0.18 + i * 0.1, 3.4, 0.05, mat(0xcfd6e2)), X1 + 0.6 + (2 - i) * 0.55, 0.12 + i * 0.05, -154.8);
+  decorTree(g0, -22.8, -146, 1.1); decorTree(g0, -22.8, -166, 1.1); decorTree(g0, 0.5, -166, 1.1); decorTree(g0, 0.6, -146.5, 1.0); lamp(g0, -2.2, -151); lamp(g0, -2.2, -159); lamp(g0, -12, -147);
+  for (const [px, pz] of [[-1.5, -148.5], [-1.5, -161.5]]) for (let i = 0; i < 4; i++) wildflower(g0, px + (i % 2) * 0.8, pz + (i >> 1) * 0.6, FPAL[(i + 2) % 6]);
+  const sb = makeBoard('BOTANİK MÜZESİ', 5.6, 1.2, 'wood'); sb.rotation.y = CFG.yaw; ad(g2, sb, cx, 6.6, Z1 + 0.6); MUS.spr = makeSprite(384, 150, () => {}, 4.2, 1.64, false); MUS.spr.position.set(-1.6 - z.cx, 4.6, -152.4 - z.cz); g2.add(MUS.spr);
+  // colliders (duvarlar; kapı açık)
+  addCollider(X0 - 0.3, X1 + 0.3, Z0 - 0.3, Z0 + 0.1, () => !z.locked); addCollider(X0 - 0.3, X1 + 0.3, Z1 - 0.1, Z1 + 0.3, () => !z.locked); addCollider(X0 - 0.3, X0 + 0.1, Z0, Z1, () => !z.locked); addCollider(X1 - 0.1, X1 + 0.3, Z0, -156.2, () => !z.locked); addCollider(X1 - 0.1, X1 + 0.3, -153.4, Z1, () => !z.locked);
+  // sergi örnekleri (dinamik, instancing)
+  MUS.specs = SPECIES.map((sp, i) => { const m = new THREE.InstancedMesh(bloomGeo(sp[0], 0), vcMat, 3); m.frustumCulled = false; m.userData.dyn = true; m.count = 0; m.visible = false; for (let k = 0; k < 3; k++) m.setColorAt(k, new THREE.Color(1, 1, 1)); scene.add(m); return m; });
+  MUS.halo = new THREE.InstancedMesh(new THREE.PlaneGeometry(1, 1), RARE.halo.material, 18); MUS.halo.frustumCulled = false; MUS.halo.userData.dyn = true; MUS.halo.count = 0; MUS.halo.renderOrder = 5; for (let k = 0; k < 18; k++) MUS.halo.setColorAt(k, new THREE.Color(1, 1, 1)); MUS.halo.visible = false; scene.add(MUS.halo);
+  MUS.dome = new THREE.InstancedMesh(new THREE.SphereGeometry(0.62, 12, 8), new THREE.MeshLambertMaterial({ color: 0xcfeeff, transparent: true, opacity: 0.22, depthWrite: false }), 18); MUS.dome.frustumCulled = false; MUS.dome.userData.dyn = true; MUS.dome.count = 0; MUS.dome.visible = false; MUS.dome.renderOrder = 7; scene.add(MUS.dome);
+  z.onShow = () => { MUS.on = true; };
+  extPad('mus', 'Botanik Müzesi', [E3.mus], 5.4, -147.0, iconMuseum, null);
+  extPad('musTkt', 'Bilet Fiyatı', geo(E3.musTkt, 5), -8.5, -146.6, iconBill, () => unlockedZ('mus'));
+  EXTAPPLY.mus = i => { unlockExt(z, i); if (!i) { praise('Botanik Müzesi!', true); toast('Koleksiyonun sergileniyor — ziyaretçiler bilet alır, Dükkan Yıldızları 6–10 açıldı'); } updateStars(); };
+}
+function musLayout() {
+  if (!MUS.z || MUS.z.locked) return; const M = new THREE.Matrix4(), V = new THREE.Vector3(), Q = new THREE.Quaternion(), Sc = new THREE.Vector3(), col = new THREE.Color(); const cnt = SPECIES.map(() => 0); let n = 0;
+  MUS.pos.forEach(([x, zz, c, r]) => { const sp = SPECIES[c], v = RVARS[r]; if (!(S.cb[sp[0] + ':' + v.id] > 0)) return; const m = MUS.specs[c], k = cnt[c]++; Q.setFromAxisAngle(_Y, 0.4 * k); M.compose(V.set(x, 2.0, zz), Q, Sc.set(2.4, 2.4, 2.4)); m.setMatrixAt(k, M); n++; });
+  MUS.specs.forEach((m, i) => { m.count = cnt[i]; m.instanceMatrix.needsUpdate = true; }); MUS.shown = n;
+}
+function updateMuseum(dt, t) {
+  const z = MUS.z; if (!z || z.locked) return; const near = nearD(-12, -157, 60), k0 = collCount();
+  const sig = k0 + '|' + S.cs.length; if (sig !== MUS.lsig) { MUS.lsig = sig; musLayout(); }
+  // örnekler dönüp parlar
+  const vis = near && MUS.shown > 0; MUS.specs.forEach(m => { m.visible = vis && m.count > 0; }); MUS.halo.visible = MUS.dome.visible = vis;
+  if (vis) {
+    const M = new THREE.Matrix4(), V = new THREE.Vector3(), Q = new THREE.Quaternion(), Sc = new THREE.Vector3(), col = new THREE.Color(); let h = 0; const cnt = SPECIES.map(() => 0);
+    MUS.pos.forEach(([x, zz, c, r]) => { const sp = SPECIES[c], v = RVARS[r]; if (!(S.cb[sp[0] + ':' + v.id] > 0)) return; const m = MUS.specs[c], k = cnt[c]++; Q.setFromAxisAngle(_Y, t * 0.8 + k); const y = 2.0 + Math.sin(t * 1.6 + x) * 0.06; M.compose(V.set(x, y, zz), Q, Sc.set(2.4, 2.4, 2.4)); m.setMatrixAt(k, M); m.setColorAt(k, col.setRGB(1, 1, 1)); rareColor(v.id, t + h * 0.2, col); MUS.halo.setColorAt(h, col); M.compose(V.set(x, y + 0.1, zz), camera.quaternion, Sc.set(1.6, 1.6, 1)); MUS.halo.setMatrixAt(h, M); M.compose(V.set(x, 2.1, zz), Q.identity(), Sc.set(1, 1, 1)); MUS.dome.setMatrixAt(h, M); h++; });
+    MUS.specs.forEach(m => { m.instanceMatrix.needsUpdate = true; if (m.instanceColor) m.instanceColor.needsUpdate = true; }); MUS.halo.count = MUS.dome.count = h; MUS.halo.instanceMatrix.needsUpdate = true; MUS.halo.instanceColor.needsUpdate = true; MUS.dome.instanceMatrix.needsUpdate = true;
+  }
+  // ziyaretçiler
+  MUS.t -= dt; if (MUS.t <= 0 && k0 > 0) { MUS.t = musInterval() * (0.8 + Math.random() * 0.4); if (near && MUS.visitors.length < 7) museumSpawn(); else if (!near) museumVirtualPay(); else museumVirtualPay(); }
+  for (let i = MUS.visitors.length - 1; i >= 0; i--) if (museumVisit(MUS.visitors[i], dt, t)) MUS.visitors.splice(i, 1);
+  const sg = k0 + '|' + (S.lv.musTkt || 0) + '|' + S.mv; if (sg !== MUS.sig && near) { MUS.sig = sg; redrawSprite(MUS.spr, (ctx, w, h) => { ctx.fillStyle = 'rgba(14,40,64,.93)'; ctx.strokeStyle = '#7fe9ff'; ctx.lineWidth = 8; rrect(ctx, 6, 6, w - 12, h - 12, 30); ctx.fill(); ctx.stroke(); iconGem(ctx, 52, 76, 70, '#7fe9ff', '#d8f8ff'); otext(ctx, 'Koleksiyon ' + k0 + '/18', 232, 46, 38, '#fff', '#05071a'); iconBill(ctx, 130, 108, 40); otext(ctx, 'Bilet ' + fmt(musTicket()), 258, 108, 38, '#6dff6a', '#0c1a0c'); }); }
+}
+function museumVirtualPay() { const v = musTicket(); S.money += v; stats.earned += v; gainAcc += v; S.mv++; stats.visitors = (stats.visitors || 0) + 1; saveDirty = true; }
+function museumSpawn() {
+  const fem = Math.random() < 0.5, c = makeChar({ shirt: pick(SHIRTS), pants: pick([0x3b4a6b, 0x5b4636, 0x2f6f5f]), hair: pick(HAIRS), skin: pick(SKINS), hairStyle: fem ? pick(['bob', 'long', 'ponytail', 'bun']) : 'short', dress: fem ? pick(SHIRTS) : 0, hat: !fem && Math.random() < 0.3 ? 'cap' : null, hatColor: pick([0xff5a6e, 0x4d96ff, 0xffd23f]), shoe: 0x3a2a22 });
+  c.group.position.set(6.5, 0, -154.8); scene.add(c.group); const ex = MUS.pos.filter(p => S.cb[SPECIES[p[2]][0] + ':' + RVARS[p[3]].id] > 0); if (!ex.length) { rm(c.group); return; }
+  const q = [[-3.2, -154.8, 'pay'], [-4.8, -154.8]], n = 1 + (Math.random() < 0.7 ? 1 : 0); for (let i = 0; i < n; i++) { const p = pick(ex), lane = p[3] === 2 ? -160.0 : -154.8, sz = p[3] === 0 ? -153.6 : p[3] === 1 ? -156.3 : -160.3; if (p[3] === 2) q.push([-4.8, -160.0]); q.push([p[0], sz, 'look', p[0], p[1]], [-4.8, lane]); if (p[3] === 2) q.push([-4.8, -154.8]); }
+  q.push([-3.2, -154.8], [6.6, -154.8, 'del']); c.q = q; c.look = 0; c.vel = c.vel || new THREE.Vector3(); MUS.visitors.push(c);
+}
+function museumVisit(c, dt, t) {
+  const gp = c.group.position; let tx = null, tz = null, mv = 0; const spd = 4.2;
+  if (c.look > 0) { c.look -= dt; faceChar(c, c.face[0] - gp.x, c.face[1] - gp.z, dt); }
+  else if (c.q.length) { const w = c.q[0]; tx = w[0]; tz = w[1]; if (Math.hypot(tx - gp.x, tz - gp.z) < 0.35) { c.q.shift(); if (w[2] === 'pay') { const v = musTicket(); payDirect(gp.x, gp.z, v, ''); S.mv++; stats.visitors = (stats.visitors || 0) + 1; } else if (w[2] === 'look') { c.look = 2 + Math.random() * 1.5; c.face = [w[3], w[4]]; } else if (w[2] === 'del') { rm(c.group); return true; } tx = null; } }
+  if (tx !== null) { const dx = tx - gp.x, dz = tz - gp.z, d = Math.hypot(dx, dz); if (d > 0.02) { const s2 = Math.min(d, spd * dt); gp.x += dx / d * s2; gp.z += dz / d * s2; c.vel.set(dx / d * spd, 0, dz / d * spd); mv = 1; faceChar(c, dx, dz, dt); } } else c.vel.set(0, 0, 0);
+  animChar(c, dt, mv, t); return false;
+}
+/* ---- gelir tahmini (çevrimdışı kazanç, görev ödülleri, festival ödülü) ---- */
+function incomeRate() { // $/sn (çalışan zinciriyle satılabilecek hat değeri; taşıyıcı ve müşteri darboğazına göre sınırlı)
+  let val = 0, items = 0, mp = priceMul() * tierMul('flo');
+  const add = (rate, price) => { if (rate > 0) { val += rate * price * mp; items += rate; } };
+  if (S.lv.cashier > 0 && S.lv.carrier > 0 && S.lv.helper > 0) {
+    const harv = 1.0 * (1 + 0.12 * (S.lv.helpSpd || 0)); add(Math.min(1 / (packInterval() / tierMul('pack') / spdBonus()), harv * 1.2), PRICE.bouquet);
+    if (S.lv.sera > 0) add(Math.min(0.5, harv * 0.4), PRICE.pot);
+    for (const st of STATIONS) {
+      const z = st.zone, o = st.o; if (z.locked || !(z.hire && z.hire()) || o.id === 'tea') continue;
+      const spl = S.lv[o.id + 'Spd'] || 0, itv = o.base * Math.pow(0.78, spl) / ((o.id === 'kese' || o.id === 'parf' || o.id === 'hon' || o.id === 'bon' ? tierMul(o.id) : 1) * spdBonus()), gard = 0.9 * (1 + 0.12 * spl);
+      let sup = gard / Math.max(1, (o.inputs[0].n || 1)); if (o.id === 'hon') sup = hiveCount() / hiveInterval() / 2; if (o.id === 'sbq') sup = 0.8; if (o.id === 'parf') sup = gard * 0.5;
+      add(Math.min(1 / itv, sup), PRICE[o.out]);
+    }
+    const cap = 6 + 4 * (S.lv.carCap || 0), trip = 2 * 45 / (4.4 * Math.pow(1.15, S.lv.carSpd || 0)) + 5, lim = 0.3 * cap / trip; if (items > lim && items > 0) val *= lim / items;
+  }
+  if (cafe && !cafe.z.locked && cafe.waiter) add(Math.min(1 / (STN.tea.o.base * Math.pow(0.78, S.lv.teaSpd || 0)), 0.3) * tierMul('tea') / tierMul('flo'), PRICE.tea);
+  if (unlockedZ('mus') && collCount() > 0) val += musTicket() / musInterval();
+  return isFinite(val) ? Math.max(0, val) : 0;
+}
+function beautyAdd(n) { const before = BF.lvl; S.bx = (S.bx || 0) + n; bfEffects(); updateBeautyHUD(); if (BF.lvl > before) later(0.9, () => beautyUp(BF.lvl)); saveDirty = true; }
+/* ---- GÖREVLER ---- */
+const QT = [
+  { k: 'bq', txt: n => n + ' buket sat', ctr: () => stats.s_bouquet || 0, base: 60, eff: 0.8, req: () => true, ic: iconBouquet },
+  { k: 'pot', txt: n => n + ' saksı orkide sat', ctr: () => stats.s_pot || 0, base: 30, eff: 0.8, req: () => S.lv.sera > 0, ic: iconPot },
+  { k: 'sach', txt: n => n + ' lavanta kesesi sat', ctr: () => stats.s_sachet || 0, base: 30, eff: 0.9, req: () => unlockedZ('lav'), ic: iconSachet },
+  { k: 'perf', txt: n => n + ' parfüm sat', ctr: () => stats.s_perfume || 0, base: 20, eff: 1.0, req: () => unlockedZ('parf'), ic: iconPerfume },
+  { k: 'sbq', txt: n => n + ' ayçiçeği buketi sat', ctr: () => stats.s_sbq || 0, base: 20, eff: 1.0, req: () => unlockedZ('sunf'), ic: iconSbq },
+  { k: 'honey', txt: n => n + ' bal sat', ctr: () => stats.s_honey || 0, base: 30, eff: 1.1, req: () => unlockedZ('bee'), ic: iconHoney },
+  { k: 'bonsai', txt: n => n + ' bonsai sat', ctr: () => stats.s_bonsai || 0, base: 12, eff: 1.1, req: () => unlockedZ('jap'), ic: iconBonsai },
+  { k: 'any', txt: n => n + ' ürün sat', ctr: ssum, base: 120, eff: 1.0, req: () => true, ic: iconSmile },
+  { k: 'decor', txt: n => n + ' dekor al', ctr: () => stats.decor || 0, base: 2, eff: 1.6, req: () => cosOn(), ic: iconStar, cap: 4, rb: 2 },
+  { k: 'tier', txt: n => n + ' mekan seviyesi al', ctr: () => stats.tiers || 0, base: 1, eff: 2.2, req: () => cosOn(), ic: iconPack, cap: 2, rb: 2 },
+  { k: 'upg', txt: n => n + ' geliştirme al', ctr: () => stats.upgrades || 0, base: 3, eff: 1.0, req: () => true, ic: iconBolt, cap: 8 },
+  { k: 'tea', txt: n => n + ' çay servis et', ctr: () => stats.cafeServed || 0, base: 25, eff: 0.9, req: () => unlockedZ('cafe'), ic: iconTea },
+  { k: 'wed', txt: n => n + ' düğün siparişi tamamla', ctr: () => stats.weddings || 0, base: 1, eff: 2.0, req: () => unlockedZ('wed'), ic: iconWedding, cap: 3, rb: 2 },
+  { k: 'rare', txt: n => n + ' nadir çiçek bul', ctr: () => stats.rares || 0, base: 2, eff: 1.4, req: () => S.lv.coll > 0, ic: (c, x, y, s) => iconGem(c, x, y, s, '#ffc21a', '#fff0a0'), cap: 5 },
+  { k: 'exp', txt: n => n + ' ihracat tamamla', ctr: () => stats.exportsDone || 0, base: 1, eff: 2.5, req: () => unlockedZ('port'), ic: iconShip, cap: 3, rb: 2 },
+  { k: 'fest', txt: n => n + ' festival tamamla', ctr: () => stats.fests || 0, base: 1, eff: 2.5, req: () => unlockedZ('fest'), ic: iconFest, cap: 2, rb: 3 },
+  { k: 'vis', txt: n => n + ' müze ziyaretçisi', ctr: () => stats.visitors || 0, base: 40, eff: 1.2, req: () => unlockedZ('mus'), ic: iconMuseum },
+  { k: 'earn', txt: n => fmt(n) + ' kazan', ctr: () => stats.earned || 0, base: 0, eff: 1.5, req: () => true, ic: iconBill, earn: 1 }
+];
+const QTM = {}; QT.forEach(q => { QTM[q.k] = q; });
+function qNew() {
+  const have = S.q.a.map(q => q.k), cand = QT.filter(q => q.req() && !have.includes(q.k)); if (!cand.length) return null; const t = pick(cand), lvl = Math.min(S.q.n, 18), rate = Math.max(2, incomeRate());
+  let n = t.earn ? Math.round(rate * 60 * 3 / 100) * 100 : Math.round(t.base * (1 + 0.1 * lvl) / (t.base > 20 ? 5 : 1)) * (t.base > 20 ? 5 : 1); if (t.cap) n = Math.min(n, t.cap); n = Math.max(1, n);
+  const rm = Math.round(Math.max(1200, rate * 60 * t.eff) / 50) * 50; return { k: t.k, p: 0, n, rm, rb: t.rb || 1 };
+}
+function qFill() { S.q.a = S.q.a.filter(q => q && QTM[q.k] && isFinite(+q.p) && isFinite(+q.n) && q.n >= 1 && isFinite(+q.rm)).slice(0, 3); let g = 0; while (S.q.a.length < 3 && g++ < 6) { const q = qNew(); if (!q) break; S.q.a.push(q); saveDirty = true; } }
+let _qT = 0, _qSig = '';
+function updateQuests(dt) {
+  const btn = document.getElementById('bQuest'); if (btn) { const show = cosOn(); if (btn.style.display !== (show ? 'flex' : 'none')) btn.style.display = show ? 'flex' : 'none'; }
+  if (!cosOn()) return; _qT -= dt; if (_qT > 0) return; _qT = 0.5; if (S.q.a.length < 3) qFill();
+  for (const q of S.q.a.slice()) { const t = QTM[q.k], cur = t.ctr(); if (q.l === undefined || cur < q.l) q.l = cur; if (cur > q.l) { q.p = Math.min(q.n, (+q.p || 0) + (cur - q.l)); q.l = cur; saveDirty = true; } if (q.p >= q.n) questDone(q); }
+  const sig = S.q.a.map(q => q.k + q.p).join(); if (sig !== _qSig) { _qSig = sig; if (document.getElementById('quests').style.display === 'flex') renderQuests(); }
+}
+function questDone(q) {
+  const i = S.q.a.indexOf(q); if (i < 0) return; S.q.a.splice(i, 1); S.q.n++; stats.quests = (stats.quests || 0) + 1; addMoney(q.rm); beautyAdd(q.rb);
+  const t = QTM[q.k]; praise('Görev tamamlandı!'); sfx('up'); vib(25); coinBurstUI(); popText(P.group.position.x, 4.4, P.group.position.z, '+' + fmt(q.rm) + (q.rb ? ' • +' + q.rb + ' Güzellik' : ''), '#ffd23f'); confetti(P.group.position.x, 2.6, P.group.position.z, 36); toast('Görev: ' + t.txt(q.n) + ' ✔  +' + fmt(q.rm));
+  const nq = qNew(); if (nq) S.q.a.push(nq); const b = document.getElementById('bQuest'); b.classList.remove('pulse'); void b.offsetWidth; b.classList.add('pulse'); saveDirty = true; _qSig = ''; writeSave();
+  if (document.getElementById('quests').style.display === 'flex') renderQuests();
+}
+function renderQuests() {
+  const L = document.getElementById('qList'); L.innerHTML = ''; document.getElementById('qDone').textContent = '✔ ' + S.q.n;
+  for (const q of S.q.a) { const t = QTM[q.k], d = document.createElement('div'); d.className = 'qc'; const cvs = document.createElement('canvas'); cvs.width = cvs.height = 56; cvs.style.cssText = 'position:absolute;right:8px;top:6px;width:38px;height:38px'; t.ic(cvs.getContext('2d'), 28, 28, 46); d.appendChild(cvs);
+    const pc = Math.round(clamp(q.p / q.n, 0, 1) * 100); d.insertAdjacentHTML('beforeend', '<div class="qt" style="padding-right:46px">' + t.txt(q.n) + '</div><div class="qr">Ödül: $' + fmt(q.rm) + (q.rb ? ' + ' + q.rb + ' Güzellik' : '') + '</div><div class="qb"><i style="width:' + pc + '%"></i><b>' + fmt(q.p) + '/' + fmt(q.n) + '</b></div>'); L.appendChild(d); }
+  if (!S.q.a.length) L.innerHTML = '<div class="qc">Yeni görevler yakında…</div>';
+}
+function initQuests() {
+  const bq = document.getElementById('bQuest'); iconClip(bq.querySelector('canvas').getContext('2d'), 30, 30, 50);
+  bq.addEventListener('click', () => { document.getElementById('menu').style.display = 'none'; document.getElementById('quests').style.display = 'flex'; qFill(); renderQuests(); });
+  document.getElementById('qClose').addEventListener('click', () => { document.getElementById('quests').style.display = 'none'; });
+  qFill();
+}
+/* ---- ÇEVRİMDIŞI KAZANÇ ---- */
+function workerCount() { let n = 0; for (const w of [helper, cashier, carrier, beek, PORT.porter, city && city.cashier, cafe && cafe.waiter, tractor]) if (w) n++; return n + GARD.length; }
+function showOffline(away) {
+  const o = document.getElementById('offc'); if (!(S.op > 0)) return; document.getElementById('offAmt').textContent = '$' + fmt(S.op);
+  const h = Math.floor(away / 3600), m = Math.floor(away % 3600 / 60); document.getElementById('offSub').textContent = away > 0 ? (h ? h + ' sa ' : '') + m + ' dk boyunca ' + workerCount() + ' çalışanın üretti' : 'Çalışanların senin için üretti';
+  const cx = document.getElementById('offCv').getContext('2d'); cx.clearRect(0, 0, 160, 110); iconBill(cx, 50, 60, 70); iconBill(cx, 100, 52, 60); iconStar(cx, 80, 34, 54); iconBill(cx, 80, 80, 66);
+  o.style.display = 'flex'; sfx('up'); confetti(P.group.position.x, 3, P.group.position.z, 70); coinBurstUI(); vib(30);
+}
+function collectOffline() {
+  const o = document.getElementById('offc'); o.style.display = 'none'; let v = Math.floor(+S.op); S.op = 0; if (!isFinite(v) || v <= 0) return; v = Math.min(v, 1e11); S.money += v; stats.earned += v; gainAcc += v; saveDirty = true;
+  praise('+' + fmt(v) + ' kazandın!', true); flash(); sfx('up'); coinBurstUI(); popText(P.group.position.x, 4.2, P.group.position.z, '+' + fmt(v), '#6dff6a'); confetti(P.group.position.x, 2.5, P.group.position.z, 90); for (let i = 0; i < 3; i++) later(i * 0.25, () => fireworks(P.group.position.x + rand(-5, 5), P.group.position.z + rand(-5, 1))); writeSave();
+}
+function checkOffline(force) {
+  if (!introDone) return; const now = Date.now(); const last = +S.ts; if (!(last > 0) && !(S.op > 0)) return;
+  let away = last > 0 ? (now - last) / 1000 : 0; if (!isFinite(away) || away < 0) away = 0;
+  if (away >= 90) { away = Math.min(away, 7200); const amt = Math.floor(incomeRate() * 0.5 * away); if (isFinite(amt) && amt > 0) S.op = Math.min(1e12, Math.max(0, +S.op || 0) + Math.min(amt, 1e11)); S.ts = now; saveDirty = true; writeSave(); }
+  if (S.op > 0 && document.getElementById('offc').style.display !== 'flex') showOffline(away);
+}
+function initOffline() {
+  document.getElementById('offBtn').addEventListener('click', collectOffline);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) checkOffline(); });
+}
+const C3I = { offChecked: false };
+function c3Frame(dt) { if (!C3I.offChecked && introDone) { C3I.offChecked = true; checkOffline(); } updateQuests(dt); }
 /* ---- veri: mekan seviyeleri, dekor yuvaları, hedef sırası ---- */
 GEN('hon', 'Bal', 'hız', 'BAL KAVANOZU', iconHoney, 0xffb703, ['#ffb703', '#ffffff'], [60000, 240000], [-3.2, -101.4], () => unlockedZ('bee'), -6.2, -108);
 GEN('bon', 'Bonsai', 'hız', 'BONSAİ ATÖLYESİ', iconBonsai, 0xe8587a, ['#e8587a', '#ffffff'], [110000, 440000], [27.5, -96.2], () => unlockedZ('jap'), 20.5, -111);
+HATS.push({ id: 'fest', n: 'Festival Şapkası', cost: 1e9, excl: 1, hat: 'sun', col: 0xffc21a }); FITS.push({ id: 6, n: 'Festival Elbisesi', cost: 1e9, excl: 1, shirt: 0xff4fa0, pants: 0x6a2be8, dress: 0xffd23f });
 Object.assign(AREA_MUL, { bee: 3, jap: 3, port: 3.5, fest: 3.5, mus: 4 });
 [['b1', 'butterfly', 'bee', -4.5, -100.5, 0, -4.5, -98.0], ['b2', 'lantern', 'bee', 0.6, -106.5, 0, 0.6, -104.2], ['b3', 'bench', 'bee', -23, -108.5, Math.PI / 2, -21.2, -110.4], ['b4', 'gazebo', 'bee', -8.5, -115, 0, -8.5, -112.4],
- ['j1', 'bench', 'jap', 24, -95.2, 0, 24, -93.2], ['j2', 'statue', 'jap', 27.5, -95.0, 0, 27.5, -93.0], ['j3', 'topiary', 'jap', 14.5, -114.5, 0, 14.5, -112.2, 0], ['j4', 'lantern', 'jap', 25.6, -104.4, 0, 25.6, -106.2]
+ ['j1', 'bench', 'jap', 24, -95.2, 0, 24, -93.2], ['j2', 'statue', 'jap', 27.5, -95.0, 0, 27.5, -93.0], ['j3', 'topiary', 'jap', 14.5, -114.5, 0, 14.5, -112.2, 0], ['j4', 'lantern', 'jap', 25.6, -104.4, 0, 25.6, -106.2],
+ ['p1c', 'bench', 'port', -16, -123.2, 0, -16, -121.2], ['p2c', 'lantern', 'port', -6.2, -124.0, 0, -6.2, -122.2], ['p3c', 'statue', 'port', -21.5, -121.5, 0, -21.5, -119.5],
+ ['f1', 'topiary', 'fest', 28, -134.5, 1, 28, -132.2, 1], ['f2', 'butterfly', 'fest', 15, -134, 0, 15, -131.5], ['f3', 'arch', 'fest', 21, -126.5, 0, 21, -124.0],
+ ['u1', 'statue', 'mus', -2.5, -150.5, 0, -2.5, -148.5], ['u2', 'fence', 'mus', -2.0, -163, 0, -2.0, -160.8], ['u3', 'pond', 'mus', -22, -156, 0, -22, -153.5]
 ].forEach(([id, type, area, x, z, ry, px, pz, v]) => { const s = { id, type, area, x, z, ry, px, pz, v: v || 0, cost: Math.round(DECT[type].base * AREA_MUL[area] / 100) * 100 }; DSL.push(s); DSLM[id] = s; });
 (function () { // C3 hedefleri, eski kuyruğun arasına serpiştirilir
   const i = GOALS.findIndex(q => q.key === 'citySpd' && q.lv === 2) + 1; GOALS.splice(i);
   const g = (k, l) => ({ key: k, lv: l });
   GOALS.push(g('bee', 1), g('beeW', 1), g('hiveSpd', 1), g('honSpd', 1), g('hiveN', 1), g('honSpd', 2), g('hiveSpd', 2), g('stars', 4), g('hiveN', 2), g('honSpd', 3), g('sbqSpd', 5), g('hiveSpd', 3), g('citySpd', 3), g('honSpd', 4), g('hiveN', 3), g('sbqSpd', 6), g('hiveSpd', 4), g('citySpd', 4), g('honSpd', 5), g('hiveN', 4),
-    g('jap', 1), g('bonW', 1), g('bonSpd', 1), g('bonSpd', 2), g('honSpd', 6), g('stars', 5), g('bonSpd', 3), g('hiveSpd', 5), g('sbqSpd', 7), g('bonSpd', 4), g('honSpd', 7), g('citySpd', 5), g('bonSpd', 5), g('bonSpd', 6), g('citySpd', 6), g('bonSpd', 7), g('citySpd', 7), g('coll', 1), g('port', 1), g('portW', 1), g('portBonus', 1), g('portBonus', 2), g('portBonus', 3), g('portBonus', 4), g('portBonus', 5));
+    g('jap', 1), g('bonW', 1), g('bonSpd', 1), g('bonSpd', 2), g('honSpd', 6), g('stars', 5), g('bonSpd', 3), g('hiveSpd', 5), g('sbqSpd', 7), g('bonSpd', 4), g('honSpd', 7), g('citySpd', 5), g('bonSpd', 5), g('bonSpd', 6), g('citySpd', 6), g('bonSpd', 7), g('citySpd', 7), g('coll', 1), g('port', 1), g('portW', 1), g('portBonus', 1), g('portBonus', 2), g('portBonus', 3), g('portBonus', 4), g('portBonus', 5), g('fest', 1), g('festBonus', 1), g('festBonus', 2), g('festBonus', 3), g('festBonus', 4), g('mus', 1), g('musTkt', 1), g('stars', 6), g('musTkt', 2), g('stars', 7), g('musTkt', 3), g('stars', 8), g('musTkt', 4), g('stars', 9), g('musTkt', 5), g('stars', 10));
   for (const k in GFIRST) delete GFIRST[k]; GOALS.forEach((q, j) => { if (GFIRST[q.key] === undefined) GFIRST[q.key] = j; });
   Object.assign(MAIN_UNLOCKS, { bee: 1, beeW: 1, jap: 1, bonW: 1, coll: 1, port: 1, portW: 1, fest: 1, mus: 1 });
 })();
@@ -4296,11 +4552,11 @@ function buildC3() {
   PROD_LIST.push('honey', 'bonsai');
   const ct = POS.counter; for (const [t, sy, x0, n, dx] of [['honey', 2.2, ct.x + 0.2, 3, 0.5], ['bonsai', 2.2, ct.x + 1.8, 2, 0.55]]) { const l = new Stack(scene, (i, out) => out.set(x0 + (i % n) * dx, sy + 0.06, ct.z - 0.9), n); l.pend = 0; LANES[t] = l; EXTSTACKS.push(l); }
   world.add(mk(G.box, mat(0xe8a850), 0.9, 0.07, 0.4, ct.x + 2.45, 2.2, ct.z - 0.9));
-  buildBee(); buildJapan(); buildColl(); buildPort();
+  buildBee(); buildJapan(); buildColl(); buildPort(); buildFest(); buildMuseum();
 }
-function initC3() { hivesRefresh(true); initColl(); }
+function initC3() { hivesRefresh(true); initColl(); initQuests(); initOffline(); }
 function updateC3(dt, t) {
-  updateBees(dt, t); updateBeek(dt, t); beeZoneActions(dt); updateJapan(dt, t); rareUpdate(dt, t); updatePort(dt, t);
+  updateBees(dt, t); updateBeek(dt, t); beeZoneActions(dt); updateJapan(dt, t); rareUpdate(dt, t); updatePort(dt, t); updateFest(dt, t); updateMuseum(dt, t); c3Frame(dt);
 }
 /*C3-END*/
 /* =====================================================================
@@ -4344,7 +4600,8 @@ window.__game = {
   EXTZ, STN, GARD, cafe: () => cafe, wed: () => wed, city: () => city, tractor: () => tractor, give(type, n) { for (let i = 0; i < n; i++) P.stack.add(['orchid', 'lav', 'sun', 'rosep', 'flower'].includes(type) ? makeFlowerItem(0, type === 'flower' ? 'tulip' : type) : makeItemOf(type), type); },
   bot(x, z) { BOT = (x || z) ? { x, z } : null; if (BOT) hideIntro(); }, hideIntro, objective() { objective(_obj); return Object.assign({}, _obj); }, get goal() { return curGoal; }, GOALS, UPG,
   S, stats, P: () => P, queue, beds, machine, inputPile, outputPile, moneyPile, get shelf() { return shelfB; }, get shelfP() { return shelfP; }, get potInput() { return potInput; }, get potOutput() { return potOutput; }, get zone2() { return zone2; }, get zone3() { return zone3; }, VAN, get vanLoad() { return vanLoad; }, get vanPile() { return vanPile; }, get cashier() { return cashier; }, get carrier() { return carrier; }, upPads, zones, customers, CFG, POS,
-  c3x() { return { list: RARE.list, check: checkSets, bonus: collBonus, SETS, RARE }; },
+  c3x() { return { list: RARE.list, check: checkSets, bonus: collBonus, SETS, RARE, FEST, PORT, MUS, QT, qFill, incomeRate, festStart, festEnd, checkOffline, collectOffline, musTicket, C3I, spdBonus, hiveCount }; },
+  offline(sec) { S.ts = Date.now() - sec * 1000; C3I.offChecked = true; checkOffline(); },
   helper: () => helper, get c3() { return { C3, JAP, E3, beek: () => beek, beeZone, hiveInterval, nearFlowerZones }; },
   carry(n) { while (P.stack.length) P.stack.items.pop(); for (let i = 0; i < n; i++) P.stack.add(makeFlowerItem(0, "tulip"), "flower"); },
   tp(x, z) { P.group.position.set(x, 0, z); P.vel.set(0, 0, 0); camInit = false; },
