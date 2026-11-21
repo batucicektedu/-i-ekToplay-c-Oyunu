@@ -1,0 +1,30 @@
+// Bölüm geçiş kapısı: max kayıt + para -> öde -> open [1,2] -> kapıya yürü -> kart -> Geç -> sahil/ (stub)
+const http=require('http'),fs=require('fs'),path=require('path'),root=path.resolve(__dirname,'..');
+const srv=http.createServer((q,r)=>{const u=decodeURIComponent(q.url.split('?')[0]);
+  if(u.startsWith('/sahil/')){r.setHeader('content-type','text/html');return r.end('<title>stub</title>SAHIL STUB')}
+  const f=path.join(root,u==='/'?'index.html':u);fs.readFile(f,(e,b)=>{if(e){r.statusCode=404;return r.end()}r.setHeader('content-type',f.endsWith('.html')?'text/html':f.endsWith('.js')?'text/javascript':'application/octet-stream');r.end(b)})});
+srv.listen(0,async()=>{process.env.GAME='http://127.0.0.1:'+srv.address().port+'/index.html';
+const h=require('./h.js');let fail=0;const ok=(c,m)=>{if(!c){fail++;console.log('FAIL',m)}else console.log('ok',m)};
+const {b,page,errs}=await h.open({q:'low',fixture:__dirname+'/max.json',wait:1500,patch:sv=>{sv.money=5e6;sv.lv.gate=0}});
+await page.evaluate(()=>{try{localStorage.removeItem('cicek_bolumler')}catch(e){}window.__resetting=false;__game.hideIntro()});
+await page.reload();await page.waitForTimeout(1500);
+await page.evaluate(()=>{window.__resetting=false;__game.hideIntro();__game.S.money=5e6;__game.S.lv.gate=0;try{localStorage.removeItem('cicek_bolumler')}catch(e){}});
+let r=await page.evaluate(()=>{__game.tp(5.4,-150);__game.sim(1);const u=__game.upPads.gate;return {has:!!u,vis:u&&u.group.visible}});
+ok(r.has&&r.vis,'gate pad visible '+JSON.stringify(r));
+r=await page.evaluate(()=>{__game.tp(5.4,-163.5);__game.sim(5);return {lv:__game.S.lv.gate,open:JSON.parse(localStorage.getItem('cicek_bolumler')||'{}').open,card:getComputedStyle(document.getElementById('gateCard')).display}});
+ok(r.lv===1&&r.open&&r.open.includes(2),'paid -> open has 2 '+JSON.stringify(r));ok(r.card==='none','no card at pad');
+r=await page.evaluate(()=>{__game.tp(5.4,-171);__game.sim(0.5);return getComputedStyle(document.getElementById('gateCard')).display});
+ok(r==='flex','card shown in gate');
+await page.evaluate(()=>document.getElementById('gateStay').click());
+r=await page.evaluate(()=>{__game.sim(1);return getComputedStyle(document.getElementById('gateCard')).display});ok(r==='none','Kal closes, no reappear');
+await page.evaluate(()=>{__game.tp(5.4,-171.5);__game.sim(1)});r=await page.evaluate(()=>getComputedStyle(document.getElementById('gateCard')).display);ok(r==='none','still hidden while inside');
+await page.evaluate(()=>{__game.tp(5.4,-160);__game.sim(1);__game.tp(5.4,-171);__game.sim(0.5)});
+r=await page.evaluate(()=>getComputedStyle(document.getElementById('gateCard')).display);ok(r==='flex','card after leave+re-enter');
+await page.evaluate(()=>document.getElementById('reset').click());await page.evaluate(()=>document.getElementById('mChap').click());
+r=await page.evaluate(()=>[...document.querySelectorAll('#mChapList button')].map(x=>x.textContent+(x.disabled?'|d':'')));ok(r.length===3&&/Kilitli/.test(r[2]),'menu '+JSON.stringify(r));
+await page.evaluate(()=>document.getElementById('mClose').click());
+await Promise.all([page.waitForURL('**/sahil/**',{timeout:8000}),page.evaluate(()=>document.getElementById('gateGo').click())]);
+ok(/\/sahil\//.test(page.url()),'navigated '+page.url());
+const sv=await page.evaluate(()=>0);
+ok(errs.length===0,'console errors '+errs.slice(0,2));
+await b.close();srv.close();console.log(fail?'FAIL':'PASS');process.exit(fail?1:0)});

@@ -64,6 +64,13 @@
   #fsBtn{position:absolute;right:calc(max(12px,env(safe-area-inset-right)) + 52px);top:max(12px,env(safe-area-inset-top));pointer-events:auto;width:44px;height:44px;border:0;border-radius:50%;background:rgba(18,48,74,.55);padding:0;opacity:.8;display:none}
   #fsBtn svg{width:24px;height:24px;display:block;margin:auto}
   #reset svg{width:24px;height:24px;display:block;margin:auto}
+  #gateCard{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(6,24,48,.62);z-index:22;pointer-events:auto}
+  .gbox{width:min(340px,90vw);background:linear-gradient(#fff,#e3f4ff);border-radius:26px;padding:24px 20px 20px;text-align:center;box-shadow:0 10px 0 rgba(0,0,0,.18),0 24px 48px rgba(0,0,0,.4),inset 0 0 0 4px #7fe9ff}
+  .gt{font-weight:900;font-size:26px;line-height:1.15;color:#0f3a63}
+  .gs{font-weight:800;font-size:16px;color:#3b6a8f;margin:10px 0 18px}
+  .gb{display:flex;gap:12px}
+  .gb button{flex:1;font:900 21px/1 inherit;font-family:inherit;border:0;border-radius:16px;padding:16px 8px;color:#fff;background:linear-gradient(#58d68d,#27ae60);box-shadow:0 5px 0 #146b38}
+  .gb button#gateStay{background:linear-gradient(#aab6c8,#8393ab);box-shadow:0 5px 0 #5b6b82}
   #menu{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(10,20,40,.55);z-index:20;pointer-events:auto}
   .mbox{background:linear-gradient(#fff,#e9f1ff);border-radius:22px;padding:18px 20px;width:min(300px,86vw);box-shadow:0 10px 0 rgba(0,0,0,.18),0 20px 40px rgba(0,0,0,.35);display:flex;flex-direction:column;gap:10px}
   .mt{font-weight:900;font-size:22px;color:#16324a;text-align:center}
@@ -130,6 +137,7 @@
     <button id="reset" aria-label="Ayarlar"><svg viewBox="0 0 24 24"><path fill="#fff" d="M12 8a4 4 0 100 8 4 4 0 000-8zm9 5v-2l-2.2-.5a7 7 0 00-.7-1.7l1.2-1.9-1.4-1.4-1.9 1.2a7 7 0 00-1.7-.7L13 3h-2l-.5 2.2a7 7 0 00-1.7.7L6.9 4.7 5.5 6.1l1.2 1.9a7 7 0 00-.7 1.7L3.8 11v2l2.2.5c.2.6.4 1.2.7 1.7l-1.2 1.9 1.4 1.4 1.9-1.2c.5.3 1.1.5 1.7.7L11 21h2l.5-2.2c.6-.2 1.2-.4 1.7-.7l1.9 1.2 1.4-1.4-1.2-1.9c.3-.5.5-1.1.7-1.7z"/></svg></button>
     <button id="fsBtn" aria-label="Tam ekran"><svg viewBox="0 0 24 24"><path fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
   </div>
+  <div id="gateCard"><div class="gbox"><div class="gt">Sahil Balıkçısı'na geç?</div><div class="gs">İlerlemen burada kayıtlı kalır.</div><div class="gb"><button id="gateGo">Geç</button><button id="gateStay">Kal</button></div></div></div>
   <div id="menu"><div class="mbox"><div class="mt">Ayarlar</div><button id="mWard" style="background:linear-gradient(#ff8fc4,#ff4f93);box-shadow:0 4px 0 #b81f64">Gardırop &amp; Kozmetik</button><button id="mNight">Gece: Açık</button><button id="mQ"></button><button id="mFs" style="display:none">Tam Ekran</button><button id="mReset">İlerlemeyi sıfırla</button><button id="mClose">Kapat</button></div></div>
   <div id="ward"><div class="wbox"><div class="wh"><div class="wt">Gardırop</div><div class="wm" id="wMoney">0</div></div><div class="wtabs" id="wTabs"><button data-t="player" class="on">Oyuncu</button><button data-t="work">Çalışanlar</button><button data-t="floor">Meydan</button></div><div id="wgrid"></div><button id="wClose">Kapat</button></div></div>
   <div id="fx"></div><div id="flash"></div><div id="praise" class="txt"></div>
@@ -220,11 +228,11 @@ function rm(o) { if (o && o.parent) o.parent.remove(o); }
 let fountainWater = null, clouds = [], butterflies = [];
 let LOADED_X = null, carpet1 = null, carpet2 = null;
 const MAIN_UNLOCKS = { bed: 1, helper: 1, cashier: 1, carrier: 1, sera: 1, van: 1 };
-const S = { money: 0, lv: { cap: 0, speed: 0, pack: 0, bed: 0, helper: 0, cashier: 0, carrier: 0, cashSpd: 0, carSpd: 0, carCap: 0, helpSpd: 0, sera: 0, van: 0, lav: 0, lavW: 0, keseSpd: 0, parf: 0, parfW: 0, parfSpd: 0, cafe: 0, cafeW: 0, teaSpd: 0, wed: 0, wedBonus: 0, sunf: 0, sunW: 0, sbqSpd: 0, city: 0, cityW: 0, citySpd: 0, stars: 0, bee: 0, beeW: 0, hiveN: 0, hiveSpd: 0, honSpd: 0, jap: 0, bonW: 0, bonSpd: 0, coll: 0, port: 0, portW: 0, portBonus: 0, fest: 0, festBonus: 0, mus: 0, musTkt: 0, wedW: 0, portSpd: 0, portCap: 0, helpCap: 0, helperN: 0, helperT: 0, lavCap: 0, lavN: 0, lavT: 0, parfCap: 0, parfN: 0, parfT: 0, cafeG: 0, cafeGCap: 0, cafeGN: 0, cafeGT: 0, sunCap: 0, sunN: 0, bonCap: 0, bonN: 0, bonT: 0, carN: 0, cashN: 0, wedSpd: 0, potSpd: 0, bus: 0, busSpd: 0, busCap: 0, busN: 0, wedN: 0, waitN: 0, cityN: 0, portN: 0, beeN: 0 }, tut: 0, tier: { pack: 0, flo: 0, pot: 0, van: 0, kese: 0, parf: 0, tea: 0, wed: 0, city: 0, hon: 0, bon: 0 }, decor: {}, cos: { hat: 'straw', fit: 0, uni: 0, floor: 0, own: [] }, dn: 0,
+const S = { money: 0, lv: { cap: 0, speed: 0, pack: 0, bed: 0, helper: 0, cashier: 0, carrier: 0, cashSpd: 0, carSpd: 0, carCap: 0, helpSpd: 0, sera: 0, van: 0, lav: 0, lavW: 0, keseSpd: 0, parf: 0, parfW: 0, parfSpd: 0, cafe: 0, cafeW: 0, teaSpd: 0, wed: 0, wedBonus: 0, sunf: 0, sunW: 0, sbqSpd: 0, city: 0, cityW: 0, citySpd: 0, stars: 0, bee: 0, beeW: 0, hiveN: 0, hiveSpd: 0, honSpd: 0, jap: 0, bonW: 0, bonSpd: 0, coll: 0, port: 0, portW: 0, portBonus: 0, fest: 0, festBonus: 0, mus: 0, musTkt: 0, wedW: 0, portSpd: 0, portCap: 0, helpCap: 0, helperN: 0, helperT: 0, lavCap: 0, lavN: 0, lavT: 0, parfCap: 0, parfN: 0, parfT: 0, cafeG: 0, cafeGCap: 0, cafeGN: 0, cafeGT: 0, sunCap: 0, sunN: 0, bonCap: 0, bonN: 0, bonT: 0, carN: 0, cashN: 0, wedSpd: 0, potSpd: 0, bus: 0, busSpd: 0, busCap: 0, busN: 0, wedN: 0, waitN: 0, cityN: 0, portN: 0, beeN: 0, gate: 0 }, tut: 0, tier: { pack: 0, flo: 0, pot: 0, van: 0, kese: 0, parf: 0, tea: 0, wed: 0, city: 0, hon: 0, bon: 0 }, decor: {}, cos: { hat: 'straw', fit: 0, uni: 0, floor: 0, own: [] }, dn: 0,
   cb: {}, cs: [], pt: { n: 0, cur: null }, fe: { n: 0, t: 420 }, q: { a: [], n: 0 }, bx: 0, ts: 0, op: 0, mv: 0, seen: {} };
 let saveDirty = false, saveTimer = 0;
 let introDone = false, curGoal = null, curGoalIdx = -1, lastGoalIdx = -2;
-const SAVE_VER = 6, BAK_KEY = SAVE_KEY + '_bak', TMP_KEY = SAVE_KEY + '_tmp';
+const SAVE_VER = 7, BAK_KEY = SAVE_KEY + '_bak', TMP_KEY = SAVE_KEY + '_tmp';
 let SAVE_BLOCKED = false; // okuma bozuk/başarısızsa eski kaydın üzerine yazma
 function readSaveKey(k) { try { const r = localStorage.getItem(k); if (r === null) return { none: true }; const o = JSON.parse(r); return o && typeof o === 'object' && !Array.isArray(o) ? { o, raw: r } : { bad: true, raw: r }; } catch (e) { return { bad: true }; } }
 const hasProgress = o => !!o && (+o.money > 0 || (o.lv && Object.keys(o.lv).some(k => +o.lv[k] > 0)) || +o.tut > 0);
@@ -235,6 +243,7 @@ function migrateSave(s) { // ver alanı yoksa 1 sayılır; sadece alan ekler, hi
   if (v < 4) { /* v3 -> v4 (C3): cb, cs, pt, fe, q, bx, ts, op, mv ve yeni lv/tier anahtarları eklendi; eksikse varsayılan */ }
   if (v < 5) { /* v4 -> v5 (C5): toplayıcı kapasite/eleman/traktör, otobüs, hız anahtarları eklendi (hepsi varsayılan 0); sunW>0 traktör sahibi kalır */ }
   if (v < 6) { /* v5 -> v6 (C6): +1 Eleman anahtarları eklendi (wedN, waitN, cityN, portN, beeN; varsayılan 0) */ }
+  if (v < 7) { /* v6 -> v7 (C7): lv.gate (bölüm geçiş kapısı ödendi) eklendi; cicek_bolumler ile eşlenir */ }
   s.ver = SAVE_VER; return s;
 }
 (function loadSave() {
@@ -2202,7 +2211,7 @@ const PADOK = new Set(); let padOkT = 0;
 function padOkRefresh(dt) {
   padOkT -= dt; if (padOkT > 0) return; padOkT = 0.25; PADOK.clear();
   const list = []; for (const k in upPads) { const u = upPads[k]; if (u.done || !padVisible(u)) continue; list.push(u); }
-  const goalU = curGoal ? upPads[curGoal.key] : null, score = u => { if (u === goalU) return -3; if (u.paid > 0 || u.inside) return -2; if (HIREK.has(u.key)) return -1.5; const c = u.cost(); return (S.money + u.paid >= c * 0.4) ? c / 1e9 : 9; };
+  const goalU = curGoal ? upPads[curGoal.key] : null, score = u => { if (u === goalU) return -3; if (u.key === 'gate') return -2.5; if (u.paid > 0 || u.inside) return -2; if (HIREK.has(u.key)) return -1.5; const c = u.cost(); return (S.money + u.paid >= c * 0.4) ? c / 1e9 : 9; };
   list.sort((a, b) => score(a) - score(b)); let n = 0; for (const u of list) { const sc = score(u); if (sc >= 9 && u !== goalU) continue; if (n >= 4 && !(sc <= -2)) continue; let ov = false; for (const q of PADOK) if (Math.abs(q.x - u.x) < (q.w + u.w) / 2 - 0.3 && Math.abs(q.z - u.z) < (q.d + u.d) / 2 - 0.3) { ov = true; break; } if (ov && u !== goalU && !(u.paid > 0 || u.inside)) continue; PADOK.add(u); n++; }
 }
 function updateUpgrades(dt) {
@@ -2438,6 +2447,7 @@ function objective(out) {
   const set = (x, y, z, kind) => { out.x = x; out.y = y; out.z = z; out.kind = kind; out.ok = true; return out; };
   const gp = curGoal ? upPads[curGoal.key] : null;
   if (gp && gp.group.visible && !gp.done && S.money + gp.paid >= gp.cost()) return set(gp.x, 0.4, gp.z, 'pad');
+  { const gt = upPads.gate; if (gt && !gt.done && gt.group.visible && S.money + gt.paid >= gt.cost()) return set(gt.x, 0.4, gt.z, 'pad'); }
   { const ce = c3Early(set); if (ce) return ce; }
   const ripe = () => { let best = null, bd = 1e9; for (const bb of beds) { if (bb.locked || bb.nohelp) continue; for (const f of bb.flowers) if (f.t >= f.gt) { const d = (f.x - P.group.position.x) ** 2 + (f.z - P.group.position.z) ** 2; if (d < bd) { bd = d; best = f; } } } return best; };
   if (outZone.inside && outputPile.length > 0 && P.free() > 0 && nB < 14) return set(outZone.x, 0.4, outZone.z, 'out');
@@ -4888,16 +4898,126 @@ Object.assign(AREA_MUL, { bee: 3, jap: 3, port: 3.5, fest: 3.5, mus: 4 });
   for (const k in GFIRST) delete GFIRST[k]; GOALS.forEach((q, j) => { if (GFIRST[q.key] === undefined) GFIRST[q.key] = j; });
   Object.assign(MAIN_UNLOCKS, { bee: 1, beeW: 1, jap: 1, bonW: 1, coll: 1, port: 1, portW: 1, fest: 1, mus: 1 });
 })();
+/* ---- C7: BÖLÜM GEÇİŞ KAPISI (Bölüm 1 → Sahil Balıkçısı) ---- */
+const BOL_KEY = 'cicek_bolumler', GATE_X = 5.4, GATE_Z = -169, GATE_COST = 2500000;
+function bolRead() { // bozuksa {v:1,open:[1],last:1}
+  const d = { v: 1, open: [1], last: 1 };
+  try { const o = JSON.parse(localStorage.getItem(BOL_KEY)); if (o && typeof o === 'object' && Array.isArray(o.open)) { const s = new Set([1]); for (const n of o.open) { const k = Math.floor(+n); if (k >= 1 && k <= 3) s.add(k); } d.open = Array.from(s).sort(); d.last = [1, 2, 3].includes(+o.last) ? +o.last : 1; } } catch (e) {}
+  return d;
+}
+function bolWrite(add, last) { // sadece ekler; open'dan asla çıkarmaz
+  try { const d = bolRead(); if (add && !d.open.includes(add)) { d.open.push(add); d.open.sort(); } if (last) d.last = last; localStorage.setItem(BOL_KEY, JSON.stringify(d)); } catch (e) {}
+}
+const gatePaid = () => S.lv.gate > 0;
+const GATE = { g: null, strips: [], portal: null, bars: null, ptex: null, sign: null, armed: true, card: false, sparkT: 0 };
+function iconGate(ctx, cx, cy, s) {
+  ctx.lineJoin = 'round'; ctx.lineCap = 'round'; ctx.lineWidth = s * 0.05; ctx.strokeStyle = '#13486a';
+  ctx.fillStyle = '#f4e3b2'; for (const sx of [-1, 1]) { rrect(ctx, cx + sx * s * 0.3 - s * 0.09, cy - s * 0.32, s * 0.18, s * 0.66, s * 0.03); ctx.fill(); ctx.stroke(); }
+  ctx.fillStyle = '#f0c040'; rrect(ctx, cx - s * 0.42, cy - s * 0.42, s * 0.84, s * 0.16, s * 0.05); ctx.fill(); ctx.stroke();
+  const gr = ctx.createLinearGradient(0, cy - s * 0.26, 0, cy + s * 0.34); gr.addColorStop(0, '#7fe9ff'); gr.addColorStop(1, '#1f8fd8'); ctx.fillStyle = gr; ctx.fillRect(cx - s * 0.21, cy - s * 0.26, s * 0.42, s * 0.6);
+  ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.moveTo(cx, cy - s * 0.12); ctx.lineTo(cx + s * 0.16, cy + s * 0.08); ctx.lineTo(cx + s * 0.06, cy + s * 0.08); ctx.lineTo(cx + s * 0.06, cy + s * 0.26); ctx.lineTo(cx - s * 0.06, cy + s * 0.26); ctx.lineTo(cx - s * 0.06, cy + s * 0.08); ctx.lineTo(cx - s * 0.16, cy + s * 0.08); ctx.closePath(); ctx.fill();
+}
+function gateSignTex() {
+  const c = cv(1024, 300), x = c.getContext('2d'), w = 1024, h = 300;
+  const g = x.createLinearGradient(0, 0, 0, h); g.addColorStop(0, '#12335c'); g.addColorStop(1, '#0a1d3c'); x.fillStyle = g; rrect(x, 6, 6, w - 12, h - 12, 44); x.fill();
+  x.strokeStyle = '#f0c040'; x.lineWidth = 12; rrect(x, 6, 6, w - 12, h - 12, 44); x.stroke(); x.strokeStyle = 'rgba(255,255,255,.35)'; x.lineWidth = 3; rrect(x, 24, 24, w - 48, h - 48, 32); x.stroke();
+  otext(x, 'SIRADAKİ BÖLÜME GEÇ', w / 2, 112, fitT(x, 'SIRADAKİ BÖLÜME GEÇ', 112, w - 150), '#ffd84a', '#3a2400', 14);
+  x.fillStyle = 'rgba(127,233,255,.25)'; rrect(x, 250, 190, w - 500, 74, 37); x.fill();
+  otext(x, 'Sahil Balıkçısı', w / 2, 228, 66, '#e9fbff', '#0a3a5c', 10);
+  x.strokeStyle = '#7fe9ff'; x.lineWidth = 7; x.lineCap = 'round'; for (const bx of [110, w - 210]) { x.beginPath(); for (let i = 0; i <= 8; i++) { const px = bx + i * 12, py = 232 + (i % 2 ? -9 : 9); if (i) x.lineTo(px, py); else x.moveTo(px, py); } x.stroke(); }
+  for (const [fx, d] of [[140, 1], [w - 140, -1]]) { x.fillStyle = '#ff9a4d'; x.beginPath(); x.ellipse(fx, 150, 34, 18, 0, 0, TAU); x.fill(); x.beginPath(); x.moveTo(fx - d * 30, 150); x.lineTo(fx - d * 52, 134); x.lineTo(fx - d * 52, 166); x.closePath(); x.fill(); x.fillStyle = '#fff'; x.beginPath(); x.arc(fx + d * 16, 145, 5, 0, TAU); x.fill(); }
+  return canvasTex(c);
+}
+function arrowTex(rep) {
+  const c = cv(128, 128), x = c.getContext('2d'); x.clearRect(0, 0, 128, 128);
+  x.lineJoin = 'round'; x.lineCap = 'round';
+  const chev = (dy, col, lw) => { x.strokeStyle = col; x.lineWidth = lw; x.beginPath(); x.moveTo(24, 90 + dy); x.lineTo(64, 48 + dy); x.lineTo(104, 90 + dy); x.stroke(); };
+  chev(4, 'rgba(10,40,70,.55)', 26); chev(0, '#ffe14a', 18);
+  const t = canvasTex(c, [1, rep]); t.anisotropy = 4; return t;
+}
+function buildGate() {
+  const g = new THREE.Group(); GATE.g = g; scene.add(g); g.visible = false;
+  const stone = mat(0xf4ecd8), gold = mat(GOLD), navy = mat(0x12335c), X = GATE_X, Z = GATE_Z, ph = 6.4;
+  for (const sx of [-1, 1]) {
+    const px = X + sx * 3.0; const p = rbox(1.5, ph, 1.5, 0.12, stone); p.position.set(px, ph / 2, Z); p.castShadow = true; g.add(p);
+    const base = rbox(2.0, 0.7, 2.0, 0.1, mat(0xcfc6ae)); base.position.set(px, 0.35, Z); g.add(base);
+    const cap = rbox(1.95, 0.5, 1.95, 0.1, gold); cap.position.set(px, ph + 0.15, Z); g.add(cap);
+    g.add(mk(G.sph, GLOWM, 0.5, 0.5, 0.5, px, ph + 0.95, Z));
+    for (let k = 0; k < 3; k++) g.add(mk(G.box, gold, 1.56, 0.12, 1.56, px, 1.3 + k * 1.7, Z));
+    GLOWS.push([px, Z + 1.0, 3.6]);
+    addCollider(px - 0.95, px + 0.95, Z - 0.95, Z + 0.95);
+  }
+  const lint = rbox(8.2, 1.1, 1.7, 0.14, stone); lint.position.set(X, ph + 0.45, Z); lint.castShadow = true; g.add(lint);
+  const trim = rbox(8.5, 0.28, 1.95, 0.08, gold); trim.position.set(X, ph + 1.15, Z); g.add(trim);
+  for (const sx of [-1, 1]) g.add(mk(G.box, navy, 0.22, 2.4, 0.22, X + sx * 3.0, ph + 2.3, Z - 0.1));
+  { const bd = mk(G.box, navy, 9.8, 3.2, 0.14, X, ph + 2.7, Z - 0.05); bd.rotation.x = -0.42; g.add(bd);
+    const sg = new THREE.Mesh(G.plane, new THREE.MeshBasicMaterial({ map: gateSignTex(), transparent: true, fog: false })); sg.scale.set(9.6, 2.8, 1); sg.rotation.x = -0.42; sg.position.set(X, ph + 2.7 + 0.12, Z - 0.05 + 0.27); g.add(sg); GATE.sign = sg; }
+  const bars = new THREE.Group(); GATE.bars = bars; g.add(bars); const iron = mat(0x4a5568);
+  for (let i = 0; i < 9; i++) bars.add(mk(G.cyl, iron, 0.09, ph - 0.5, 0.09, X - 2.08 + i * 0.52, (ph - 0.5) / 2 + 0.1, Z));
+  for (const yy of [1.2, 3.4, 5.4]) bars.add(mk(G.box, iron, 4.6, 0.14, 0.14, X, yy, Z));
+  { const lk = rbox(0.9, 0.8, 0.4, 0.08, gold); lk.position.set(X, 3.2, Z + 0.15); bars.add(lk); const sh = new THREE.Mesh(new THREE.TorusGeometry(0.32, 0.08, 6, 12, Math.PI), gold); sh.position.set(X, 3.6, Z + 0.15); bars.add(sh); }
+  addCollider(X - 2.3, X + 2.3, Z - 0.4, Z + 0.4, () => !gatePaid());
+  { const c = cv(64, 256), x = c.getContext('2d'); const gr = x.createLinearGradient(0, 0, 0, 256); gr.addColorStop(0, '#bff6ff'); gr.addColorStop(0.5, '#3fc3ff'); gr.addColorStop(1, '#0b6fd0'); x.fillStyle = gr; x.fillRect(0, 0, 64, 256);
+    x.fillStyle = 'rgba(255,255,255,.5)'; for (let i = 0; i < 7; i++) { x.beginPath(); x.ellipse(rand(8, 56), i * 38 + 12, 3, 20, 0, 0, TAU); x.fill(); }
+    const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(2, 1.2); GATE.ptex = t;
+    const pm = new THREE.Mesh(G.plane, new THREE.MeshBasicMaterial({ map: t, transparent: true, opacity: 0.62, depthWrite: false, side: THREE.DoubleSide, fog: false })); pm.scale.set(4.6, ph - 0.5, 1); pm.position.set(X, (ph - 0.5) / 2 + 0.1, Z); pm.renderOrder = 6; pm.visible = false; g.add(pm); GATE.portal = pm; }
+  const strip = (z0, z1, w) => { const len = Math.abs(z1 - z0), t = arrowTex(Math.max(1, Math.round(len / 1.6))); const m = new THREE.Mesh(G.plane, new THREE.MeshBasicMaterial({ map: t, transparent: true, depthWrite: false, fog: false, polygonOffset: true, polygonOffsetFactor: -7, polygonOffsetUnits: -7 })); m.rotation.x = -Math.PI / 2; m.scale.set(w, len, 1); m.position.set(X, 0.035, (z0 + z1) / 2); m.renderOrder = 2; g.add(m); const o = { m, t, paidOnly: false }; GATE.strips.push(o); return o; };
+  strip(-151.2, -160.8, 2.4); strip(-165.9, -168.2, 2.4); strip(-160.8, -165.9, 2.4).paidOnly = true;
+  for (const sx of [-1, 1]) { decorTree(g, X + sx * 6.4, Z + 1.5, 1.3); decorTree(g, X + sx * 5.2, Z - 1.8, 1.0); }
+  const pad = extPad('gate', 'Sıradaki Bölüm', [GATE_COST], X, -163.5, iconGate, () => unlockedZ('mus') || gatePaid());
+  pad.autoShow = true; UPG.gate.sub = () => 'Sahil Balıkçısı';
+  EXTAPPLY.gate = i => gateApply(i);
+  gateSync();
+}
+function gateSync() { if (!GATE.g) return; const paid = gatePaid(); GATE.g.visible = unlockedZ('mus') || paid; GATE.bars.visible = !paid; GATE.portal.visible = paid; }
+function gateApply(instant) {
+  bolWrite(2); gateSync();
+  if (instant) return;
+  const X = GATE_X, Z = GATE_Z;
+  confetti(X, 4, Z + 1, 120); confetti(X - 3, 2, Z + 2, 40); confetti(X + 3, 2, Z + 2, 40); ring(X, Z + 1.5, 0x4fe3ff, 14); ring(X, Z + 1.5, 0xffd23f, 9); sparkles(X, 3, Z + 0.5, 30, 0x9fefff, 2.0); flash(); coinBurstUI(); vib(60);
+  praise('YENİ BÖLÜM AÇILDI!', true); toast('Sahil Balıkçısı açıldı — kapıdan geçebilirsin');
+  panReq('gate', X, Z + 5, 'SAHİL BALIKÇISI AÇILDI!');
+}
+function updateGate(dt, t) {
+  const g = GATE.g; if (!g) return; gateSync(); if (!g.visible) return;
+  const paid = gatePaid(), gp = P.group.position;
+  for (const s of GATE.strips) { s.m.visible = !s.paidOnly || paid; s.t.offset.y -= dt * 0.55; }
+  if (GATE.ptex) { GATE.ptex.offset.y -= dt * 0.35; GATE.ptex.offset.x = Math.sin(t * 0.8) * 0.1; GATE.portal.material.opacity = 0.55 + 0.1 * Math.sin(t * 2.2); }
+  if (paid && Math.hypot(gp.x - GATE_X, gp.z - GATE_Z) < 14) { GATE.sparkT -= dt; if (GATE.sparkT <= 0) { GATE.sparkT = 0.16; emit({ x: GATE_X + rand(-1.9, 1.9), y: rand(0.4, 1.2), z: GATE_Z + rand(-0.2, 0.2), vx: 0, vy: rand(1.2, 2.4), vz: 0, life: 1.1, size: 0.22, c: 0x9fefff, type: 1, grav: -0.2, drag: 0.5 }); } }
+  // kapıya yürüyünce onay kartı (oyuncu alandan çıkıp yeniden girene dek tekrar çıkmaz)
+  const inGate = paid && Math.abs(gp.x - GATE_X) < 2.3 && gp.z < GATE_Z - 0.8, away = !(Math.abs(gp.x - GATE_X) < 3.2 && gp.z < GATE_Z + 3.4);
+  if (away) GATE.armed = true;
+  if (inGate && GATE.armed && !GATE.card && introDone) { GATE.armed = false; GATE.card = true; gateCardEl.style.display = 'flex'; sfx('up'); }
+}
+const gateCardEl = document.getElementById('gateCard');
+function gateGo() { gateCardEl.style.display = 'none'; writeSave(); bolWrite(0, 1); try { location.href = 'sahil/'; } catch (e) {} }
+function gateStay() { gateCardEl.style.display = 'none'; GATE.card = false; }
+document.getElementById('gateGo').addEventListener('click', gateGo); document.getElementById('gateStay').addEventListener('click', gateStay);
+(function () { // Ayarlar menüsü: Bölümler
+  const box = menuEl.querySelector('.mbox'), btn = document.createElement('button'), list = document.createElement('div');
+  btn.id = 'mChap'; btn.textContent = 'Bölümler'; btn.style.cssText = 'background:linear-gradient(#35c6b0,#13917f);box-shadow:0 4px 0 #0b5d52';
+  list.id = 'mChapList'; list.style.cssText = 'display:none;flex-direction:column;gap:8px';
+  box.insertBefore(btn, document.getElementById('mReset')); box.insertBefore(list, document.getElementById('mReset'));
+  const CH = [[1, 'Çiçek Bahçesi', null], [2, 'Sahil Balıkçısı', 'sahil/'], [3, 'Hayvan Çiftliği', 'ciftlik/']];
+  const fill = () => { list.innerHTML = ''; const open = bolRead().open; if (gatePaid() && !open.includes(2)) open.push(2);
+    for (const [n, name, url] of CH) { const b = document.createElement('button'), cur = n === 1, ok = cur || open.includes(n); b.dataset.ch = n;
+      b.textContent = n + ' · ' + name + (cur ? ' (şu an)' : ok ? '' : ' — Kilitli');
+      b.style.cssText = ok ? (cur ? 'background:linear-gradient(#58d68d,#27ae60);box-shadow:0 4px 0 #146b38' : 'background:linear-gradient(#4aa8ff,#2f7bff);box-shadow:0 4px 0 #1d4fb0') : 'background:#c4ccd8;box-shadow:0 4px 0 #9aa5b5;color:#7b8798;opacity:.75';
+      if (cur || !ok) b.disabled = true; else b.addEventListener('click', () => { writeSave(); bolWrite(0, 1); location.href = url; });
+      list.appendChild(b); } };
+  btn.addEventListener('click', () => { const on = list.style.display === 'none'; if (on) fill(); list.style.display = on ? 'flex' : 'none'; });
+  document.getElementById('reset').addEventListener('click', () => { list.style.display = 'none'; });
+})();
 /* ---- kurma / başlatma / güncelleme ---- */
 function buildC3() {
   PROD_LIST.push('honey', 'bonsai');
   const ct = POS.counter; for (const [t, sy, x0, n, dx] of [['honey', 2.2, ct.x + 0.2, 3, 0.5], ['bonsai', 2.2, ct.x + 1.8, 2, 0.55]]) { const l = new Stack(scene, (i, out) => out.set(x0 + (i % n) * dx, sy + 0.06, ct.z - 0.9), n); l.pend = 0; LANES[t] = l; EXTSTACKS.push(l); }
   world.add(mk(G.box, mat(0xe8a850), 0.9, 0.07, 0.4, ct.x + 2.45, 2.2, ct.z - 0.9));
-  buildBee(); buildJapan(); buildColl(); buildPort(); buildFest(); buildMuseum();
+  buildBee(); buildJapan(); buildColl(); buildPort(); buildFest(); buildMuseum(); buildGate();
 }
 function initC3() { hivesRefresh(true); initColl(); initQuests(); initOffline(); }
 function updateC3(dt, t) {
-  updateBees(dt, t); updateBeek(dt, t); beeZoneActions(dt); updateJapan(dt, t); rareUpdate(dt, t); updatePort(dt, t); updateFest(dt, t); updateMuseum(dt, t); c3Frame(dt);
+  updateBees(dt, t); updateBeek(dt, t); beeZoneActions(dt); updateJapan(dt, t); rareUpdate(dt, t); updatePort(dt, t); updateFest(dt, t); updateMuseum(dt, t); updateGate(dt, t); c3Frame(dt);
 }
 /*C3-END*/
 /* =====================================================================
@@ -4928,6 +5048,8 @@ buildStations(); buildDecor(); buildSera(); buildVan(); buildZones(); buildPlaye
     wedN: N('wedN', 'görevli'), waitN: N('waitN', 'garson'), cityN: N('cityN', 'kasiyer'), portN: N('portN', 'hamal'), beeN: N('beeN', 'arıcı') };
   for (const k in PADSUB) if (UPG[k] && !UPG[k].sub) UPG[k].sub = PADSUB[k]; }
 // restore progress
+if (bolRead().open.includes(2)) S.lv.gate = Math.max(S.lv.gate, 1); else if (S.lv.gate > 0) bolWrite(2); // iki kayıttan biri 'ödendi' diyorsa ödenmiş say, diğerini eşle
+bolWrite(0, 1);
 for (const k in S.lv) if (upPads[k]) S.lv[k] = Math.min(S.lv[k], upPads[k].max());
 if (S.lv.bed > 0) { unlockBed(beds[2], true); upPads.bed.done = true; upPads.bed.group.visible = false; }
 if (S.lv.sera > 0) unlockSera(true);
@@ -4949,7 +5071,7 @@ for (const k in upPads) { const u = upPads[k]; if (!u.done) { u.group.visible = 
 function allPads() { const l = []; for (const k in upPads) l.push(upPads[k]); for (const c of CPADS) if (!c.o.dead) l.push(c); return l; }
 function roadsList() { return [[3.45, 7.35, -172, -11.5], [8.3, 11.7, 12, 47], [-11.1, -8.9, -11, 11], [-17.5, -10.5, -5.5, -2.5], [-17.5, -10.5, 2.5, 5.5], [-17.5, -10.5, -13.2, -10.5]]; } // sokak, minibüs yolu, toprak patikalar
 function bedRect(b) { return b.rc || (b.rc = (() => { let x0 = 1e9, x1 = -1e9, z0 = 1e9, z1 = -1e9; for (const f of b.flowers) { x0 = Math.min(x0, f.x); x1 = Math.max(x1, f.x); z0 = Math.min(z0, f.z); z1 = Math.max(z1, f.z); } return [x0 - 0.8, x1 + 0.8, z0 - 0.8, z1 + 0.8]; })()); }
-function padOnRoadOK(p) { return !!(p.key && (EXTZ[p.key] || p.key === 'sera' || p.key === 'van' || p.key === 'coll')); } // bölge açma pad'leri sokak üstünde durur
+function padOnRoadOK(p) { return !!(p.key && (EXTZ[p.key] || p.key === 'sera' || p.key === 'van' || p.key === 'coll' || p.key === 'gate')); } // bölge açma pad'leri sokak üstünde durur
 function padHits(p, x, z, others) {
   const hw = p.w / 2 + 0.2, hd = p.d / 2 + 0.2, x0 = x - hw, x1 = x + hw, z0 = z - hd, z1 = z + hd;
   for (const b of PROPBOX) if (b[0] < x1 && b[1] > x0 && b[2] < z1 && b[3] > z0) return 'prop';
