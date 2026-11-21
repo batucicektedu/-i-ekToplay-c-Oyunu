@@ -1,4 +1,16 @@
-# Çiçek Bahçesi – Tasarım Dokümanı (Faz B)
+# Çiçek Bahçesi – Tasarım Dokümanı
+
+## Son sürüm (C4 – sadeleştirme turu)
+- **Sade ekran:** HUD'da yalnızca para, kapasite, hedef çubuğu, tam ekran ve ayarlar. Görevler / Koleksiyon / Gardırop ayar menüsünde, açılınca görünür. Güzellik göstergesi ve satın alınmamış dekor hayaletleri/pad'leri kaldırıldı (alınmış dekor ve bonusları korunur). Küçük fenerler kaldırıldı.
+- **Pad'ler:** daha büyük, büyük yazı; aynı anda en çok 4 pad (sıradaki hedef + işçi alımları + parası %40'a ulaşanlar, üst üste binenler gizlenir). Görünen pad'e basınca her zaman tepki verir: para yetmezse "Yetersiz para: X" uyarısı. Pad çakışma denetimi (`fixPads`, `tests/padoverlap.js`) pad'leri prop/collider'dan uzaklaştırır; `tests/padpay.js` her görünür pad'in parayı çektiğini doğrular.
+- **Geç içerik:** C2 (mekan seviyesi, gardırop, gece-gündüz) ve C3 bölgeleri Şehir Çiçekçisi alınmadan görünmez; sonra zincir halinde (Arıcılık → Japon → Defter → Liman → Festival → Müze). C3 fiyatları artırıldı (Japon 105K, Defter 75K, Liman 230K, Festival 320K, Müze 600K). Eski kayıtlarda açılmış her şey açık kalır.
+- **Minibüs:** her sefer farklı istek; Bisiklet (3), Araba (5), Kamyonet (8), Kamyon (12) – büyük balon ürün simgeleri ve sayaçla ne istediğini söyler; ödeme türe göre çarpılır (2.0/2.3/2.6/3.0). Taşıyıcı artık minibüse de sırayla servis yapar.
+- **Düğün:** büyük "DÜĞÜN SİPARİŞİ" pad'i, büyük sipariş panosu, en çok 2 ürün türü, iz/ok yönlendirmesi; Düğün Görevlisi (7.500) siparişi çıkış yığınlarından otomatik besler.
+- **Liman:** Hamal Hızı ve Hamal Kapasitesi pad'leri.
+- **Hata düzeltmeleri:** kapasite taşması (HUD kırpma, taşınan ürünler kayda eklendi), festival hedefi gerçek satış hızından (%70, 3 dk), bekçi meşru beklemeleri saymıyor (30 dk boşta: 0 takılma; tüm ürünler üretilip satılıyor).
+- **Performans:** bu turda yeni optimizasyon yapılmadı (yönerge: yeni özellik yok); önceki sayılar geçerli (Yüksek 490-800 çağrı geç oyunda).
+
+## Faz B
 
 Kaynak: idle arcade / hybrid-casual araştırması (Supersonic, Homa, Azur Games "My Mini Mart" analizi, Burger Please! incelemeleri, genel idle ekonomi kuralları).
 
