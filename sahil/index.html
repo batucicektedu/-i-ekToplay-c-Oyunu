@@ -1479,6 +1479,13 @@ function buildFlowerInstances() {
   for (const t in sl) { const m = new THREE.InstancedMesh(stemGeo(t), vcMat, sl[t].length); m.frustumCulled = false; sl[t].forEach((f, i) => { f.sm = m; f.si = i; }); world.add(m); instMeshes.push(m); m.userData.dyn = true; }
   for (const k in bl) { const [t, ck] = k.split('|'), m = new THREE.InstancedMesh(bloomGeo(t, +ck), vcMat, bl[k].length); m.frustumCulled = false; bl[k].forEach((f, i) => { f.bm = m; f.bi = i; }); world.add(m); instMeshes.push(m); m.userData.dyn = true; }
   for (const f of allFl) writeFlower(f);
+  const cull = (m, list) => { let x0 = 1e9, x1 = -1e9, z0 = 1e9, z1 = -1e9; for (const f of list) { x0 = Math.min(x0, f.x); x1 = Math.max(x1, f.x); z0 = Math.min(z0, f.z); z1 = Math.max(z1, f.z); } m.userData.cull = { cx: (x0 + x1) / 2, cz: (z0 + z1) / 2, r: Math.hypot(x1 - x0, z1 - z0) / 2 + 2 }; };
+  for (const t in sl) cull(sl[t].length ? sl[t][0].sm : null, sl[t]); for (const k in bl) cull(bl[k][0].bm, bl[k]);
+}
+let cullT = 0;
+function cullInst(dt) { // oyuncudan uzak balık/yengeç örnek ağları çizilmez (draw call azaltma)
+  cullT -= dt; if (cullT > 0) return; cullT = 0.3; const gp = P.group.position;
+  for (const m of instMeshes) { const c = m.userData.cull; if (!c) continue; const d = Math.hypot(gp.x - c.cx, gp.z - c.cz); m.visible = d < c.r + 48; }
 }
 const _fM = new THREE.Matrix4(), _fB = new THREE.Matrix4(), _fS = new THREE.Matrix4(), _fT = new THREE.Matrix4(), _fq = new THREE.Quaternion(), _fe = new THREE.Euler(), _fs = new THREE.Vector3(), _fp = new THREE.Vector3();
 function writeFlower(f) {
@@ -2818,7 +2825,7 @@ function rodUpdate(c, dt, on) {
 function fishSplash(f) { for (let i = 0; i < 9; i++) { const a = rand(0, TAU), s = rand(0.8, 2.2); emit({ x: f.x, y: 0.35, z: f.z, vx: Math.cos(a) * s, vy: rand(2.5, 4.5), vz: Math.sin(a) * s, life: rand(0.45, 0.7), size: rand(0.14, 0.24), c: i % 3 ? 0xdff6ff : 0x7fd3f0, grav: 11, drag: 0.8 }); } }
 function fishPick(gx, gz, maxD, claimChk) { let best = null, bd = maxD * maxD; for (const b of beds) { if (b.locked || b.nohelp) continue; for (const f of b.flowers) { if (!isFishT(f.type) || f.t < f.gt || f.pop > 0 || (claimChk && !claimOK(f))) continue; const d = (f.x - gx) ** 2 + (f.z - gz) ** 2; if (d < bd) { bd = d; best = f; } } } return best; }
 function updateBeds(dt) {
-  updateTide(dt);
+  updateTide(dt); cullInst(dt);
   for (const b of beds) {
     if (b.dropping !== undefined) { b.dropping += dt; const k = Math.min(1, b.dropping / 0.9); b.group.position.y = -3.2 * k * k; if (k >= 1) { b.group.visible = false; b.group.position.y = 0; b.dropping = undefined; for (let i = 0; i < 10; i++) dust(b.x + rand(-3.4, 3.4), 0.3, b.z + rand(-2.8, 2.8), 1, 0.7); } }
     if (b.locked) continue;
@@ -3228,8 +3235,8 @@ function buildExpansion() {
   const WEST = { x0: -24, x1: 1.6 }, EAST = { x0: 9.2, x1: 33 };
   /* ----- Lavanta + Kese ----- */
   { const z = makeExt({ id: 'lav', name: 'Karides Kafesi', label: 'KARİDES', R: { x0: WEST.x0, x1: WEST.x1, z0: -38, z1: -14 } });
-    const g0 = mkGroup(z, 0.1); slab(z, g0, 0xd6e8c0); buildField(z, g0, -18, -33, 'lav', 7, 5); buildField(z, g0, -18, -25.5, 'lav', 7, 5); decorTree(g0, -22.5, -16, 1.1); decorTree(g0, 0, -36, 1.2); lamp(g0, -2, -16);
-    const g1 = mkGroup(z, 0.5); buildStation(z, g1, { id: 'kese', name: 'KARİDES TEZGAHI', x: -6.2, z: -28.5, awn: '#8f5be0', col: '#a64dff', col2: 0xa47be8, mcol: 0x7a4ad0, shirt: 0xb58cf0, inputs: [{ type: 'lav' }], out: 'sachet', base: 2.4, hire: 'lavW' });
+    const g0 = mkGroup(z, 0.1); slab(z, g0, 0xe6d9ae); buildField(z, g0, -18, -33, 'lav', 7, 5); buildField(z, g0, -18, -25.5, 'lav', 7, 5); decorTree(g0, -22.5, -16, 1.1); decorTree(g0, 0, -36, 1.2); lamp(g0, -2, -16);
+    const g1 = mkGroup(z, 0.5); buildStation(z, g1, { id: 'kese', name: 'KARİDES TEZGAHI', x: -6.2, z: -28.5, awn: '#1d6fb8', col: '#a64dff', col2: 0xa47be8, mcol: 0x7a4ad0, shirt: 0xb58cf0, inputs: [{ type: 'lav' }], out: 'sachet', base: 2.4, hire: 'lavW' });
     z.onShow = () => { const a = STN.kese.ins[0]; if (a) a.zone.group.visible = true; };
     extPad('lav', 'Karides', [ECON.lav], 5.4, -17.0, iconLav, null);
     extPad('lavW', 'Karides Balıkçısı', [ECON.lavW], -8.5, -16.6, iconHelper, () => unlockedZ('lav'));
@@ -3240,8 +3247,8 @@ function buildExpansion() {
   }
   /* ----- Parfüm ----- */
   { const z = makeExt({ id: 'parf', name: 'Konserve Fabrikası', label: 'KONSERVE', R: { x0: EAST.x0, x1: EAST.x1, z0: -38, z1: -14 } });
-    const g0 = mkGroup(z, 0.1); slab(z, g0, 0xf0d9e4); buildField(z, g0, 28.2, -33, 'rosep', 7, 5); decorTree(g0, 11.5, -36, 1.2); decorTree(g0, 31.5, -16, 1.1); lamp(g0, 11, -16);
-    const g1 = mkGroup(z, 0.5); buildStation(z, g1, { id: 'parf', name: 'KONSERVE FABRİKASI', x: 20.5, z: -26, flip: true, awn: '#ff6fa5', col: '#ff4f9a', col2: 0xff8fc4, mcol: 0xd04a8a, shirt: 0xffd0e4, inputs: [{ type: 'rosep' }, { type: 'lav' }], out: 'perfume', base: 3.4, hire: 'parfW' });
+    const g0 = mkGroup(z, 0.1); slab(z, g0, 0xdcecf2); buildField(z, g0, 28.2, -33, 'rosep', 7, 5); decorTree(g0, 11.5, -36, 1.2); decorTree(g0, 31.5, -16, 1.1); lamp(g0, 11, -16);
+    const g1 = mkGroup(z, 0.5); buildStation(z, g1, { id: 'parf', name: 'KONSERVE FABRİKASI', x: 20.5, z: -26, flip: true, awn: '#19b5c9', col: '#ff4f9a', col2: 0xff8fc4, mcol: 0xd04a8a, shirt: 0xffd0e4, inputs: [{ type: 'rosep' }, { type: 'lav' }], out: 'perfume', base: 3.4, hire: 'parfW' });
     extPad('parf', 'Konserve', [ECON.parf], 5.4, -20.5, iconPerfume, null);
     extPad('parfW', 'Yengeç Balıkçısı', [ECON.parfW], 15, -16.6, iconHelper, () => unlockedZ('parf'));
     extPad('parfSpd', 'Konserve Hızı', geo(ECON.parfSpd, 7), 19.5, -16.6, iconBolt, () => unlockedZ('parf'));
@@ -3252,7 +3259,7 @@ function buildExpansion() {
   /* ----- Kafe ----- */
   { const z = makeExt({ id: 'cafe', name: 'Izgara Restoranı', label: 'IZGARA RESTORANI', R: { x0: WEST.x0, x1: WEST.x1, z0: -64, z1: -40 } });
     const g0 = mkGroup(z, 0.1); slab(z, g0, 0xf3e3c4); decorTree(g0, -22.5, -42, 1.1); decorTree(g0, -22.5, -62, 1.2); lamp(g0, -2, -42);
-    const g1 = mkGroup(z, 0.5); buildStation(z, g1, { id: 'tea', name: 'IZGARA', x: -6.2, z: -49, awn: '#ff7a8a', col: '#ff7a8a', col2: 0xffb04a, mcol: 0xb5651d, shirt: 0xffffff, inputs: [{ type: 'orchid' }, { type: 'lav' }], any: true, out: 'tea', base: 2.6, hire: 'cafeW' }); delete PZ.tea;
+    const g1 = mkGroup(z, 0.5); buildStation(z, g1, { id: 'tea', name: 'IZGARA', x: -6.2, z: -49, awn: '#1d6fb8', col: '#ff7a8a', col2: 0xffb04a, mcol: 0xb5651d, shirt: 0xffffff, inputs: [{ type: 'orchid' }, { type: 'lav' }], any: true, out: 'tea', base: 2.6, hire: 'cafeW' }); delete PZ.tea;
     STN.tea.o.any = true; const g2 = mkGroup(z, 0.8);
     cafe = { z, tables: [], guests: [], t: 6, waiter: null };
     [[-19, -56], [-14, -56], [-9, -56], [-19, -61], [-14, -61], [-9, -61]].forEach(([tx, tz]) => {
@@ -3274,7 +3281,7 @@ function buildExpansion() {
   }
   /* ----- Düğün ----- */
   { const z = makeExt({ id: 'wed', name: 'Sahil Oteli', label: 'OTEL', R: { x0: EAST.x0, x1: EAST.x1, z0: -64, z1: -40 } });
-    const g0 = mkGroup(z, 0.1); slab(z, g0, 0xf7f0f4);
+    const g0 = mkGroup(z, 0.1); slab(z, g0, 0xe9e2c8);
     const carpet = new THREE.Mesh(G.plane, LM({ color: lc(0xc2103a) })); carpet.rotation.x = -Math.PI / 2; carpet.scale.set(3.4, 15, 1); ad(g0, carpet, 21, 0.05, -54); 
     const arch = new THREE.Group(); const wm = mat(0xffffff);
     for (const sx of [-2.4, 2.4]) arch.add(mk(G.cyl, wm, 0.2, 5.2, 0.2, sx, 2.6, 0));
@@ -3297,8 +3304,8 @@ function buildExpansion() {
   }
   /* ----- Ayçiçeği + traktör ----- */
   { const z = makeExt({ id: 'sunf', name: 'Yosun Çiftliği', label: 'YOSUN', R: { x0: WEST.x0, x1: WEST.x1, z0: -90, z1: -66 } });
-    const g0 = mkGroup(z, 0.1); slab(z, g0, 0xf3e8a8); for (const cz of [-87, -81, -75]) buildField(z, g0, -18.5, cz, 'sun', 7, 5); decorTree(g0, 0, -88, 1.2); lamp(g0, -2, -68);
-    const g1 = mkGroup(z, 0.5); buildStation(z, g1, { id: 'sbq', name: 'SUŞİ TEZGAHI', x: -7.5, z: -77, awn: '#ffc21a', col: '#ffb000', col2: 0xffa800, mcol: 0xd89a10, shirt: 0xfff0a0, inputs: [{ type: 'sun', n: 2 }], out: 'sbq', base: 3.2, hire: 'sunW' });
+    const g0 = mkGroup(z, 0.1); slab(z, g0, 0xe6d9ae); for (const cz of [-87, -81, -75]) buildField(z, g0, -18.5, cz, 'sun', 7, 5); decorTree(g0, 0, -88, 1.2); lamp(g0, -2, -68);
+    const g1 = mkGroup(z, 0.5); buildStation(z, g1, { id: 'sbq', name: 'SUŞİ TEZGAHI', x: -7.5, z: -77, awn: '#19b5c9', col: '#ffb000', col2: 0xffa800, mcol: 0xd89a10, shirt: 0xfff0a0, inputs: [{ type: 'sun', n: 2 }], out: 'sbq', base: 3.2, hire: 'sunW' });
     STN.sbq.o.id = 'sbq';
     extPad('sunf', 'Yosun', [ECON.sunf], 5.4, -66.5, iconSun, null);
     extPad('sunW', 'Tekne', [ECON.sunW], -8.5, -68.6, iconTractor, () => unlockedZ('sunf'));
@@ -4278,7 +4285,7 @@ function buildBee() {
     const big = new THREE.Mesh(hiveGeo(), vcMat); big.scale.setScalar(2.5); big.castShadow = true; ad(g0, big, -22, 0, -101); addCollider(-23.7, -20.3, -102.7, -99.3, () => !z.locked); }
   // çiçek kutuları + tabela
   for (const sx of [-1, 1]) ad(g0, rbox(2.6, 0.4, 0.7, 0.1, mat(0xc98a4a)), -9 + sx * 4.5, 0.25, -95.5);
-  const g1b = g1; const st = buildStation(z, g1b, { id: 'hon', name: 'TUZ PAKETLEME', x: -6.2, z: -108, awn: '#ffb703', col: '#ffb703', col2: 0xffc21a, mcol: 0xc98a10, shirt: 0xffd54a, inputs: [{ type: 'comb', n: 2 }], out: 'honey', base: 3.0, hire: 'beeW' });
+  const g1b = g1; const st = buildStation(z, g1b, { id: 'hon', name: 'TUZ PAKETLEME', x: -6.2, z: -108, awn: '#ff6f61', col: '#ffb703', col2: 0xffc21a, mcol: 0xc98a10, shirt: 0xffd54a, inputs: [{ type: 'comb', n: 2 }], out: 'honey', base: 3.0, hire: 'beeW' });
   beeZone = new Zone({ x: -17, z: -103.5, w: 9.5, d: 9, color: '#ffb703', draw: drawZoneIcon(iconComb, 0.42) }); beeZone.group.visible = false;
   // kovanlar (dinamik; sahne düzeyinde)
   HIVE_SLOTS.forEach(([hx, hz], i) => {
@@ -4394,7 +4401,7 @@ function buildJapan() {
   lamp(g0, 10.5, -93.5); lamp(g0, 31.5, -93.5);
   // fidan tarlası (sap) + bonsai atölyesi
   buildField(z, g1, 29.5, -101.2, 'sap', 6, 4);
-  buildStation(z, g1, { id: 'bon', name: 'İNCİ ATÖLYESİ', x: 20.5, z: -111, flip: true, awn: '#e8587a', col: '#ff7aa8', col2: 0xff9ec0, mcol: 0x6b8a4a, shirt: 0xffb3cf, inputs: [{ type: 'sap', n: 2 }], out: 'bonsai', base: 3.8, hire: 'bonW' });
+  buildStation(z, g1, { id: 'bon', name: 'İNCİ ATÖLYESİ', x: 20.5, z: -111, flip: true, awn: '#ff6f61', col: '#ff7aa8', col2: 0xff9ec0, mcol: 0x6b8a4a, shirt: 0xffb3cf, inputs: [{ type: 'sap', n: 2 }], out: 'bonsai', base: 3.8, hire: 'bonW' });
   // koi (dinamik)
   { const km = new THREE.InstancedMesh(koiGeo(), vcMatI, 7); km.frustumCulled = false; km.userData.dyn = true; km.visible = false; scene.add(km); for (let i = 0; i < 7; i++) { km.setColorAt(i, new THREE.Color().setHSL(i % 3 === 0 ? 0.0 : 0.07 + (i % 2) * 0.03, 0.9, i % 2 ? 0.7 : 0.55)); JAP.koi.push({ a: rand(0, TAU), sp: rand(0.25, 0.5) * (i % 2 ? 1 : -1), rx: rand(1.0, 2.4), rz: rand(1.4, 3.3), ph: rand(0, 6) }); } JAP.koiM = km; }
   z.onShow = () => { JAP.koiM.visible = true; };

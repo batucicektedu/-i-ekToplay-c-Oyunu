@@ -156,14 +156,15 @@ Müşteri istekleri yeni ürünlere ağırlıklıdır (sıra ağırlığı 1,5+1
 
 **Çizim çağrısı (390x844, geç oyun, tüm bölgeler açık; önce -> sonra).** Yüksek: meydan 456 -> 494, geniş bakış 618 -> 729, cadde (z -70) 185 -> 297 (yeni bölgeler görünür). Düşük: 414 -> 446, 570 -> 682, 150 -> 278. Yeni bölge görünümleri (Yüksek): Arıcılık 260, Japon 257, Liman 222, Festival 233, Müze 170 (C2 öğeleriyle +~45). Kilitliyken yeni içerik ~+16 çağrı.
 
-## Bölüm 2 – Sahil Balıkçısı
-`sahil/index.html` (Bölüm 1 motorunun kopyası; kayıt `bolum2_sahil`, SAVE_VER 7: yeni alanlar `ic`, `lv.gate`). İç kimlikler (bouquet, pot, sachet…) aynı kalır, içerik deniz temasına çevrildi:
-- Sahne: kum zemin, animasyonlu deniz (batı/doğu/güney), balık noktaları = köpüklü havuzlar (balıklar fışkırır), palmiye, şemsiye, iskele+tekne, deniz feneri, martılar. Bölüm 1'in gün-gece/kozmetik/dekor/mekan seviyesi (C2) kapalı (sade).
-- Zincir: Balık → Balık Hali (paket balık 15) → Balık Pazarı. Bölgeler (Bölüm 1 fiyatlarıyla aynı eğri): Midye Kayalığı 1800 (midye tabağı 45), Teslimat Aracı 2500, Karides Kafesi 4500 (karides kokteyli 70), Konserve Fabrikası 15.5K (yengeç+karides, 250), Izgara Restoranı 33K (garson), Sahil Oteli 50K (sipariş), Yosun Çiftliği 48K (suşi 120, tekne), Sahil Büfesi 45K, Tuz Tavası 20K, İnci Koyu 80K, Nadir Balıklar, İhracat Limanı, Sahil Festivali, Deniz Akvaryumu.
-- Otomasyon: toplayıcılar Kapasite / +1 Eleman (3) / "Tekne Yap" (BALIKÇI TEKNESİ!, havuzlarda sürer); taşıyıcı, kasiyer, garson, hamal +1; Teslimat Minibüsü ana yolda.
-- Bölümler: ◀ ÖNCEKİ BÖLÜM kapısı (başlangıç), SIRADAKİ BÖLÜME GEÇ (yol sonu, 750K pad, `cicek_bolumler`), ayar menüsünde Bölümler, ilk ziyaret kartı.
-- Çalışan salınım önlemi: varış yarıçapı ≥ adım, yardım modunda en az 6 sn bağlılık, 10 sn'de >6 yön değişimi ise park (idleCool).
-- Testler: `tests/sahil/` (smoke, bot, padoverlap, padpay, idle30+osc, hints, saves).
+## Bölüm 2 – Sahil Balıkçısı (v2: yeni koy tasarımı)
+`sahil/index.html` (kayıt `bolum2_sahil`, motor Bölüm 1'den; içerik ve yerleşim yeni). Palet: turkuaz, beyaz, kum, lacivert, mercan.
+- Yerleşim: merkez = beyaz kireç taşı yürüyüş yolu (promenade); batıda denize uzanan tahta İSKELE (hub). Balık noktaları iskelenin iki yanında (açık deniz, köpüren/fışkıran balıklar, açık turkuaz "balık sahası"); kilitli üçüncü saha şamandıra halkasıyla çevrili. Kuzeyde beyaz Ege evleri (mavi/mercan kapı-panjur, begonvil), palmiye, mavi-beyaz şemsiyeler, ufukta yelkenliler, uzakta fener adası.
+- Çekirdek mekanik: OLTA. Oyuncu iskelede durunca (yürürken değil) otomatik olta tutar, atış animasyonu, ~0.3-0.6 sn'de bir balık yakalar (Hız yükseltmesiyle hızlanır), sıçrama/su sıçraması, balık sırta uçar. Yardımcı balıkçılar iskele kenarında durup aynı şekilde olta atar; "Tekne Yap" evrimi tekne olur. Midye/karides/yengeç/yosun/istiridye yürüyerek toplanır.
+- Zincir: Balık (olta) → Temizleme Tezgâhı → Buzlu Kasa → Balık Tezgâhı (müşteri kuyruğu) → para.
+- Midye Kayalığı: GELGİT. 36 sn'lik döngü; su çekilince (alçak gelgit) kayalar ve midyeler ortaya çıkar, sadece o zaman toplanır (oyuncu ve işçiler); su yükselince midyeler suyun altında kalır.
+- Diğer bölgeler (Karides Kafesi, Konserve, Izgara Restoranı, Düğün/Mezat, Suşi, Tuz Tavası, İnci, Liman/İhracat, Festival, Müze, Şehir büfesi) hâlâ Bölüm 1 bölge altyapısının deniz temalı uyarlamasıdır; sıradaki iş: her birine kendi mekaniği (tekneler denize açılıp dönsün, kafes çekme, mezat zili, fener adası finali).
+- Bölümler: ◀ ÖNCEKİ BÖLÜM kapısı, SIRADAKİ BÖLÜME GEÇ (750K pad, `cicek_bolumler`), ayar menüsünde Bölümler.
+- Testler: `tests/sahil/` (smoke, bot, padoverlap, padpay, idle30+osc, hints, saves). Kayıt örnekleri: `tests/sahil/saves/`.
 
 ## Bölüm 3 – Hayvan Çiftliği (devam ediyor)
 `ciftlik/index.html` (Sahil motorunun kopyası; kayıt `bolum3_ciftlik`). Şu an oynanabilir: Tavuk Kümesi (yuva + yumurta, gezinen tavuklar) → kolileme → Çiftlik Dükkânı, İnek Ahırı (süt şişesi), Süt Kamyonu; ahır, silo, yel değirmeni, saman balyaları, ahşap çitler, ◀ ÖNCEKİ BÖLÜM → ../sahil/, Bölümler menüsü, giriş kartı. Diğer bölgeler (koyun, örgü, peynir, sevimli hayvanlar, havuç-elma, AT ÇİFTLİĞİ, final) henüz yok: pad'leri gizli (`SOON`).
