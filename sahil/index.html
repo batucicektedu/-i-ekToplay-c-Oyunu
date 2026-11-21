@@ -166,7 +166,7 @@ const CFG = {
   inputCap: 24, outputCap: 16, moneyCap: 60,
   queueMax: 6, spawnEvery: 1.4, spawnShortEvery: 0.6, walkSpeed: 5.0, leaveSpeed: 5.7, queueX: 10, queueZ0: -1.5, queueGap: 1.5,
   helperCap: 6,
-  bounds: { x0: -19, x1: 17.8, z0: -10.4, z1: 16 },
+  bounds: { x0: -28.2, x1: 17.8, z0: -10.4, z1: 16 },
   start: { x: -5.5, z: 2.6 }
 };
 const geo = (base, n) => Array.from({ length: n }, (_, i) => Math.max(5, Math.round(base * Math.pow(1.3, i) / 5) * 5));
@@ -198,7 +198,7 @@ const POS = {
   outTable: { x: 1.4, z: -2.2 }, outPad: { x: 1.4, z: 0.7 },
   counter: { x: 10, z: -3.4 }, counterPad: { x: 7.4, z: -1.3 },
   moneyPile: { x: 13.7, z: -3.2 },
-  beds: [{ x: -14, z: -8 }, { x: -14, z: 0 }, { x: -14, z: 8 }],
+  beds: [{ x: -15.8, z: -3.8 }, { x: -15.8, z: 3.8 }, { x: -24.0, z: -3.8 }],
   potOut: { x: 42.6, z: -0.4 }, upgradeZ: 9.4, upgradeZ2: 6.0
 };
 const TABLE_Y = 1.0;
@@ -1288,28 +1288,60 @@ function updateGulls(t) {
 function buildBeach() {
   // deniz + köpük
   const mk2 = (x0, x1, z0, z1, rx, ry) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(1, 1, Math.max(4, Math.round((x1 - x0) / 2)), Math.max(4, Math.round((z1 - z0) / 2))), seaMat('#2a8fc4', 'rgba(255,255,255,.38)', rx, ry, 1, 0.96)); m.rotation.x = -Math.PI / 2; m.scale.set(x1 - x0, z1 - z0, 1); m.position.set((x0 + x1) / 2, 0.045, (z0 + z1) / 2); m.userData.dyn = true; m.renderOrder = 1; world.add(m); return m; };
-  mk2(-110, -28.5, -128, 46, 14, 22); mk2(48, 130, -150, 46, 10, 22); mk2(-110, 130, 44, 120, 30, 8);
+  mk2(-110, -28.5, -128, 46, 14, 22); mk2(-28.6, -10.4, -12.6, 13.2, 5, 8); mk2(48, 130, -150, 46, 10, 22); mk2(-110, 130, 44, 120, 30, 8);
   const foamT = (() => { const fc = cv(256, 32), fx = fc.getContext('2d'); fx.fillStyle = '#fff'; for (let i = 0; i < 9; i++) { fx.beginPath(); fx.ellipse(14 + i * 28 + (i % 2) * 5, 16 + Math.sin(i * 1.7) * 5, 13 + (i % 3) * 3, 4, 0, 0, TAU); fx.fill(); } return fc; })();
   const foam = (x, z, w, d, rot) => { const t = canvasTex(foamT, [Math.max(1, w / 6), Math.max(1, d / 6)]); const f = new THREE.Mesh(G.plane, new THREE.MeshBasicMaterial({ map: t, transparent: true, opacity: 0.7, depthWrite: false, fog: false })); f.rotation.x = -Math.PI / 2; f.rotation.z = rot || 0; f.scale.set(w, d, 1); f.position.set(x, 0.06, z); f.userData.dyn = true; f.renderOrder = 2; world.add(f); BEACH.foam.push(f); };
-  foam(-28.2, -41, 1.8, 172); foam(48.6, -52, 1.8, 196); foam(0, 44.6, 240, 1.8);
+  foam(-28.2, -41, 1.8, 172); foam(-10.5, 0.3, 1.6, 25.8); foam(48.6, -52, 1.8, 196); foam(0, 44.6, 240, 1.8);
   // ıslak kum şeritleri
   const wet = (x, z, w, d) => { const m = new THREE.Mesh(G.plane, LM({ color: lc(0xd9bf84) })); m.rotation.x = -Math.PI / 2; m.scale.set(w, d, 1); m.position.set(x, 0.012, z); m.receiveShadow = true; world.add(m); };
-  wet(-26.6, -41, 3.4, 172); wet(46.6, -52, 3.4, 196); wet(0, 42.6, 240, 3.4);
-  // iskele + tekne (batı)
-  { const pg = new THREE.Group(), wm = mat(0xa87a46), dk = mat(0x6a4a2a);
-    for (let i = 0; i < 18; i++) pg.add(mk(G.box, i % 2 ? wm : mat(0xb88a52), 0.9, 0.12, 3.6, -25 - i * 1.0, 0.5, 4.5));
-    for (let i = 0; i < 9; i++) for (const sz of [2.8, 6.2]) pg.add(mk(G.cyl, dk, 0.14, 1.3, 0.14, -26 - i * 2.0, 0.05, sz));
-    world.add(pg); shadowAll(pg, true, true);
-    const bt = makeBoatModel(0x1fa6c8); bt.g.scale.setScalar(1.1); bt.g.position.set(-33, 0.18, 8.4); bt.g.rotation.y = 0.2; world.add(bt.g);
-    const bt2 = makeBoatModel(0xff7a1a); bt2.g.scale.setScalar(1.1); bt2.g.position.set(-40, 0.18, 0.2); bt2.g.rotation.y = -0.3; world.add(bt2.g); }
+  wet(-26.6, -41, 3.4, 172); wet(-9.4, 0.3, 2.4, 25.8); wet(46.6, -52, 3.4, 196); wet(0, 42.6, 240, 3.4);
+  buildBayHub();
   // deniz feneri (batı açıkları) + kayalar
-  lighthouse(world, -50, -14, 1.1);
+  { const isl = [part(G.cyl, 0xe9d49a, 0, 0.1, 0, 9, 0.35, 7), part(G.cyl, 0xd9bf84, 0, 0.05, 0, 11, 0.2, 9)]; const im = new THREE.Mesh(mergeParts(isl), vcMat); im.position.set(-52, 0.02, -12.5); world.add(im); palm(world, -48.5, -10.5, 0.9); palm(world, -55, -9.8, 0.8); }
+  lighthouse(world, -52, -13.5, 1.25);
   for (const [x, z, s] of [[-30, -7, 1.2], [-31.5, 12, 1.5], [-29, 17, 1.0], [50, 14, 1.3], [52, -20, 1.5], [49.5, -33, 1.1]]) world.add(mk(G.sphT, mat(0x8a8a86), s * 1.4, s * 0.8, s * 1.1, x, 0.2, z));
   // şemsiyeler + havlular (güney kumsal)
-  for (const [x, z, a, b] of [[-6, 17.5, 0xff5a4a, 0xffffff], [-12, 22, 0x2fa6e8, 0xffffff], [2, 23, 0xffc21a, 0xffffff], [-3, 28, 0xff5a9a, 0xffffff], [-16, 17, 0x1fc5b5, 0xffffff], [4, 30, 0xff8a1f, 0xffffff]]) umbrella(world, x, z, a, b);
+  for (const [x, z, a, b] of [[-6, 17.5, 0x1d6fb8, 0xffffff], [-12, 22, 0xff6f61, 0xffffff], [2, 23, 0x1d6fb8, 0xffffff], [-3, 28, 0xff6f61, 0xffffff], [-16, 17, 0x1d6fb8, 0xffffff], [4, 30, 0xff6f61, 0xffffff]]) umbrella(world, x, z, a, b);
   // palmiyeler
-  for (const [x, z, s] of [[-24, 3, 1.1], [-24, 14, 1.25], [-15, 19, 1.1], [-26, -3, 1.3], [-23, -9, 1.2], [-21.5, 24, 1.2], [-8, 26, 1.1], [1, 18, 1.0], [-16, 28, 1.2]]) palm(world, x, z, s);
+  for (const [x, z, s] of [[-8, 15, 1.1], [-16, 16.5, 1.2], [-21.5, 24, 1.2], [-8, 26, 1.1], [1, 18, 1.0], [-16, 28, 1.2], [18, 14.5, 1.1], [18.5, -7.5, 1.2]]) palm(world, x, z, s);
   initGulls();
+}
+
+/* ---- Sahil merkezi: iskele, Ege evleri, yelkenliler ---- */
+function aegeanHouse(P_, x, z, w, d, h, ry, door, face) { // beyaz küp ev, mavi kapı/panjur, düz çatı, begonvil
+  const c = Math.cos(ry), sn = Math.sin(ry), T = (lx, lz) => [x + lx * c + lz * sn, z - lx * sn + lz * c], W = 0xfdfcf6, B = door || 0x1d6fb8;
+  P_.push(part(G.box, W, x, h / 2, z, w, h, d, 0, ry, 0)); P_.push(part(G.box, 0xe9f3fb, x, h + 0.08, z, w + 0.3, 0.16, d + 0.3, 0, ry, 0));
+  const fz = (d / 2 + 0.02) * (face || 1); let [dx, dz] = T(-w * 0.18, fz); P_.push(part(G.box, B, dx, 0.85, dz, 0.9, 1.7, 0.08, 0, ry, 0));
+  for (const wx of [w * 0.26]) { const [wx2, wz2] = T(wx, fz); P_.push(part(G.box, 0x8fd0ee, wx2, h * 0.58, wz2, 0.7, 0.8, 0.08, 0, ry, 0)); const [a1, a2] = T(wx - 0.5, fz); P_.push(part(G.box, B, a1, h * 0.58, a2, 0.26, 0.9, 0.1, 0, ry, 0)); const [b1, b2] = T(wx + 0.5, fz); P_.push(part(G.box, B, b1, h * 0.58, b2, 0.26, 0.9, 0.1, 0, ry, 0)); }
+  const [pk1, pk2] = T(w * 0.38, fz + 0.3 * (face || 1)); P_.push(part(G.sph, 0xe0307a, pk1, h + 0.35, pk2, 0.55, 0.4, 0.5), part(G.sph, 0xff5aa8, pk1 + 0.3, h * 0.55, pk2, 0.4, 0.5, 0.35), part(G.sph, 0x2f9a4a, pk1 - 0.2, h + 0.15, pk2, 0.4, 0.3, 0.4));
+}
+function sailboatParts(P_, x, z, ry, sc, col) {
+  const m = new THREE.Matrix4(); const q = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, ry, 0));
+  const add = (g, c, lx, ly, lz, sx, sy, sz) => { const lp = new THREE.Vector3(lx, ly, lz).multiplyScalar(sc).applyQuaternion(q); P_.push(part(g, c, x + lp.x, ly * sc + 0.0, z + lp.z, sx * sc, sy * sc, sz * sc, 0, ry, 0)); };
+  add(G.box, 0xffffff, 0, 0.5, 0, 1.6, 0.8, 4.4); add(G.box, col, 0, 0.2, 0, 1.64, 0.25, 4.46); add(G.cyl, 0x8a98a8, 0, 3.4, -0.2, 0.07, 6, 0.07);
+  add(new THREE.ConeGeometry(1, 1, 3), 0xfdfcf6, 0, 3.5, -0.9, 0.12, 5.2, 1.7);
+}
+function buildBayHub() {
+  // iskele: z=0 boyunca x -10.2 .. -27.6
+  const P_ = [], wc = [0xb08550, 0xa07848, 0xbf9560];
+  for (let i = 0; i < 18; i++) P_.push(part(G.box, wc[i % 3], -10.6 - i * 0.98, 0.02, 0, 0.94, 0.08, 3.1));
+  for (let i = 0; i < 9; i++) for (const sz of [-1.65, 1.65]) { P_.push(part(G.cyl, 0x5a3a1c, -11.2 - i * 2.0, 0.45, sz, 0.12, 1.1, 0.12), part(G.sph, 0x5a3a1c, -11.2 - i * 2.0, 1.0, sz, 0.15, 0.1, 0.15)); }
+  for (const sz of [-1.65, 1.65]) P_.push(part(G.box, 0xf3ead8, -19.0, 0.82, sz, 17.4, 0.06, 0.06));
+  P_.push(part(G.cyl, 0x5a3a1c, -28.2, 0.5, 0, 0.2, 1.2, 0.2));
+  const pier = new THREE.Mesh(mergeParts(P_), vcMat); pier.receiveShadow = true; pier.castShadow = true; world.add(pier);
+  // sahil koyu (kıyıda deniz kolonu): denizdeki çarpışma
+  addCollider(-28.4, -10.35, -13, -1.62); addCollider(-28.4, -10.35, 1.62, 13.4);
+  // Ege evleri
+  const H = [];
+  aegeanHouse(H, -5.6, -9.4, 4.2, 2.8, 3.2, 0, 0x1d6fb8); aegeanHouse(H, 3.2, -9.4, 3.0, 2.4, 2.8, 0, 0xff6f61);
+  aegeanHouse(H, -7.4, -14.8, 4.6, 3.2, 4.8, 0, 0x1d6fb8); aegeanHouse(H, 0.2, -14.8, 4.2, 3.2, 3.8, 0, 0x1d6fb8);
+  aegeanHouse(H, 12.2, -14.8, 4.4, 3.2, 4.2, 0, 0x1d6fb8); aegeanHouse(H, 18.6, -14.8, 4.4, 3.2, 3.2, 0, 0xff6f61);
+  aegeanHouse(H, -11.2, -9.6, 3.0, 2.8, 2.6, 0, 0xff6f61);
+  addCollider(-7.8, -3.4, -10.7, -7.7); addCollider(1.6, 4.8, -10.7, -8.1); addCollider(-9.2, -7.4, -11.2, -8.0);
+  const hm = new THREE.Mesh(mergeParts(H), vcMat); hm.castShadow = true; hm.receiveShadow = true; world.add(hm);
+  // yelkenliler (ufukta)
+  const S_ = []; [[-62, 6, 0.6, 0xff6f61], [-75, -8, 2.3, 0x1d6fb8], [-84, 18, 1.2, 0x1d6fb8], [-68, 28, 0.2, 0xff6f61], [-96, -2, 0.9, 0xff6f61], [-58, -26, 1.9, 0x1d6fb8]].forEach(a => sailboatParts(S_, a[0], a[1], a[2], 0.9, a[3]));
+  const sb = new THREE.Mesh(mergeParts(S_), vcMat); sb.userData.dyn = false; world.add(sb);
 }
 const BEACH = { foam: [] };
 function updateBeach(dt, t) { SEAT.value = t; for (const f of BEACH.foam) f.material.map.offset.x -= dt * 0.03; updateGulls(t); }
@@ -1332,20 +1364,19 @@ function grassTex() { // kum
   }
   x.lineCap = 'round';
   for (let i = 0; i < 220; i++) { const px = rand(0, 256), py = rand(0, 256); x.fillStyle = Math.random() < 0.5 ? 'rgba(150,110,60,.35)' : 'rgba(255,255,240,.5)'; x.beginPath(); x.arc(px, py, rand(0.8, 1.8), 0, TAU); x.fill(); }
-  for (let i = 0; i < 10; i++) { const px = rand(0, 256), py = rand(0, 256); x.fillStyle = i % 2 ? 'rgba(255,170,160,.7)' : 'rgba(255,255,255,.75)'; x.beginPath(); x.ellipse(px, py, 3.2, 2.2, rand(0, 3), 0, TAU); x.fill(); }
+  for (let i = 0; i < 14; i++) { const px = rand(0, 256), py = rand(0, 256); x.fillStyle = 'rgba(255,255,255,.55)'; x.beginPath(); x.ellipse(px, py, 3.0, 1.8, rand(0, 3), 0, TAU); x.fill(); }
   return canvasTex(c, [40, 40]);
 }
-function cobbleTex() { // kum taşı kaldırım
+function cobbleTex() { // beyaz kireç taşı yürüyüş yolu (mavi derzli)
   const c = cv(512, 512), x = c.getContext('2d');
-  x.fillStyle = '#8a7244'; x.fillRect(0, 0, 512, 512);
-  const cw = 64, ch = 64;
-  for (let r = 0; r < 8; r++) for (let q = -1; q < 8; q++) {
-    const ox = (r % 2) * 32, px = q * cw + ox + 3, py = r * ch + 3, g = Math.floor(Math.random() * 18);
-    x.fillStyle = 'rgb(' + (190 + g) + ',' + (168 + g) + ',' + (122 + g) + ')'; rrect(x, px, py, cw - 6, ch - 6, 14); x.fill();
-    x.strokeStyle = 'rgba(255,255,240,.45)'; x.lineWidth = 3; x.beginPath(); x.moveTo(px + 8, py + ch - 14); x.arcTo(px + 2, py + 2, px + cw - 10, py + 4, 12); x.lineTo(px + cw - 12, py + 5); x.stroke();
-    x.fillStyle = 'rgba(90,60,20,.10)'; x.fillRect(px + 6, py + ch - 14, cw - 18, 6);
+  x.fillStyle = '#7f9fb8'; x.fillRect(0, 0, 512, 512);
+  const cw = 128, ch = 64;
+  for (let r = 0; r < 8; r++) for (let q = -1; q < 5; q++) {
+    const ox = (r % 2) * 64, px = q * cw + ox + 3, py = r * ch + 3, g = Math.floor(Math.random() * 12);
+    x.fillStyle = 'rgb(' + (244 + g % 8) + ',' + (240 + g % 10) + ',' + (230 + g % 14) + ')'; rrect(x, px, py, cw - 6, ch - 6, 10); x.fill();
+    x.fillStyle = 'rgba(120,160,190,.10)'; x.fillRect(px + 6, py + ch - 14, cw - 18, 6);
   }
-  return canvasTex(c, [14, 9.5]);
+  return canvasTex(c, [7, 9.5]);
 }
 function dirtTex() { // ıslak kum
   const c = cv(128, 128), x = c.getContext('2d');
@@ -1366,10 +1397,9 @@ function buildGround() {
   };
   const edgeM = mat(0x9a6a30);
   const edged = (x0, x1, z0, z1) => { const m = new THREE.Mesh(G.plane, edgeM); m.rotation.x = -Math.PI / 2; m.scale.set(x1 - x0 + 0.5, z1 - z0 + 0.5, 1); m.position.set((x0 + x1) / 2, 0.006, (z0 + z1) / 2); m.receiveShadow = true; world.add(m); strip(x0, x1, z0, z1, 0.012); };
-  edged(-10.9, -9, -11, 11); edged(-17.3, -10.7, -5.3, -2.7); edged(-17.3, -10.7, 2.7, 5.3); edged(-17.3, -10.7, -13, -10.7);
   // plaza
   const cm = LM({ map: cobbleTex() });
-  FLOORM.push({ m: cm, rep: [14, 9.5], k: 0 });
+  FLOORM.push({ m: cm, rep: [7, 9.5], k: 0 });
   const plaza = new THREE.Mesh(G.plane, cm); plaza.rotation.x = -Math.PI / 2; plaza.scale.set(25.7, 17.7, 1); plaza.position.set(3.65, 0.02, 3.35); plaza.receiveShadow = true; world.add(plaza);
   // curbs
   const curbM = mat(0xf1e4c3);
@@ -1377,7 +1407,7 @@ function buildGround() {
     const w = x1 - x0, d = z1 - z0; const m = rbox(w, 0.2, d, 0.09, curbM); m.position.set((x0 + x1) / 2, 0.08, (z0 + z1) / 2); m.receiveShadow = true; world.add(m);
   };
   const cobM = LM({ map: cobbleTex() });
-  { const m = new THREE.Mesh(G.plane, cobM); m.rotation.x = -Math.PI / 2; m.scale.set(3.2, 34, 1); m.position.set(10, 0.02, 29); m.receiveShadow = true; world.add(m); cobM.map.repeat.set(14 * 3.2 / 25.7, 9.5 * 34 / 17.7); FLOORM.push({ m: cobM, rep: [14 * 3.2 / 25.7, 9.5 * 34 / 17.7], k: 0 });
+  { const m = new THREE.Mesh(G.plane, cobM); m.rotation.x = -Math.PI / 2; m.scale.set(3.2, 34, 1); m.position.set(10, 0.02, 29); m.receiveShadow = true; world.add(m); cobM.map.repeat.set(7 * 3.2 / 25.7, 9.5 * 34 / 17.7); FLOORM.push({ m: cobM, rep: [7 * 3.2 / 25.7, 9.5 * 34 / 17.7], k: 0 });
     for (const sx of [-1, 1]) { const cu = rbox(0.25, 0.2, 34, 0.09, curbM); cu.position.set(10 + sx * 1.7, 0.08, 29); world.add(cu); } }
   curb(-9.35, 16.65, -5.65, -5.4); curb(-9.35, -9.1, -5.65, 12.35); curb(16.4, 16.65, -5.65, 12.35);
   curb(-9.35, 8.3, 12.1, 12.35); curb(11.7, 16.65, 12.1, 12.35);
@@ -1398,10 +1428,6 @@ function buildFences() {
     for (let i = 0; i <= k; i++) addPost(lerp(x0, x1, i / k), lerp(z0, z1, i / k));
     rail(x0, z0, x1, z1);
   };
-  line(-20.5, -12.2, 1.6, -12.2, 1.4); line(9.2, -12.2, 20.5, -12.2, 1.4);
-  line(-20.5, -12.2, -20.5, 17, 1.4);
-  line(20.5, -12.2, 20.5, -6, 1.4);
-  line(20.5, 9, 20.5, 17, 1.4);
   post.count = n; cap.count = n; post.castShadow = true; world.add(post, cap);
   return { addPost, line, rail };
 }
@@ -1414,11 +1440,12 @@ function buildHedge(cx, cz, w, d, h) {
   return g;
 }
 
-function buildBush(x, z, s) {
+function buildBush(x, z, s) { // begonvil
   const t = new THREE.Group();
-  t.add(mk(G.sphT, mat(0x35b043), 0.8 * s, 0.6 * s, 0.8 * s, 0, 0.4 * s, 0));
-  t.add(mk(G.sphT, mat(0x45c552), 0.55 * s, 0.45 * s, 0.55 * s, 0.6 * s, 0.3 * s, 0.2 * s));
-  t.add(mk(G.sphT, mat(0x45c552), 0.5 * s, 0.4 * s, 0.5 * s, -0.55 * s, 0.28 * s, -0.15 * s));
+  t.add(mk(G.sphT, mat(0x2f9a4a), 0.8 * s, 0.6 * s, 0.8 * s, 0, 0.4 * s, 0));
+  t.add(mk(G.sphT, mat(0xe0307a), 0.6 * s, 0.5 * s, 0.6 * s, 0.35 * s, 0.62 * s, 0.1 * s));
+  t.add(mk(G.sphT, mat(0xff4f9a), 0.5 * s, 0.42 * s, 0.5 * s, -0.4 * s, 0.55 * s, -0.12 * s));
+  t.add(mk(G.sphT, mat(0xc21f6a), 0.35 * s, 0.3 * s, 0.35 * s, 0.05 * s, 0.9 * s, -0.1 * s));
   t.position.set(x, 0, z); shadowAll(t, true, false); world.add(t);
 }
 
@@ -1468,33 +1495,27 @@ function growFlower(f) {
 }
 function buildBed(idx) {
   const p = POS.beds[idx], bed = { idx, x: p.x, z: p.z, locked: idx === 2, flowers: [], group: new THREE.Group() };
-  poolRim(world, p.x, p.z, 6.6, 5.4, 0.27); poolWater(world, p.x, p.z, 6.5, 5.3, 0.23);
-  for (let r = 0; r < 5; r++) for (let c = 0; c < 7; c++) {
+  poolWater(world, p.x, p.z, 8.4, 3.9, 0.07);
+  for (let r = 0; r < 3; r++) for (let c = 0; c < 8; c++) {
     const ty = idx === 0 ? 'tulip' : idx === 1 ? 'rose' : ((r + c) % 2 ? 'rose' : 'tulip');
-    const fx = p.x + (c - 3) * 0.95, fz = p.z + (r - 2) * 0.98; const f = newFlower(bed, r + c + idx, ty, fx, 0.2, fz, rand(0, CFG.growTime), CFG.growTime); f.vis = idx !== 2;
+    const fx = p.x + (c - 3.5) * 0.95, fz = p.z + (r - 1) * 1.0; const f = newFlower(bed, r + c + idx, ty, fx, 0.2, fz, rand(0, CFG.growTime), CFG.growTime); f.vis = idx !== 2;
     bed.flowers.push(f);
   }
   if (idx === 2) {
     // locked overlay: grey tint, fence ring, lock sign
     const ov = new THREE.Mesh(G.plane, new THREE.MeshBasicMaterial({ color: lc(0x9c8556), transparent: true, opacity: 0.85, depthWrite: false }));
-    ov.rotation.x = -Math.PI / 2; ov.scale.set(6.6, 5.4, 1); ov.position.set(p.x, 0.27, p.z); ov.renderOrder = 3;
+    ov.rotation.x = -Math.PI / 2; ov.scale.set(8.6, 4.1, 1); ov.position.set(p.x, 0.12, p.z); ov.renderOrder = 3;
     bed.group.add(ov);
-    const fm = mat(0xffffff);
-    const addF = (x0, z0, x1, z1) => {
-      const len = Math.hypot(x1 - x0, z1 - z0), k = Math.round(len / 0.9);
-      for (let i = 0; i <= k; i++) { const px = lerp(x0, x1, i / k), pz = lerp(z0, z1, i / k); const po = mk(G.box, fm, 0.2, 1.0, 0.2, px, 0.5, pz); po.castShadow = true; bed.group.add(po); }
-      for (const y of [0.35, 0.75]) { const r = mk(G.box, fm, Math.abs(x1 - x0) || 0.1, 0.1, Math.abs(z1 - z0) || 0.1, (x0 + x1) / 2, y, (z0 + z1) / 2); r.castShadow = true; bed.group.add(r); }
-    };
-    const hx = 3.5, hz = 2.9;
-    addF(p.x - hx, p.z - hz, p.x + hx, p.z - hz); addF(p.x - hx, p.z + hz, p.x + hx, p.z + hz);
-    addF(p.x - hx, p.z - hz, p.x - hx, p.z + hz); addF(p.x + hx, p.z - hz, p.x + hx, p.z + hz);
-    const sg = makeBoard('KİLİTLİ', 2.4, 0.8, 'wood'); sg.position.set(p.x + 3.6, 1.3, p.z + 0.0); sg.rotation.y = Math.PI / 2 * 0.0; sg.scale.setScalar(0.9); bed.group.add(sg);
+    const bm1 = mat(0xff5a3a), bm2 = mat(0xffffff), hx = 4.3, hz = 2.0;
+    const buoy = (x, z, i) => { const bb = mk(G.sph, i % 2 ? bm1 : bm2, 0.3, 0.3, 0.3, x, 0.22, z); bed.group.add(bb); };
+    let bi = 0; for (let x = -hx; x <= hx + 0.01; x += 0.86) { buoy(p.x + x, p.z - hz, bi++); buoy(p.x + x, p.z + hz, bi++); } for (let z = -hz + 0.8; z < hz; z += 0.8) { buoy(p.x - hx, p.z + z, bi++); buoy(p.x + hx, p.z + z, bi++); }
+    const sg = makeBoard('KİLİTLİ', 2.4, 0.8, 'wood'); sg.position.set(p.x, 1.4, p.z - 2.2); sg.rotation.y = Math.PI / 2 * 0.0; sg.scale.setScalar(0.9); bed.group.add(sg);
     const lk = makeSprite(128, 128, (ctx) => {
       ctx.fillStyle = '#ffb703'; ctx.strokeStyle = '#7a4a00'; ctx.lineWidth = 8; rrect(ctx, 24, 56, 80, 62, 14); ctx.fill(); ctx.stroke();
       ctx.beginPath(); ctx.arc(64, 56, 24, Math.PI, 0); ctx.stroke(); ctx.fillStyle = '#7a4a00'; ctx.beginPath(); ctx.arc(64, 84, 8, 0, TAU); ctx.fill();
-    }, 1.8, 1.8, false); lk.position.set(p.x, 2.3, p.z); bed.group.add(lk);
+    }, 1.8, 1.8, false); lk.position.set(p.x, 2.5, p.z + 0.2); bed.group.add(lk);
     world.add(bed.group);
-    bed.collider = addCollider(p.x - 3.7, p.x + 3.7, p.z - 3.1, p.z + 3.1, () => bed.locked);
+    
     bed.flowers.forEach(f => { f.t = 0; f.vis = false; });
   }
   beds.push(bed);
@@ -1502,7 +1523,7 @@ function buildBed(idx) {
 }
 function unlockBed(bed, instant) {
   bed.locked = false; bed.group.visible = !!instant ? false : true; bed.flowers.forEach(f => { f.vis = true; f.t = instant ? rand(0, f.gt) : 0; });
-  if (!instant) { bed.group.visible = true; bed.dropping = 0; confetti(bed.x, 1.5, bed.z, 50); for (let i = 0; i < 14; i++) dust(bed.x + rand(-3.2, 3.2), 0.3, bed.z + rand(-2.6, 2.6), 2, 0.8); ring(bed.x, bed.z, 0x7dff7a, 7); 0; }
+  if (!instant) { bed.group.visible = true; bed.dropping = 0; confetti(bed.x, 1.5, bed.z, 50); for (let i = 0; i < 14; i++) dust(bed.x + rand(-3.2, 3.2), 0.3, bed.z + rand(-1.6, 1.6), 2, 0.8); ring(bed.x, bed.z, 0x7dff7a, 7); 0; }
 }
 
 /* ---- furniture: tables, machine, counter ---- */
@@ -1574,21 +1595,20 @@ function buildStations() {
   // back wall with shelves
   const wall = rbox(bw, 2.5, 0.18, 0.05, WM); wall.position.set(bcx, 1.25, -4.85); wall.castShadow = wall.receiveShadow = true; world.add(wall);
   for (const sy of [1.35, 2.05]) { const sh = rbox(bw - 0.6, 0.08, 0.55, 0.03, light); sh.position.set(bcx, sy, -4.55); sh.castShadow = true; world.add(sh); }
-  const roll = [0xff9ec4, 0xe0a868, 0x9fe0c0, 0xfff0d6, 0xff6fa5, 0xb9a0ff, 0xe0a868, 0xffd23f];
-  roll.forEach((c, i) => { const rx = BX0 + 0.9 + i * 1.3, rl = mk(G.cyl, mat(c), 0.17, 0.5, 0.17, rx, 1.65, -4.5); world.add(rl); const rl2 = mk(G.cyl, mat(roll[(i + 3) % 8]), 0.17, 0.5, 0.17, rx + 0.4, 2.35, -4.5); world.add(rl2); });
-  for (let i = 0; i < 4; i++) pot(BX0 + 1.5 + i * 2.8, -4.5, i % 2 ? 'rose' : 'tulip', i);
+  for (let i = 0; i < 6; i++) { const lx = BX0 + 1.0 + i * 2.0; world.add(mk(G.sph, mat(i % 2 ? 0xff6f61 : 0xfdfcf6), 0.28, 0.28, 0.28, lx, 3.7, -3.2)); world.add(mk(G.cyl, mat(0x2d3a45), 0.01, 0.5, 0.01, lx, 3.95, -3.2)); }
+  for (const [cx, cz] of [[BX0 + 1.4, -4.4], [BX0 + 3.6, -4.4], [BX1 - 1.6, -4.4]]) { world.add(mk(G.box, mat(0xfdfcf6), 1.1, 0.55, 0.8, cx, 0.28, cz)); world.add(mk(G.box, mat(0x1d6fb8), 1.12, 0.1, 0.82, cx, 0.58, cz)); }
   // posts + awning roof (back lean-to so the worker stays visible)
   for (const px of [BX0 + 0.1, BX1 - 0.1]) { const po = mk(G.cyl, mat(0xffffff), 0.1, 4.2, 0.1, px, 2.1, -4.2); po.castShadow = true; world.add(po); }
-  const roof = new THREE.Mesh(new THREE.BoxGeometry(bw + 0.8, 0.14, 2.4), LM({ map: awningTex('#0aa89a', '#ffffff') }));
+  const roof = new THREE.Mesh(new THREE.BoxGeometry(bw + 0.8, 0.14, 2.4), LM({ map: awningTex('#1d6fb8', '#ffffff') }));
   roof.material.map.repeat.set(2, 1); roof.material.map.wrapS = THREE.RepeatWrapping;
   roof.position.set(bcx, 4.15, -3.95); roof.rotation.x = -0.1; roof.castShadow = true; world.add(roof);
-  const sgn = makeBoard('PAKETLEME', 4.6, 1.0, 'wood'); sgn.position.set(bcx, 5.05, -2.95); sgn.rotation.x = -0.25; world.add(sgn); roof.userData.dyn = sgn.userData.dyn = true; STREF.pack = [roof, sgn];
+  const sgn = makeBoard('TEMİZLEME', 4.6, 1.0, 'wood'); sgn.position.set(bcx, 5.05, -2.95); sgn.rotation.x = -0.25; world.add(sgn); roof.userData.dyn = sgn.userData.dyn = true; STREF.pack = [roof, sgn];
   // ---- machine / wrapping area
   const mg = new THREE.Group(); mg.position.set(machine.x, TABLE_Y, machine.z); world.add(mg); machine.group = mg;
   mg.add(mk(G.box, mat(0xe0a868), 1.5, 0.03, 1.0, 0, 0.02, 0.15));
-  mg.add(mk(G.box, mat(0xff9ec4), 1.0, 0.03, 0.8, 0, 0.045, 0.2));
+  mg.add(mk(G.box, mat(0xbfe9ff), 1.0, 0.03, 0.8, 0, 0.045, 0.2));
   const rl = mk(G.cyl, mat(0xe0a868), 0.24, 0.9, 0.24, 0, 0.35, -0.45); rl.rotation.z = Math.PI / 2; mg.add(rl);
-  const rl2 = mk(G.cyl, mat(0xff9ec4), 0.18, 0.95, 0.18, 0, 0.35, -0.45); rl2.rotation.z = Math.PI / 2; mg.add(rl2);
+  const rl2 = mk(G.cyl, mat(0x7fd3f0), 0.18, 0.95, 0.18, 0, 0.35, -0.45); rl2.rotation.z = Math.PI / 2; mg.add(rl2);
   for (const sx of [-1, 1]) mg.add(mk(G.box, dark, 0.08, 0.55, 0.08, sx * 0.55, 0.28, -0.45));
   [[0xe8283c, 0.95, 0.4], [0xff6fa5, 1.25, 0.25], [0xffd23f, 0.95, -0.05]].forEach(([c, x, z]) => { mg.add(mk(G.cyl, mat(c), 0.14, 0.2, 0.14, x, 0.1, z)); mg.add(mk(G.cyl, mat(0xfff0d6), 0.05, 0.22, 0.05, x, 0.1, z)); });
   const sc1 = mk(G.box, mat(0xd0d6dc), 0.5, 0.02, 0.05, -1.0, 0.04, 0.5); sc1.rotation.y = 0.5; mg.add(sc1);
@@ -1611,32 +1631,31 @@ function buildStations() {
     const cx = 2, cz = 3, per = cx * cz, l = Math.floor(i / per), r = i % per;
     out.set(ip.x + ((r % cx) - 0.5) * 0.78, TABLE_Y + 0.66 + l * 0.27, ip.z + (Math.floor(r / cx) - 1) * 0.46);
   }, CFG.inputCap);
-  const s1 = makeBoard('BALIKLAR', 1.5, 0.45, 'wood'); s1.position.set(ip.x, TABLE_Y + 1.3, ip.z - 0.9); s1.rotation.x = -0.15; world.add(s1);
+  const s1 = makeBoard('HAM BALIK', 1.5, 0.45, 'wood'); s1.position.set(ip.x, TABLE_Y + 1.3, ip.z - 0.9); s1.rotation.x = -0.15; world.add(s1);
   // ---- output tray
   const ot = POS.outTable;
   const tray = rbox(3.5, 0.08, 1.9, 0.03, mat(0xf5d9a8)); tray.position.set(ot.x, TABLE_Y + 0.04, ot.z); tray.receiveShadow = true; world.add(tray);
   for (const [sx, sz, wx, wz] of [[0, 0.95, 3.5, 0.08], [0, -0.95, 3.5, 0.08], [1.75, 0, 0.08, 1.9], [-1.75, 0, 0.08, 1.9]]) { const rr = mk(G.box, WM, wx, 0.16, wz, ot.x + sx, TABLE_Y + 0.1, ot.z + sz); world.add(rr); }
-  const s2 = makeBoard('PAKETLER', 1.7, 0.45, 'wood'); s2.position.set(ot.x, TABLE_Y + 1.35, ot.z - 0.9); s2.rotation.x = -0.15; world.add(s2);
+  const s2 = makeBoard('BUZLU KASA', 1.7, 0.45, 'wood'); s2.position.set(ot.x, TABLE_Y + 1.35, ot.z - 0.9); s2.rotation.x = -0.15; world.add(s2);
   outputPile = new Stack(scene, (i, out) => {
     const per = 8, l = Math.floor(i / per), r = i % per;
     out.set(ot.x + ((r % 4) - 1.5) * 0.86 + l * 0.0, TABLE_Y + 0.4 + l * 0.7, ot.z + (Math.floor(r / 4) - 0.5) * 0.85);
   }, CFG.outputCap);
   // ---- flower shop kiosk
-  const ct = POS.counter, blue = mat(0x1747d6), cw = mat(0xf7f2e6);
+  const ct = POS.counter, blue = mat(0x1d6fb8), cw = mat(0xf7f2e6);
   const back = rbox(5.2, 3.0, 0.22, 0.05, mat(0xfff0d6)); back.position.set(ct.x, 1.5, ct.z - 1.15); back.castShadow = back.receiveShadow = true; world.add(back);
   for (const sy of [1.5, 2.2]) { const sh = rbox(4.4, 0.07, 0.4, 0.02, light); sh.position.set(ct.x, sy, ct.z - 0.9); world.add(sh); }
-  [0, 1, 2, 3].forEach(i => pot(ct.x - 1.65 + i * 1.1, ct.z - 0.9, i % 2 ? 'rose' : 'tulip', i)); 
+  for (let i = 0; i < 4; i++) world.add(mk(G.box, mat(i % 2 ? 0xe8f6fc : 0xcfeeff), 0.8, 0.5, 0.5, ct.x - 1.65 + i * 1.1, 1.52, ct.z - 0.95));
   const cb = rbox(4.4, 1.1, 1.4, 0.3, blue); cb.position.set(ct.x, 0.55, ct.z); cb.castShadow = cb.receiveShadow = true; world.add(cb);
   for (const sx of [-1, 1]) { const e = mk(G.cyl, blue, 0.78, 1.1, 0.78, ct.x + sx * 2.2, 0.55, ct.z); e.castShadow = true; world.add(e); world.add(mk(G.cyl, cw, 0.86, 0.14, 0.86, ct.x + sx * 2.2, 1.14, ct.z)); }
   const ctop = rbox(4.5, 0.14, 1.7, 0.06, cw); ctop.position.set(ct.x, 1.14, ct.z); ctop.castShadow = true; world.add(ctop);
-  for (let i = 0; i < 5; i++) { const st = mk(G.box, mat(i % 2 ? 0x3d7dff : 0x0d2fa0), 0.3, 0.9, 0.03, ct.x - 1.6 + i * 0.8, 0.58, ct.z + 0.72); world.add(st); }
+  for (let i = 0; i < 5; i++) { const st = mk(G.box, mat(i % 2 ? 0xffffff : 0x1d6fb8), 0.3, 0.9, 0.03, ct.x - 1.6 + i * 0.8, 0.58, ct.z + 0.72); world.add(st); }
   const reg = new THREE.Group(); reg.position.set(ct.x - 1.75, 1.21, ct.z);
   reg.add(mk(G.box, mat(0x444c55), 0.7, 0.3, 0.55, 0, 0.15, 0)); const scr = mk(G.box, mat(0x66f07a), 0.4, 0.22, 0.05, 0, 0.45, 0.1); scr.rotation.x = -0.4; reg.add(scr); reg.add(mk(G.box, mat(0xd0d6dc), 0.5, 0.06, 0.3, 0, 0.32, 0.25)); world.add(reg);
-  bucket(ct.x - 3.1, ct.z + 0.4, ['tulip']); bucket(ct.x - 3.1, ct.z - 0.6, ['rose']); bucket(ct.x + 3.2, ct.z + 0.9, ['tulip', 'rose']);
-  const aw = new THREE.Mesh(new THREE.BoxGeometry(5.4, 0.12, 2.3), LM({ map: awningTex('#e8142e', '#ffffff') }));
+  const aw = new THREE.Mesh(new THREE.BoxGeometry(5.4, 0.12, 2.3), LM({ map: awningTex('#ff6f61', '#ffffff') }));
   aw.position.set(ct.x, 3.15, ct.z - 0.3); aw.rotation.x = -0.12; aw.castShadow = true; world.add(aw);
   for (const sx of [-1, 1]) { const po = mk(G.cyl, mat(0xffffff), 0.08, 3.1, 0.08, ct.x + sx * 2.6, 1.55, ct.z + 0.8); po.castShadow = true; world.add(po); }
-  const cs = makeBoard('BALIK PAZARI', 3.4, 0.9, 'chalk'); cs.position.set(ct.x, 4.2, ct.z - 0.55); cs.rotation.x = -0.25; world.add(cs); aw.userData.dyn = cs.userData.dyn = true; STREF.flo = [aw, cs];
+  const cs = makeBoard('BALIK TEZGAHI', 3.6, 0.9, 'wood'); cs.position.set(ct.x, 4.2, ct.z - 0.55); cs.rotation.x = -0.25; world.add(cs); aw.userData.dyn = cs.userData.dyn = true; STREF.flo = [aw, cs];
   addCollider(ct.x - 2.7, ct.x + 2.7, ct.z - 1.2, ct.z + 0.95);
   // queue stanchions with rope along the street side
   const stan = (x, z) => { const g = new THREE.Group(); g.position.set(x, 0, z); g.add(mk(G.cyl, mat(0xc9a227), 0.2, 0.05, 0.2, 0, 0.03, 0)); g.add(mk(G.cyl, mat(0xe8c64a), 0.05, 0.95, 0.05, 0, 0.5, 0)); g.add(mk(G.sph, mat(0xe8c64a), 0.1, 0.1, 0.1, 0, 1.0, 0)); g.traverse(m => { if (m.isMesh) m.castShadow = true; }); world.add(g); };
@@ -1655,7 +1674,7 @@ function buildStations() {
   // counter shelf (tezgah rafı): upright products on the counter top
   shelfB = new Stack(scene, (i, out) => { const r = i % 6; out.set(ct.x - 1.35 + (r % 3) * 0.62, 1.55, ct.z + (Math.floor(r / 3) - 0.5) * 0.62); }, 6); shelfB.pend = 0;
   shelfP = new Stack(scene, (i, out) => { const r = i % 6; out.set(ct.x + 0.55 + (r % 3) * 0.62, 1.55, ct.z + (Math.floor(r / 3) - 0.5) * 0.62); }, 6); shelfP.pend = 0;
-  for (const [px, col] of [[ct.x - 0.75, 0xff6fa5], [ct.x + 1.15, 0xa64dff]]) { const pl = rbox(1.95, 0.05, 1.45, 0.02, mat(col)); pl.position.set(px, 1.24, ct.z); world.add(pl); }
+  for (const [px, col] of [[ct.x - 0.75, 0x7fd3f0], [ct.x + 1.15, 0xffd6a0]]) { const pl = rbox(1.95, 0.05, 1.45, 0.02, mat(col)); pl.position.set(px, 1.24, ct.z); world.add(pl); }
 }
 
 /* =====================================================================
@@ -1943,24 +1962,6 @@ function updateVan(dt, t) {
 }
 
 function buildDecor() {
-  // greenhouse next to the garden
-  const gh = new THREE.Group(); gh.position.set(-5.6, 0, -9.2);
-  const glass = LM({ color: lc(0xbfe8f5), transparent: true, opacity: 0.32, depthWrite: false });
-  gh.add(mk(G.box, glass, 4.2, 2.2, 2.8, 0, 1.1, 0));
-  const roofG = new THREE.Mesh(new THREE.CylinderGeometry(1.5, 1.5, 4.2, 3, 1), glass); roofG.rotation.z = Math.PI / 2; roofG.rotation.x = 0; roofG.position.y = 2.65; roofG.scale.set(1, 1, 1); gh.add(roofG);
-  const fr = mat(0xffffff);
-  for (const sx of [-1, 0, 1]) for (const sz of [-1, 1]) gh.add(mk(G.box, fr, 0.08, 2.2, 0.08, sx * 2.1, 1.1, sz * 1.4));
-  for (const sz of [-1, 1]) { gh.add(mk(G.box, fr, 4.3, 0.08, 0.08, 0, 2.2, sz * 1.4)); gh.add(mk(G.box, fr, 4.3, 0.08, 0.08, 0, 0.05, sz * 1.4)); }
-  for (const sx of [-1, 1]) { gh.add(mk(G.box, fr, 0.08, 0.08, 2.9, sx * 2.1, 2.2, 0)); gh.add(mk(G.box, fr, 0.08, 0.08, 2.9, sx * 2.1, 0.05, 0)); }
-  gh.add(mk(G.box, dark2(), 3.2, 0.5, 0.7, 0, 0.25, -0.6));
-  for (let i = 0; i < 5; i++) { const ty = i % 2 ? 'rose' : 'tulip'; const st = new THREE.Mesh(stemGeo(ty), vcMat), bl = new THREE.Mesh(bloomGeo(ty, i), vcMat); st.position.set(-1.3 + i * 0.65, 0.5, -0.6); bl.position.set(-1.3 + i * 0.65, 0.5 + STEM_H, -0.6); gh.add(st, bl); }
-  world.add(gh); addCollider(-7.8, -3.4, -10.7, -7.7);
-  // wooden shed
-  const sh = new THREE.Group(); sh.position.set(3.2, 0, -9.4);
-  sh.add(rbox(3.0, 2.0, 2.4, 0.06, woodM())).children[0].position.y = 1.0;
-  const rf = mk(G.box, mat(0xc0392b), 3.5, 0.14, 1.7, 0, 2.35, -0.55); rf.rotation.x = 0.55; sh.add(rf); const rf2 = mk(G.box, mat(0xc0392b), 3.5, 0.14, 1.7, 0, 2.35, 0.55); rf2.rotation.x = -0.55; sh.add(rf2);
-  sh.add(mk(G.box, mat(0x6b3e1d), 0.9, 1.4, 0.06, 0, 0.7, 1.22));
-  sh.traverse(m => { if (m.isMesh) m.castShadow = true; }); world.add(sh); addCollider(1.6, 4.8, -10.7, -8.1);
   // lamp posts
   const lamp = (x, z) => { GLOWS.push([x, z, 3.4]); const g = new THREE.Group(); g.position.set(x, 0, z); g.add(mk(G.cyl, mat(0x2d3a45), 0.09, 3.2, 0.09, 0, 1.6, 0)); g.add(mk(G.cyl, mat(0x2d3a45), 0.2, 0.15, 0.2, 0, 0.08, 0)); g.add(mk(G.sph, LAMPM, 0.26, 0.3, 0.26, 0, 3.3, 0)); g.traverse(m => { if (m.isMesh) m.castShadow = true; }); world.add(g); };
   [[-9.3, -5.2], [16.2, -5.2], [-9.3, 12], [7.9, 12.0], [12.1, 12.0], [16.2, 12]].forEach(a => lamp(a[0], a[1]));
@@ -1980,8 +1981,6 @@ function buildDecor() {
   const bench = (x, z, ry) => { const g = new THREE.Group(); g.position.set(x, 0, z); g.rotation.y = ry; g.add(mk(G.box, woodM(), 2.0, 0.1, 0.6, 0, 0.5, 0)); g.add(mk(G.box, woodM(), 2.0, 0.5, 0.08, 0, 0.85, -0.28)); for (const sx of [-0.85, 0.85]) g.add(mk(G.box, mat(0x2d3a45), 0.08, 0.5, 0.5, sx, 0.25, 0)); g.traverse(m => { if (m.isMesh) m.castShadow = true; }); world.add(g); };
   bench(15.0, 6.2, -Math.PI / 2); bench(-1.5, 11.6, Math.PI);
   addCollider(14.4, 15.6, 5.1, 7.3);
-  // flower pots along edges
-  [[-8.6, -5.0, 'tulip', 0], [-6.8, -5.0, 'rose', 1], [4.6, -5.0, 'rose', 2], [6.4, -5.0, 'tulip', 3], [15.4, -5.0, 'rose', 0], [-8.7, 6.0, 'tulip', 1], [-8.7, 10.4, 'rose', 3], [15.7, 10.5, 'tulip', 2], [15.7, 8.8, 'rose', 1]].forEach(a => pot(a[0], a[1], a[2], a[3]));
   const cp2 = carpet2 = new THREE.Mesh(G.plane, LM({ color: lc(0x1b5f7a) })); cp2.rotation.x = -Math.PI / 2; cp2.scale.set(10.6, 3.5, 1); cp2.position.set(0.4, 0.03, POS.upgradeZ2); cp2.receiveShadow = true; world.add(cp2);
   // upgrade area carpet
   const cp = carpet1 = new THREE.Mesh(G.plane, LM({ color: lc(0x1b5f7a), transparent: true, opacity: 1 })); cp.rotation.x = -Math.PI / 2; cp.scale.set(16.2, 3.7, 1); cp.position.set(1.2, 0.03, POS.upgradeZ); cp.receiveShadow = true; world.add(cp);
@@ -2060,7 +2059,7 @@ function buildZones() {
   moneyZone.label.visible = false;
   const z = POS.upgradeZ, z2 = POS.upgradeZ2, L = S.lv;
   const mk_ = (key, x, zz, icon, vis) => { const u = new UpgradePad(key, x, zz, icon); u.vis = vis || null; upPads[key] = u; return u; };
-  mk_('bed', -8.2, POS.beds[2].z, iconBed);
+  mk_('bed', -8.4, -7.6, iconBed);
   mk_('sera', 17.0, 2.4, iconSera);
   buildSeraZones(); buildVanZones();
   mk_('van', 17.8, 14.6, iconVan);
@@ -2127,7 +2126,7 @@ function updateHelper(dt, t) {
         if (!f && h.stack.length === 0 && h.incoming === 0 && zone2 && !zone2.locked) { const k2 = h.kind === 'orchid' ? 'flower' : 'orchid'; f = pickT(k2); if (f) h.kind = k2; } // tercih edilen tür yoksa diğerine geç (kilitlenme önlemi)
         if (f) claimF(f, h);
       }
-      if (h.target) { tx = h.target.x; tz = h.target.z; h.idle = 0; }
+      if (h.target) { if (isFishT(h.target.type) && !h.tr) { tx = clamp(h.target.x, -26.5, -11.5); tz = h.target.z < 0 ? -0.9 : 0.9; } else { tx = h.target.x; tz = h.target.z; } h.idle = 0; }
       else { h.idle += dt; if (h.idle > 1.2 && h.stack.length > 0) h.state = 'deliver'; }
     }
   } else if (h.state === 'deliver') {
@@ -2139,14 +2138,14 @@ function updateHelper(dt, t) {
   let mv = 0, dx = 0, dz = 0;
   if (tx !== null) {
     dx = tx - h.group.position.x; dz = tz - h.group.position.z; const d = Math.hypot(dx, dz);
-    const fishT = h.target && isFishT(h.target.type) && !h.tr, stop = fishT ? 1.5 : 0.35;
+    const fishT = h.target && isFishT(h.target.type) && !h.tr, stop = fishT ? 0.25 : 0.35;
     if (d > stop) { const st = Math.min(d, spd * dt); h.group.position.x += dx / d * st; h.group.position.z += dz / d * st; h.vel.set(dx / d * spd, 0, dz / d * spd); mv = 1; }
     else h.vel.set(0, 0, 0);
   } else h.vel.set(0, 0, 0);
-  if (mv) faceChar(h, dx, dz, dt); else if (h.target && tx !== null) faceChar(h, dx, dz, dt);
+  if (mv) faceChar(h, dx, dz, dt); else if (h.target) faceChar(h, h.target.x - h.group.position.x, h.target.z - h.group.position.z, dt);
   const hFish = !!(h.state === 'seek' && h.target && isFishT(h.target.type) && !h.tr && !mv); h._rodOn = hFish;
   h.cd -= dt;
-  if (h.state === 'seek' && h.target && h.cd <= 0 && Math.hypot(h.target.x - h.group.position.x, h.target.z - h.group.position.z) < (isFishT(h.target.type) && !h.tr ? 1.9 : 0.9) && h.free() > 0) {
+  if (h.state === 'seek' && h.target && h.cd <= 0 && Math.hypot(h.target.x - h.group.position.x, h.target.z - h.group.position.z) < (isFishT(h.target.type) && !h.tr ? 4.6 : 0.9) && h.free() > 0) {
     if (isFishT(h.target.type) && !h.tr) { if (h.rod && h.rod.k > 0.5 && h.rod.cast > 0.45) { fishSplash(h.target); h.rod.jerk = 1; harvest(h.target, h); h.target = null; h.cd = 0.55 / (1 + 0.15 * S.lv.helpSpd); } }
     else { harvest(h.target, h); h.target = null; h.cd = 0.12; }
   }
@@ -5121,15 +5120,9 @@ function initGatePad() {
 }
 
 buildGround(); buildBeach(); buildFences();
-// hedges around beds (east side open to the plaza)
-buildHedge(-17.85, 0, 0.8, 23.2, 0.95);
-buildHedge(-14, -11.35, 7.4, 0.8, 0.95);
-buildHedge(-14, 11.35, 7.4, 0.8, 0.95);
 // plaza edge hedges / bushes
-buildHedge(13.6, 12.9, 4.2, 0.9, 0.9); buildHedge(5.2, 12.9, 6.4, 0.9, 0.9);
-for (const [x, z, s] of [[-18, -9, 1], [-6, -9.5, 1.2], [0.5, -9, 1], [13, -8.5, 1.2], [-19.2, 13, 1], [18.5, 13, 1.1], [6, 13.4, 0.9]]) buildBush(x, z, s);
-for (const [x, z, s] of [[-24, 3, 1.3], [-24, 14, 1.6], [-15, 19, 1.4], [-26, -3, 1.6], [-23, -9, 1.5]]) buildTree(x, z, s);
-buildDecorFlowers();
+for (const [x, z, s] of [[-9.5, -8.6, 1.1], [0.6, -8.6, 1.0], [13, -8.5, 1.2], [18.5, 13, 1.1], [6, 13.4, 0.9], [-9.4, 13.2, 1.0], [15.5, -7.2, 0.9]]) buildBush(x, z, s);
+for (const [x, z, s] of [[-9.2, 16, 1.3], [-12, 19, 1.6], [-26, 16.5, 1.4], [-24, -14.5, 1.6]]) buildTree(x, z, s);
 for (let i = 0; i < 3; i++) buildBed(i);
 buildStations(); buildDecor(); buildSera(); buildVan(); buildZones(); buildPlayer(); LANES.bouquet = shelfB; LANES.pot = shelfP; buildExpansion(); buildLanes(); buildC3(); finalizeWorld();
 initGatePad();
@@ -5165,7 +5158,7 @@ for (const k in upPads) { const u = upPads[k]; if (!u.done) { u.group.visible = 
 
 /* ---- pad çakışma denetimi: pad dikdörtgeni prop/collider ile kesişiyorsa en yakın boş yere taşınır ---- */
 function allPads() { const l = []; for (const k in upPads) l.push(upPads[k]); for (const c of CPADS) if (!c.o.dead) l.push(c); return l; }
-function roadsList() { return [[3.45, 7.35, -172, -11.5], [8.3, 11.7, 12, 47], [-11.1, -8.9, -11, 11], [-17.5, -10.5, -5.5, -2.5], [-17.5, -10.5, 2.5, 5.5], [-17.5, -10.5, -13.2, -10.5]]; } // sokak, minibüs yolu, toprak patikalar
+function roadsList() { return [[3.45, 7.35, -172, -11.5], [8.3, 11.7, 12, 47], [-10.4, -9.0, -1.5, 1.5]]; } // sokak, minibüs yolu, toprak patikalar
 function bedRect(b) { return b.rc || (b.rc = (() => { let x0 = 1e9, x1 = -1e9, z0 = 1e9, z1 = -1e9; for (const f of b.flowers) { x0 = Math.min(x0, f.x); x1 = Math.max(x1, f.x); z0 = Math.min(z0, f.z); z1 = Math.max(z1, f.z); } return [x0 - 0.8, x1 + 0.8, z0 - 0.8, z1 + 0.8]; })()); }
 function padOnRoadOK(p) { return !!(p.key && (EXTZ[p.key] || p.key === 'sera' || p.key === 'van' || p.key === 'coll')); } // bölge açma pad'leri sokak üstünde durur
 function padHits(p, x, z, others) {
