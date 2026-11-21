@@ -13,4 +13,5 @@ const r=await page.evaluate(()=>{const g=__game,st=g.stats,o={};for(const k in s
 console.log(JSON.stringify(r));console.log(errs);
 const bad=[];if(r.stalls)bad.push('stalls');if(!r.citySold)bad.push('city');if(!r.cafeServed)bad.push('tea');for(const k of ['s_bouquet','s_pot','s_sachet','s_perfume','s_sbq','s_honey','s_bonsai'])if(!r.sold[k])bad.push(k);if(errs.length)bad.push('errors');
 if(!r.cityBy.c_perfume)bad.push('city perfume');if(!r.busItems)bad.push('bus');if(TR&&r.tr<5)bad.push('tractors '+r.tr);
-console.log(bad.length?'FAIL '+bad:'PASS');await b.close();process.exit(bad.length?1:0)})();
+await b.close();{const o=require('child_process').spawnSync('node',[__dirname+'/osc.js'],{env:Object.assign({},process.env,{SEC:'120'}),encoding:'utf8'});console.log(o.stdout.split('\n').slice(-2).join(' '));if(o.status)bad.push('oscillation');}
+console.log(bad.length?'FAIL '+bad:'PASS');process.exit(bad.length?1:0)})();
