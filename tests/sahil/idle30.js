@@ -1,7 +1,7 @@
 // 30 sim dakika, tüm çalışanlar alınmış + max yükseltme. TR=1: tüm toplayıcılar traktöre evrilmiş. NOHELP=1: sadece temel (yeni) çalışanlar.
 const h=require('./h.js');
 (async()=>{const TR=process.env.TR==='1';
-const {b,page,errs}=await h.open({q:'low',fixture:__dirname+'/../max.json',wait:1500,patch:sv=>{Object.assign(sv.lv,{wedW:1,portSpd:1,portCap:1,beeW:1,bonW:1,portW:1,cityW:1,cafeW:1,sunW:1,parfW:1,lavW:1,cafeG:1,
+const {b,page,errs}=await h.open({q:'low',fixture:process.env.FIX||__dirname+'/../max.json',wait:1500,patch:sv=>{Object.assign(sv.lv,{wedW:1,portSpd:1,portCap:1,beeW:1,bonW:1,portW:1,cityW:1,cafeW:1,sunW:1,parfW:1,lavW:1,cafeG:1,
  helpCap:4,helperN:2,lavCap:4,lavN:2,parfCap:4,parfN:2,cafeGCap:4,cafeGN:2,sunCap:4,sunN:2,bonCap:4,bonN:2,carN:2,cashN:2,wedSpd:5,potSpd:5,bus:1,busSpd:5,busCap:4,busN:2,wedN:2,waitN:2,cityN:2,portN:2,beeN:2});
  if(TR)Object.assign(sv.lv,{helperT:1,lavT:1,parfT:1,cafeGT:1,bonT:1});sv.money=1000;}});
 await page.evaluate(()=>{window.__resetting=false;__game.hideIntro();__game.tp(8,2);window.__m0=__game.S.money;window.__s0=Object.assign({},__game.stats)});
