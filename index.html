@@ -3091,13 +3091,13 @@ function buildExpansion() {
   }
   /* ----- Şehir Çiçekçisi ----- */
   { const z = makeExt({ id: 'city', name: 'Şehir Çiçekçisi', label: 'ŞEHİR ŞUBESİ', R: { x0: EAST.x0, x1: EAST.x1, z0: -90, z1: -66 } });
-    const g0 = mkGroup(z, 0.1); slab(z, g0, 0xdde6f0); decorTree(g0, 11.5, -88, 1.2); decorTree(g0, 31.5, -88, 1.2); lamp(g0, 11, -68); lamp(g0, 31.5, -68);
+    const g0 = mkGroup(z, 0.1); { const tm = LM({ map: tileTex('#aac4ee', '#d3e2fa', 6) }); tm.map = tm.map.clone(); tm.map.needsUpdate = true; tm.map.repeat.set(14 / 3, 11 / 3); const f = new THREE.Mesh(G.plane, tm); f.rotation.x = -Math.PI / 2; f.scale.set(14, 11, 1); f.receiveShadow = true; ad(g0, f, 21, 0.035, -80); } decorTree(g0, 11.5, -88, 1.2); decorTree(g0, 31.5, -88, 1.2); lamp(g0, 11, -68); lamp(g0, 31.5, -68);
     const g1 = mkGroup(z, 0.5), cx = 21, cz = -81;
     const blue = mat(0x1747d6), cw = mat(0xf7f2e6);
     const cb = rbox(5.4, 1.1, 1.5, 0.3, blue); ad(g1, cb, cx, 0.55, cz); const ct = rbox(5.5, 0.14, 1.8, 0.06, cw); ad(g1, ct, cx, 1.14, cz); addCollider(cx - 2.8, cx + 2.8, cz - 0.9, cz + 0.9);
     const bk = rbox(6.4, 3.2, 0.22, 0.05, mat(0xfff0d6)); ad(g1, bk, cx, 1.6, cz - 1.5); const awn = new THREE.Mesh(new THREE.BoxGeometry(6.6, 0.12, 2.6), LM({ map: awningTex('#2f7bff', '#ffffff') })); awn.material.map.repeat.set(3, 1); awn.material.map.wrapS = THREE.RepeatWrapping; awn.rotation.x = -0.12; ad(g1, awn, cx, 3.4, cz - 0.4);
     for (const sx of [-1, 1]) ad(g1, mk(G.cyl, mat(0xffffff), 0.08, 3.3, 0.08), cx + sx * 3.1, 1.65, cz + 0.9);
-    const sg = makeBoard('ŞEHİR ÇİÇEKÇİSİ', 5.2, 1.0, 'chalk'); sg.rotation.x = -0.25; ad(g1, sg, cx, 4.6, cz - 0.6); awn.userData.dyn = sg.userData.dyn = true; STREF.city = [awn, sg];
+    const sg = makeBoard('ŞEHİR ÇİÇEKÇİSİ', 6.0, 1.15, 'chalk'); sg.rotation.x = -0.25; ad(g1, sg, cx, 4.6, cz - 0.6); awn.userData.dyn = sg.userData.dyn = true; STREF.city = [awn, sg];
     const st = new Stack(scene, (k, out) => { const r = k % 8, l = Math.floor(k / 8); out.set(cx - 2.0 + (r % 4) * 1.0, 1.25 + l * 0.6, cz + (Math.floor(r / 4) - 0.5) * 0.7); }, 28); st.pend = 0; EXTSTACKS.push(st);
     city = { z, stock: st, queue: [], t: 4, zone: new Zone({ x: 27.5, z: -78.4, w: 3.4, d: 3.0, color: '#2f7bff', draw: drawZoneIcon(iconShop, 0.55) }), cashier: null, cx, cz };
     city.zone.group.visible = false; z.onShow = () => { city.zone.group.visible = true; };
@@ -4728,7 +4728,7 @@ function buildMuseum() {
   MUS.dome = new THREE.InstancedMesh(new THREE.SphereGeometry(0.62, 12, 8), new THREE.MeshLambertMaterial({ color: 0xcfeeff, transparent: true, opacity: 0.22, depthWrite: false }), 18); MUS.dome.frustumCulled = false; MUS.dome.userData.dyn = true; MUS.dome.count = 0; MUS.dome.visible = false; MUS.dome.renderOrder = 7; scene.add(MUS.dome);
   z.onShow = () => { MUS.on = true; };
   extPad('mus', 'Botanik Müzesi', [E3.mus], 5.4, -147.0, iconMuseum, null);
-  extPad('musTkt', 'Bilet Fiyatı', geo(E3.musTkt, 5), -8.5, -146.6, iconBill, () => unlockedZ('mus'));
+  extPad('musTkt', 'Bilet Fiyatı', geo(E3.musTkt, 5), 0.8, -161.5, iconBill, () => unlockedZ('mus'));
   EXTAPPLY.mus = i => { unlockExt(z, i); if (!i) { praise('Botanik Müzesi!', true); toast('Koleksiyonun sergileniyor — ziyaretçiler bilet alır, Dükkan Yıldızları 6–10 açıldı'); } updateStars(); };
 }
 function musLayout() {
