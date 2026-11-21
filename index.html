@@ -4994,7 +4994,8 @@ function updateGate(dt, t) {
   if (inGate && GATE.armed && !GATE.card && introDone) { GATE.armed = false; GATE.card = true; gateCardEl.style.display = 'flex'; sfx('up'); }
 }
 const gateCardEl = document.getElementById('gateCard');
-function gateGo() { gateCardEl.style.display = 'none'; writeSave(); bolWrite(0, 1); try { location.href = 'sahil/'; } catch (e) {} }
+function goChapter(url) { writeSave(); fetch(url, { method: 'HEAD', cache: 'no-store' }).then(r => { if (r.ok) { bolWrite(0, 1); location.href = url; } else toast('Bu bölüm çok yakında geliyor! Paran ve ilerlemen güvende.'); }).catch(() => toast('Bağlantı yok, biraz sonra tekrar dene.')); }
+function gateGo() { gateCardEl.style.display = 'none'; goChapter('sahil/'); }
 function gateStay() { gateCardEl.style.display = 'none'; GATE.card = false; }
 document.getElementById('gateGo').addEventListener('click', gateGo); document.getElementById('gateStay').addEventListener('click', gateStay);
 (function () { // Ayarlar menüsü: Bölümler
@@ -5007,7 +5008,7 @@ document.getElementById('gateGo').addEventListener('click', gateGo); document.ge
     for (const [n, name, url] of CH) { const b = document.createElement('button'), cur = n === 1, ok = cur || open.includes(n); b.dataset.ch = n;
       b.textContent = n + ' · ' + name + (cur ? ' (şu an)' : ok ? '' : ' — Kilitli');
       b.style.cssText = ok ? (cur ? 'background:linear-gradient(#58d68d,#27ae60);box-shadow:0 4px 0 #146b38' : 'background:linear-gradient(#4aa8ff,#2f7bff);box-shadow:0 4px 0 #1d4fb0') : 'background:#c4ccd8;box-shadow:0 4px 0 #9aa5b5;color:#7b8798;opacity:.75';
-      if (cur || !ok) b.disabled = true; else b.addEventListener('click', () => { writeSave(); bolWrite(0, 1); location.href = url; });
+      if (cur || !ok) b.disabled = true; else b.addEventListener('click', () => goChapter(url));
       list.appendChild(b); } };
   btn.addEventListener('click', () => { const on = list.style.display === 'none'; if (on) fill(); list.style.display = on ? 'flex' : 'none'; });
   document.getElementById('reset').addEventListener('click', () => { list.style.display = 'none'; });
