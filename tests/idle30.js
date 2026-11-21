@@ -9,8 +9,8 @@ for(let m=0;m<30;m+=10){await page.evaluate(()=>{for(let i=0;i<600;i++)__game.si
 const r=await page.evaluate(()=>{const g=__game,st=g.stats,o={};for(const k in st)if(k.startsWith('s_'))o[k]=st[k]-(window.__s0[k]||0);
  const c=g.city(),cf=g.cafe();
  return {money:Math.round(g.S.money-window.__m0),stalls:st.stalls||0,sold:o,wed:st.weddings||0,wedItems:st.wedItems||0,vanRuns:st.vanRuns||0,exports:st.exportsDone||0,citySold:st.citySold||0,cityQueue:c?c.queue.length:-1,cafeServed:st.cafeServed||0,carry:g.P().stack.length,
-  gard:g.GARD.map(x=>x.kind+(x.tr?'T':'')).join(','),tr:g.GARD.filter(x=>x.tr).length,busTrips:st.busTrips||0,cityBy:Object.fromEntries(Object.keys(st).filter(k=>k.startsWith('c_')).map(k=>[k,st[k]])),wd:(window.__wdLog||[]).slice(0,5)}});
+  gard:g.GARD.map(x=>x.kind+(x.tr?'T':'')).join(','),tr:g.GARD.filter(x=>x.tr).length,busTrips:st.busTrips||0,busItems:st.busItems||0,cityBy:Object.fromEntries(Object.keys(st).filter(k=>k.startsWith('c_')).map(k=>[k,st[k]])),wd:(window.__wdLog||[]).slice(0,5)}});
 console.log(JSON.stringify(r));console.log(errs);
 const bad=[];if(r.stalls)bad.push('stalls');if(!r.citySold)bad.push('city');if(!r.cafeServed)bad.push('tea');for(const k of ['s_bouquet','s_pot','s_sachet','s_perfume','s_sbq','s_honey','s_bonsai'])if(!r.sold[k])bad.push(k);if(errs.length)bad.push('errors');
-if(!r.cityBy.c_perfume)bad.push('city perfume');if(TR&&r.tr<5)bad.push('tractors '+r.tr);
+if(!r.cityBy.c_perfume)bad.push('city perfume');if(!r.busItems)bad.push('bus');if(TR&&r.tr<5)bad.push('tractors '+r.tr);
 console.log(bad.length?'FAIL '+bad:'PASS');await b.close();process.exit(bad.length?1:0)})();

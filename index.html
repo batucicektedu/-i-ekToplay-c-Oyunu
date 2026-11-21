@@ -2193,7 +2193,7 @@ function updateGoalState() {
   }
 }
 /* C4: aynı anda en çok ~4 pad: sıradaki hedef + para biriktirilen/yakında alınabilir olanlar */
-const HIREK = new Set(['wedW', 'helper', 'cashier', 'carrier', 'lavW', 'parfW', 'cafeW', 'sunW', 'cityW', 'beeW', 'bonW', 'portW']);
+const HIREK = new Set(['wedW', 'helper', 'cashier', 'carrier', 'lavW', 'parfW', 'cafeW', 'sunW', 'cityW', 'beeW', 'bonW', 'portW', 'cafeG', 'bus']);
 const PADOK = new Set(); let padOkT = 0;
 function padOkRefresh(dt) {
   padOkT -= dt; if (padOkT > 0) return; padOkT = 0.25; PADOK.clear();
@@ -3101,6 +3101,10 @@ function buildExpansion() {
   extPad('cashN', '+1 Eleman', geo(600, 2), -0.6, 2.4, iconCashier, () => S.lv.cashier > 0).autoShow = true; UPG.cashN.sub = () => 'Kasiyer: ' + (1 + S.lv.cashN); EXTAPPLY.cashN = i => { while (CASHX.length < S.lv.cashN) spawnCashierX(i); };
   extPad('wedSpd', 'Görevli Hızı', geo(2500, 5), 24, -47.2, iconBolt, () => S.lv.wedW > 0).autoShow = true;
   extPad('potSpd', 'Saksı Hızı', geo(300, 5), 40.3, 4.5, iconBolt, () => S.lv.sera > 0).autoShow = true;
+  extPad('bus', 'Teslimat Otobüsü', [20000], 8.6, -14.5, iconVan, () => unlockedZ('parf')).autoShow = true; EXTAPPLY.bus = i => { if (!BUSES.length) spawnBus(i); while (BUSES.length < 1 + (S.lv.busN || 0)) spawnBus(i); };
+  extPad('busSpd', 'Otobüs Hızı', geo(3000, 5), 8.6, -19, iconBolt, () => S.lv.bus > 0).autoShow = true;
+  extPad('busCap', 'Otobüs Kapasite', geo(3500, 4), 8.6, -23.5, iconBackpack, () => S.lv.bus > 0).autoShow = true; UPG.busCap.sub = () => 'Taşıma ' + (12 + 6 * S.lv.busCap) + ' → ' + (18 + 6 * S.lv.busCap);
+  extPad('busN', '+1 Otobüs', geo(15000, 2), 8.6, -28, iconVan, () => S.lv.bus > 0).autoShow = true; UPG.busN.sub = () => 'Şu an ' + (1 + S.lv.busN) + ' otobüs'; EXTAPPLY.busN = i => { while (BUSES.length < 1 + (S.lv.busN || 0)) spawnBus(i); };
   /* ----- C5: ana bahçe rolü ----- */
   { const rMain = gRole({ id: 'main', name: 'Yardımcı', types: ['flower', 'orchid'], shirt: 0xffffff, tcol: 0x2fae4a, home: [-9.2, 3.2], spdKey: 'helpSpd', hireKey: 'helper', capKey: 'helpCap', cntKey: 'helperN', evoKey: 'helperT', baseCap: 6 });
     gRolePads(rMain, { cap: [-7.6, 9.4, 180], cnt: [-7.6, 5.4, 900], evo: [-0.6, 12.6, 3500] }); }
@@ -3207,6 +3211,83 @@ function updateCity(dt, t) {
   if (city.out) for (let i = city.out.length - 1; i >= 0; i--) { const c = city.out[i], gp = c.group.position; if (c.hideBubble > 0) { c.hideBubble -= dt; if (c.hideBubble <= 0 && c.bubble) c.bubble.visible = false; } const dx = 7.0 - gp.x, dz = -72 - gp.z, d = Math.hypot(dx, dz); if (d < 0.6) { city.out.splice(i, 1); rm(c.group); if (c.bubble) { c.bubble.material.map.dispose(); c.bubble.material.dispose(); } continue; } const s2 = 5.6 * dt; gp.x += dx / d * s2; gp.z += dz / d * s2; c.vel.set(dx / d * 5.6, 0, dz / d * 5.6); faceChar(c, dx, dz, dt); animChar(c, dt, 1, t); }
   if (city.zone.inside && (city.tk = (city.tk || 0) - dt) <= 0) { const ty = PROD_LIST.find(q => P.stack.count(q) > 0 && city.stock.count(q) < 4); if (ty && city.stock.length + (city.stock.pend || 0) < 28) { dropTo(city.stock, P, ty); city.tk = 0.05; } }
 }
+/* =====================================================================
+   C5. TESLİMAT OTOBÜSÜ: sokakta döngü; istasyon çıkışlarından alır, raf / şehir şubesi / düğün / gemi / minibüse bırakır
+   ===================================================================== */
+const BUSES = [], BUS_DEPOT = -9.5, BUS_OUT = 4.6, BUS_IN = 6.3;
+const busCapOf = () => 12 + 6 * (S.lv.busCap || 0), busSpdOf = () => 7 + 1.2 * (S.lv.busSpd || 0);
+function spawnBus(instant) {
+  const g = new THREE.Group(), col = 0x14a89a;
+  g.add(mk(G.box, mat(col), 2.3, 1.5, 5.4, 0, 1.1, 0), mk(G.box, mat(0xffffff), 2.34, 0.35, 5.0, 0, 1.55, 0), mk(G.box, mat(0x16324a), 2.36, 0.5, 4.6, 0, 1.95, 0), mk(G.box, mat(0x0d8277), 2.3, 0.14, 5.4, 0, 2.28, 0), mk(G.box, mat(0x16324a), 1.9, 0.5, 0.12, 0, 1.5, 2.7));
+  const wheels = []; for (const [wx, wz] of [[-1.15, -1.7], [1.15, -1.7], [-1.15, 1.7], [1.15, 1.7]]) { const w = mk(G.cyl, mat(0x222222), 0.55, 0.4, 0.55, wx, 0.55, wz); w.rotation.z = Math.PI / 2; g.add(w); wheels.push(w); }
+  shadowAll(g, true, false);
+  const b = { group: g, wheels, state: 'depot', x: BUS_IN, z: BUS_DEPOT, yaw: Math.PI, stops: [], si: 0, cd: 0, incoming: 0, idx: BUSES.length, trips: 0, target: null, spr: makeSprite(320, 112, () => {}, 4.2, 1.5, false), sig: -1 };
+  b.stack = new Stack(g, (i, out) => out.set((i % 3 - 1) * 0.7, 2.55 + (i / 12 | 0) * 0.3, (((i / 3) | 0) % 4 - 1.5) * 1.0), 60); b.spr.position.set(0, 5.0, 0); g.add(b.spr);
+  g.position.set(b.x + (b.idx ? 0.0 : 0), 0, b.z - b.idx * 6); b.z = g.position.z; g.rotation.y = b.yaw; scene.add(g); BUSES.push(b);
+  if (!instant) { burst(b.x, 1.5, b.z, 0x14a89a, 24, 6); confetti(b.x, 2, b.z, 40); popText(b.x, 5.4, b.z, 'OTOBÜS!', '#ffd400'); } return b;
+}
+function busLabel(b) { const n = b.stack.length + '/' + busCapOf(), sg = n + (b.state === 'depot' ? 'd' : ''); if (sg === b.sig) return; b.sig = sg; redrawSprite(b.spr, (ctx, w, h) => { ctx.fillStyle = 'rgba(8,60,56,.94)'; ctx.strokeStyle = '#ffd23f'; ctx.lineWidth = 8; rrect(ctx, 6, 6, w - 12, h - 12, 30); ctx.fill(); ctx.stroke(); iconVan(ctx, 62, 56, 80); otext(ctx, 'OTOBÜS', 204, 36, 46, '#fff', '#05071a'); otext(ctx, n, 204, 82, 40, '#ffd23f', '#05071a'); }); }
+const busWorld = (b, p, out) => { const s = Math.sin(b.yaw), co = Math.cos(b.yaw); return out.set(p.x * co + p.z * s + b.x, p.y, -p.x * s + p.z * co + b.z); };
+const busTake = (b, ty) => { const it = b.stack.takeLast(ty); if (!it) return null; it.mesh.getWorldPosition(_w); scene.add(it.mesh); it.mesh.position.copy(_w); return it; };
+/* bir ürün türü için toplam açık talep (raf, şehir şubesi, minibüs, düğün, gemi) */
+function busWant(t) {
+  let n = 0; const l = lane(t); n += Math.max(0, l.cap - l.length - l.pend - 1) > 0 ? 3 : 0;
+  n += cityNeed(t); n += Math.max(0, vanNeed(t)); if (wed && wed.ord) n += Math.max(0, (wed.ord.need[t] || 0) - (wed.ord.got[t] || 0)); if (S.pt.cur && S.pt.cur.st === 'load') n += Math.max(0, (S.pt.cur.need[t] || 0) - (S.pt.cur.got[t] || 0)); return n;
+}
+function busPlan(b) {
+  const pk = [], hold = {}; for (const i of b.stack.items) hold[i.type] = (hold[i.type] || 0) + 1;
+  for (const st of STATIONS) { if (st.zone.locked || !st.o.out || st.o.out === 'tea' || st.busRes || st.out.length < 2) continue; const t = st.o.out; if (busWant(t) - (hold[t] || 0) > 0) pk.push({ k: 'pick', st, z: st.z }); }
+  if (!pk.length && !b.stack.length) return false;
+  for (const q of pk) q.st.busRes = b;
+  const drops = []; if (city && !city.z.locked && city.cashier) drops.push({ k: 'city', z: city.zone.z }); if (wed && !wed.z.locked) drops.push({ k: 'wed', z: -52 }); if (PORT.zone && !EXTZ.port.locked) drops.push({ k: 'port', z: PORT.zone.z + 0.2 });
+  b.stops = pk.concat(drops).sort((a, c) => c.z - a.z).map(q => Object.assign({ lane: BUS_OUT }, q)).concat(drops.slice().sort((a, c) => a.z - c.z).map(q => Object.assign({}, q, { lane: BUS_IN })));
+  b.si = 0; return b.stops.length > 0;
+}
+function busRelease(b) { for (const st of STATIONS) if (st.busRes === b) st.busRes = null; }
+function busDrive(b, tz, lane, dt) {
+  const spd = busSpdOf(), dz = tz - b.z, step = Math.min(Math.abs(dz), spd * dt), dx = lane - b.x;
+  b.z += Math.sign(dz) * step; b.x += dx * (1 - Math.exp(-3 * dt)); b.x = clamp(b.x, 3.9, 6.9);
+  const hy = Math.abs(dz) > 0.4 ? Math.atan2(dx * 0.6, Math.sign(dz) || 1) : b.yaw; b.yaw += angDiff(b.yaw, hy) * (1 - Math.exp(-6 * dt));
+  for (const w of b.wheels) w.rotation.x += step / 0.55; if (step > 0.01 && Math.random() < dt * 8) dust(b.x, 0.2, b.z - Math.sign(dz) * 2.5, 1, 0.5);
+  return Math.abs(dz) < 0.35 && Math.abs(dx) < 0.5;
+}
+function busDropItem(b, ty, how) {
+  const it = busTake(b, ty); if (!it) return false;
+  if (how === 'city') { const st = city.stock, idx = st.length + (st.pend || 0); st.pend = (st.pend || 0) + 1; fly(it.mesh, out => { st.slotFn(Math.min(idx, 27), out); return 0; }, 0.3, 1.8, () => { st.pend--; st.add(it.mesh, it.type); sfx('drop'); }); }
+  else if (how === 'wed') { const o = wed.ord; o.got[ty] = (o.got[ty] || 0) + 1; stats.wedItems = (stats.wedItems || 0) + 1; fly(it.mesh, out => { out.set(21, 4.6, -61); return 0; }, 0.45, 2.4, () => { rm(it.mesh); sparkles(21, 4.6, -61, 4, 0xffd0e2, 0.5); sfx('coin'); }); }
+  else if (how === 'port') portLoad(ty, it.mesh);
+  else if (how === 'van') toVan(it, null); else toShelf(it, null);
+  stats.busItems = (stats.busItems || 0) + 1; return true;
+}
+function busDropFor(b, k) { // bu durakta bırakılabilecek ürün türü
+  for (const i of b.stack.items) { const ty = i.type;
+    if (k === 'city' && cityNeed(ty) > 0) return [ty, 'city'];
+    if (k === 'wed' && wed.ord && (wed.ord.got[ty] || 0) < (wed.ord.need[ty] || 0)) return [ty, 'wed'];
+    if (k === 'port' && portNeeds().includes(ty) && S.pt.cur && (S.pt.cur.got[ty] || 0) < S.pt.cur.need[ty]) return [ty, 'port'];
+    if (k === 'depot') { if (vanNeed(ty) > 0 && vanFree() > 0 && VAN.state === 'parked') return [ty, 'van']; if (shelfFree(ty) > 0) return [ty, 'shelf']; } }
+  return null;
+}
+function updateBus(b, dt, t) {
+  b.cd -= dt; const gp = b.group.position;
+  if (b.state === 'depot') {
+    b.target = null; if (b.cd <= 0) { const d = busDropFor(b, 'depot'); if (d) { busDropItem(b, d[0], d[1]); b.cd = 0.12; } else if (b.incoming === 0 && b.stack.length < busCapOf() && b.go !== false) { b.cd = 0.6; if (busPlan(b)) { b.state = 'out'; b.si = 0; } } }
+    busDrive(b, BUS_DEPOT, BUS_IN, dt);
+  } else if (b.state === 'out') {
+    const s = b.stops[b.si]; if (!s) { b.state = 'back'; } else if (busDrive(b, s.z, s.lane, dt)) { b.state = 'stop'; b.cd = 0.2; b.stopT = 0; }
+  } else if (b.state === 'stop') {
+    const s = b.stops[b.si]; b.stopT += dt; let busy = false;
+    if (s.k === 'pick') { const ty = s.st.o.out; if (b.cd <= 0 && s.st.out.length > 0 && b.stack.length + b.incoming < busCapOf() && busWant(ty) - b.stack.count(ty) - b.incoming > 0) { const it = s.st.out.takeLast(); if (it) { it.mesh.getWorldPosition(_w); scene.add(it.mesh); it.mesh.position.copy(_w); const base = b.stack.length + b.incoming; b.incoming++; fly(it.mesh, out => { busWorld(b, _e.set((((base + b.incoming - 1) % 3) - 1) * 0.7, 2.55, 0), out); return 0; }, 0.25, 2.2, () => { b.incoming = Math.max(0, b.incoming - 1); b.stack.add(it.mesh, ty); }); b.cd = 0.12; } busy = true; } else if (b.incoming > 0) busy = true; }
+    else if (b.cd <= 0) { const d = busDropFor(b, s.k); if (d) { busDropItem(b, d[0], d[1]); b.cd = 0.12; busy = true; } }
+    if (!busy && b.cd <= 0 || b.stopT > 14) { if (s.k === 'pick') s.st.busRes = null; b.si++; b.state = b.si >= b.stops.length ? 'back' : 'out'; }
+  } else if (b.state === 'back') {
+    busRelease(b); if (busDrive(b, BUS_DEPOT, BUS_IN, dt)) { b.state = 'depot'; b.trips++; stats.busTrips = (stats.busTrips || 0) + 1; b.cd = 0.3; }
+  }
+  gp.set(b.x, 0, b.z); b.group.rotation.y = b.yaw; b.stack.update(dt, t); busLabel(b);
+  watchdog(b, dt, gp, b.si + '' + b.stack.length, [BUS_IN, BUS_DEPOT], busReset, q => q.state === 'depot');
+}
+function busReset(b) { busRelease(b); b.state = b.stack.length ? 'back' : 'depot'; b.si = 0; b.stops = []; b.cd = 0; b.incoming = 0; }
+function updateBuses(dt, t) { for (const b of BUSES) updateBus(b, dt, t); }
+
 let acT = 0;
 function autoCollect(dt) {
   acT -= dt; if (acT > 0) return; acT = 0.12;
@@ -3216,7 +3297,7 @@ function autoCollect(dt) {
 function updateExpansion(dt, t) {
   updateExtZones(dt); for (const st of STATIONS) updateStation(st, dt, t);
   stationActions(dt); for (const h of GARD) updateGardener(h, dt, t);
-  updateCafe(dt, t); updateWedding(dt, t); updateCity(dt, t);
+  updateCafe(dt, t); updateWedding(dt, t); updateCity(dt, t); updateBuses(dt, t);
   for (const s of EXTSTACKS) s.update(dt, t);
 }
 
