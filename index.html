@@ -2392,7 +2392,7 @@ function findPath(sx, sz, tx, tz) {
   const D = [[1, 0, 1], [-1, 0, 1], [0, 1, 1], [0, -1, 1], [1, 1, 1.414], [1, -1, 1.414], [-1, 1, 1.414], [-1, -1, 1.414]];
   while (open.length) {
     const k = pop(); if (k === tk) { found = true; break; } const i = k % W, j = (k / W) | 0;
-    for (const [di, dj, cst] of D) { const a = i + di, b = j + dj; if (a < 0 || b < 0 || a >= W || b >= H) continue; const nk = b * W + a; if (bl[nk]) continue; if (di && dj && (bl[j * W + a] || bl[b * W + i])) continue; const ng = g[k] + cst; if (ng < g[nk]) { g[nk] = ng; from[nk] = k; push(nk, ng + Math.hypot(a - ti, b - tj)); } }
+    for (const [di, dj, cst] of D) { const a = i + di, b = j + dj; if (a < 0 || b < 0 || a >= W || b >= H) continue; const nk = b * W + a; if (bl[nk]) continue; if (di && dj && (bl[j * W + a] || bl[b * W + i])) continue; const ng = g[k] + cst; if (ng < g[nk] - 1e-3) { g[nk] = ng; from[nk] = k; push(nk, ng + Math.hypot(a - ti, b - tj)); } }
   }
   if (!found) return [[sx, sz], [tx, tz]];
   const pts = []; for (let k = tk; k !== -1; k = from[k]) pts.push([PG.x0 + ((k % W) + 0.5) * PG.c, PG.z0 + (((k / W) | 0) + 0.5) * PG.c]); pts.reverse(); pts[0] = [sx, sz]; pts.push([tx, tz]);
@@ -2903,9 +2903,13 @@ function makeTractorModel(col) {
   for (const [wx, wz, r] of [[-1.0, -0.9, 0.75], [1.0, -0.9, 0.75], [-0.9, 1.0, 0.5], [0.9, 1.0, 0.5], [-1.1, -2.6, 0.45], [1.1, -2.6, 0.45]]) { const w = mk(G.cyl, mat(0x222222), r, 0.5, r, wx, r, wz); w.rotation.z = Math.PI / 2; g.add(w); wheels.push(w); }
   shadowAll(g, true, false); g.scale.setScalar(1 / CHAR_S); return { g, wheels };
 }
+function bigLabel(x, y, z, text, col) {
+  const sp = makeSprite(512, 160, () => {}, 7.2, 2.25, false); redrawSprite(sp, (ctx, w, h) => { ctx.fillStyle = 'rgba(22,28,64,.95)'; ctx.strokeStyle = col; ctx.lineWidth = 12; rrect(ctx, 8, 8, w - 16, h - 16, 44); ctx.fill(); ctx.stroke(); otext(ctx, text, w / 2, h / 2 + 4, 92, col, '#05071a'); });
+  sp.position.set(x, y, z); scene.add(sp); later(2.8, () => { rm(sp); if (sp.material.map) sp.material.map.dispose(); sp.material.dispose(); });
+}
 function setTractor(h, instant) {
   if (h.tr) return; h.tr = true; const m = makeTractorModel(h.tcol || 0xffc21a); h.tmodel = m; h.group.add(m.g);
-  if (!instant) { const p = h.group.position; burst(p.x, 1.5, p.z, 0xffd23f, 26, 6); confetti(p.x, 2, p.z, 60); ring(p.x, p.z, 0xffc21a, 6); sparkles(p.x, 2, p.z, 14, 0xfff2a0, 0.9); popText(p.x, 5.6, p.z, 'TRAKTÖR!', '#ffd400'); praise('TRAKTÖR! ' + (h.rname || ''), true); flash(); vib(30); m.g.scale.setScalar(0.01); h.tpop = 0; }
+  if (!instant) { const p = h.group.position; burst(p.x, 1.5, p.z, 0xffd23f, 26, 6); confetti(p.x, 2, p.z, 60); ring(p.x, p.z, 0xffc21a, 6); sparkles(p.x, 2, p.z, 14, 0xfff2a0, 0.9); bigLabel(p.x, 6.2, p.z, 'TRAKTÖR!', '#ffd400'); praise('TRAKTÖR! ' + (h.rname || ''), true); flash(); vib(30); m.g.scale.setScalar(0.01); h.tpop = 0; }
 }
 function tractorFx(h, mv, spd, dt) {
   if (!h.tr) return; h.body.visible = h.legL.visible = h.legR.visible = false; const m = h.tmodel; if (!m) return;
@@ -4878,7 +4882,7 @@ window.__game = {
   measure() { renderer.info.reset(); if (composer) composer.render(0); else renderer.render(scene, camera); return { calls: renderer.info.render.calls, tris: renderer.info.render.triangles }; },
   get c2() { return { TD, TDM, TK, applyTier, CPADS, S, cosGate, buyTier, DSL, DSLM, DECT, DEC, zonesAll: zones, buyDecor, beautyPts, BF, placeDecor, DN, NIGHT, DN_PERIOD }; },
   path(tx, tz) { return findPath(P.group.position.x, P.group.position.z, tx, tz); }, colliders,
-  EXTZ, STN, GARD, cafe: () => cafe, wed: () => wed, city: () => city, tractor: () => tractor, give(type, n) { n = Math.min(n, Math.max(0, P.free())); for (let i = 0; i < n; i++) P.stack.add(['orchid', 'lav', 'sun', 'rosep', 'flower'].includes(type) ? makeFlowerItem(0, type === 'flower' ? 'tulip' : type) : makeItemOf(type), type); },
+  EXTZ, STN, GARD, GROLES, roleEvolve, BUSES, cafe: () => cafe, wed: () => wed, city: () => city, tractor: () => tractor, give(type, n) { n = Math.min(n, Math.max(0, P.free())); for (let i = 0; i < n; i++) P.stack.add(['orchid', 'lav', 'sun', 'rosep', 'flower'].includes(type) ? makeFlowerItem(0, type === 'flower' ? 'tulip' : type) : makeItemOf(type), type); },
   bot(x, z) { BOT = (x || z) ? { x, z } : null; if (BOT) hideIntro(); }, hideIntro, objective() { objective(_obj); return Object.assign({}, _obj); }, get goal() { return curGoal; }, GOALS, UPG,
   S, stats, P: () => P, queue, beds, machine, inputPile, outputPile, moneyPile, get shelf() { return shelfB; }, get shelfP() { return shelfP; }, get potInput() { return potInput; }, get potOutput() { return potOutput; }, get zone2() { return zone2; }, get zone3() { return zone3; }, VAN, get vanLoad() { return vanLoad; }, get vanPile() { return vanPile; }, get cashier() { return cashier; }, get carrier() { return carrier; }, upPads, zones, customers, CFG, POS,
   c3x() { return { list: RARE.list, check: checkSets, bonus: collBonus, SETS, RARE, FEST, PORT, MUS, QT, qFill, incomeRate, festStart, festEnd, checkOffline, collectOffline, musTicket, C3I, spdBonus, hiveCount }; },

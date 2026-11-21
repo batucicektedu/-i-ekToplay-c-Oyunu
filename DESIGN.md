@@ -1,5 +1,15 @@
 # Çiçek Bahçesi – Tasarım Dokümanı
 
+## Son sürüm (C5 – yönetici turu)
+- **Otomasyon:** her ürün zinciri çalışanla kapanır. Girdi: Lavanta/Gül/Ayçiçeği/Bonsai/Çay Bahçıvanı (yeni, cafe), ana bahçe Yardımcı; çıktı taşıma: Taşıyıcı (+ Teslimat Otobüsü); satış: Kasiyer, Şube Kasiyeri, Garson, Düğün Görevlisi, Liman Hamalı. Para yığınları (dükkân, minibüs, liman) artık Kasiyer/Taşıyıcı/Hamal varken kendiliğinden toplanır. Parfüm istasyonu hem gül hem lavanta alır (Gül Bahçıvanı ikisini de getirir).
+- **Şehir Çiçekçisi hatası:** yığın tek türle dolup parfüm hiç gelmiyordu ve kuyruk tıkanıyordu. Artık tür başına en çok 4 ürün, müşteri yalnız stoğu olan/tedarik edilen türü ister, Taşıyıcı (ve otobüs) şubeyi besler, 40 sn bekleyen müşteri ayrılır (kuyruk tıkanmaz).
+- **Toplayıcı rolleri:** Kapasite (4 seviye), +1 Eleman (en çok 3), Traktör Yap (hız 2. seviyeden sonra). Evrimde "TRAKTÖR!" yazısı + konfeti; traktör kapasitesi 30+, hızı x1.5, bölge renginde. Ayçiçeği traktörü eskisi gibi tek alımla gelir (`sunW`), kapasite/eleman pad'leri eklendi. Boşta kalan toplayıcı 3 sn sonra başka istasyonun ihtiyacı olan türü (yalnızca o istasyonun kullandığı tür) toplar; kendi bölgesinde iş çıkınca eve döner. Talep (claim) ve bekçi sistemi aynı.
+- **Hız pad'leri:** Düğün Görevlisi Hızı, Saksı Hızı eklendi; +1 Taşıyıcı / +1 Kasiyer.
+- **Teslimat Otobüsü:** Parfüm açılınca; sokakta döngü, istasyon çıkışlarından alır, raf/şehir/düğün/gemi/minibüse bırakır; hız, kapasite, +1 otobüs. İstasyon başına rezervasyon (`busRes`).
+- **Pad'ler:** yerleşim denetimi artık sokak, patika, çiçek yatağı ve pad'lerle çakışmayı da önler (`tests/padoverlap.js`: 0); pad'ler yolun üstünde de görünür çizilir. Yıldız pad'i "Tüm satışlar +%X" alt yazısı gösterir.
+- **Kamera:** yalnız önemli ilk olaylarda (yeni bölge, ilk işçi, traktör, ilk gemi) ve her tür bir kez (`S.seen`), sıraya girer, oyuncu hareket ederken bekler.
+- **Kayıt:** SAVE_VER 5; yalnız yeni alanlar (`lv` anahtarları, `seen`). `tests/saves/c5-v5.json` eklendi.
+
 ## Son sürüm (C4 – sadeleştirme turu)
 - **Sade ekran:** HUD'da yalnızca para, kapasite, hedef çubuğu, tam ekran ve ayarlar. Görevler / Koleksiyon / Gardırop ayar menüsünde, açılınca görünür. Güzellik göstergesi ve satın alınmamış dekor hayaletleri/pad'leri kaldırıldı (alınmış dekor ve bonusları korunur). Küçük fenerler kaldırıldı.
 - **Pad'ler:** daha büyük, büyük yazı; aynı anda en çok 4 pad (sıradaki hedef + işçi alımları + parası %40'a ulaşanlar, üst üste binenler gizlenir). Görünen pad'e basınca her zaman tepki verir: para yetmezse "Yetersiz para: X" uyarısı. Pad çakışma denetimi (`fixPads`, `tests/padoverlap.js`) pad'leri prop/collider'dan uzaklaştırır; `tests/padpay.js` her görünür pad'in parayı çektiğini doğrular.
