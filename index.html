@@ -221,7 +221,7 @@ let fountainWater = null, clouds = [], butterflies = [];
 let LOADED_X = null, carpet1 = null, carpet2 = null;
 const MAIN_UNLOCKS = { bed: 1, helper: 1, cashier: 1, carrier: 1, sera: 1, van: 1 };
 const S = { money: 0, lv: { cap: 0, speed: 0, pack: 0, bed: 0, helper: 0, cashier: 0, carrier: 0, cashSpd: 0, carSpd: 0, carCap: 0, helpSpd: 0, sera: 0, van: 0, lav: 0, lavW: 0, keseSpd: 0, parf: 0, parfW: 0, parfSpd: 0, cafe: 0, cafeW: 0, teaSpd: 0, wed: 0, wedBonus: 0, sunf: 0, sunW: 0, sbqSpd: 0, city: 0, cityW: 0, citySpd: 0, stars: 0, bee: 0, beeW: 0, hiveN: 0, hiveSpd: 0, honSpd: 0, jap: 0, bonW: 0, bonSpd: 0, coll: 0, port: 0, portW: 0, portBonus: 0, fest: 0, festBonus: 0, mus: 0, musTkt: 0, wedW: 0, portSpd: 0, portCap: 0, helpCap: 0, helperN: 0, helperT: 0, lavCap: 0, lavN: 0, lavT: 0, parfCap: 0, parfN: 0, parfT: 0, cafeG: 0, cafeGCap: 0, cafeGN: 0, cafeGT: 0, sunCap: 0, sunN: 0, bonCap: 0, bonN: 0, bonT: 0, carN: 0, cashN: 0, wedSpd: 0, potSpd: 0, bus: 0, busSpd: 0, busCap: 0, busN: 0 }, tut: 0, tier: { pack: 0, flo: 0, pot: 0, van: 0, kese: 0, parf: 0, tea: 0, wed: 0, city: 0, hon: 0, bon: 0 }, decor: {}, cos: { hat: 'straw', fit: 0, uni: 0, floor: 0, own: [] }, dn: 0,
-  cb: {}, cs: [], pt: { n: 0, cur: null }, fe: { n: 0, t: 420 }, q: { a: [], n: 0 }, bx: 0, ts: 0, op: 0, mv: 0 };
+  cb: {}, cs: [], pt: { n: 0, cur: null }, fe: { n: 0, t: 420 }, q: { a: [], n: 0 }, bx: 0, ts: 0, op: 0, mv: 0, seen: {} };
 let saveDirty = false, saveTimer = 0;
 let introDone = false, curGoal = null, curGoalIdx = -1, lastGoalIdx = -2;
 const SAVE_VER = 5, BAK_KEY = SAVE_KEY + '_bak', TMP_KEY = SAVE_KEY + '_tmp';
@@ -258,6 +258,8 @@ function migrateSave(s) { // ver alanı yoksa 1 sayılır; sadece alan ekler, hi
         if (s.pt && typeof s.pt === 'object') { S.pt.n = n0(s.pt.n, 0, 99999, 0); S.pt.pile = n0(s.pt.pile, 0, 1e12, 0); S.pt.cur = s.pt.cur && typeof s.pt.cur === 'object' ? s.pt.cur : null; }
         if (s.fe && typeof s.fe === 'object') { S.fe.n = n0(s.fe.n, 0, 99999, 0); S.fe.t = isFinite(+s.fe.t) ? clamp(+s.fe.t, 0, 3600) : 420; }
         if (s.q && typeof s.q === 'object') { S.q.n = n0(s.q.n, 0, 99999, 0); if (Array.isArray(s.q.a)) S.q.a = s.q.a.filter(q => q && typeof q === 'object').slice(0, 3); }
+        if (s.seen && typeof s.seen === 'object') for (const k in s.seen) if (s.seen[k]) S.seen[String(k).slice(0, 24)] = 1;
+        if (S.pt.n > 0) S.seen.ship_first = 1;
         S.bx = n0(s.bx, 0, 1e6, 0); S.mv = n0(s.mv, 0, 1e9, 0); S.op = n0(s.op, 0, 1e12, 0); S.ts = isFinite(+s.ts) ? Math.max(0, +s.ts) : 0; }
       LOADED_X = s.x && typeof s.x === 'object' ? s.x : null;
     }
@@ -772,7 +774,7 @@ function mergeStatic(root, ao) {
       if (ch.userData.dyn || ch.isSprite || ch.isInstancedMesh || ch.isPoints) continue;
       if (ch.isMesh) {
         if (!ch.geometry || Array.isArray(ch.material) || !ch.geometry.attributes.position || ch.userData.keep) continue;
-        if (PBON) { const gg = ch.geometry; if (!gg.boundingBox) gg.computeBoundingBox(); _pbb.copy(gg.boundingBox).applyMatrix4(ch.matrixWorld); if (_pbb.max.y > 0.45 && _pbb.min.y < 1.2 && _pbb.max.x - _pbb.min.x < 30 && _pbb.max.z - _pbb.min.z < 30) PROPBOX.push([_pbb.min.x, _pbb.max.x, _pbb.min.z, _pbb.max.z]); }
+        if (PBON) { const gg = ch.geometry; if (!gg.boundingBox) gg.computeBoundingBox(); _pbb.copy(gg.boundingBox).applyMatrix4(ch.matrixWorld); if (_pbb.max.y > 0.45 && _pbb.min.y < 1.2 && _pbb.max.x - _pbb.min.x < 30 && _pbb.max.z - _pbb.min.z < 30 && (_pbb.max.x - _pbb.min.x > 0.55 || _pbb.max.z - _pbb.min.z > 0.55)) PROPBOX.push([_pbb.min.x, _pbb.max.x, _pbb.min.z, _pbb.max.z]); }
         const g = ch.geometry, mt = ch.material, plain = (mt.isMeshLambertMaterial || (mt.isMeshStandardMaterial && mt.roughness === 0.78 && mt.metalness === 0)) && !mt.map && !mt.transparent && !mt.vertexColors && mt.side === THREE.FrontSide && !mt.emissiveMap;
         const tm = plain ? vcMat : mt, hasCol = plain || !!g.attributes.color, hasUv = !plain && !!g.attributes.uv;
         const key = tm.uuid + '|' + (ch.castShadow ? 1 : 0) + (ch.receiveShadow ? 1 : 0) + (hasUv ? 'u' : '') + (hasCol ? 'c' : '') + ch.renderOrder;
@@ -1242,7 +1244,7 @@ function buildBed(idx) {
 }
 function unlockBed(bed, instant) {
   bed.locked = false; bed.group.visible = !!instant ? false : true; bed.flowers.forEach(f => { f.vis = true; f.t = instant ? rand(0, f.gt) : 0; });
-  if (!instant) { bed.group.visible = true; bed.dropping = 0; confetti(bed.x, 1.5, bed.z, 50); for (let i = 0; i < 14; i++) dust(bed.x + rand(-3.2, 3.2), 0.3, bed.z + rand(-2.6, 2.6), 2, 0.8); ring(bed.x, bed.z, 0x7dff7a, 7); panTo(bed.x, bed.z, 0.7, 1.4); }
+  if (!instant) { bed.group.visible = true; bed.dropping = 0; confetti(bed.x, 1.5, bed.z, 50); for (let i = 0; i < 14; i++) dust(bed.x + rand(-3.2, 3.2), 0.3, bed.z + rand(-2.6, 2.6), 2, 0.8); ring(bed.x, bed.z, 0x7dff7a, 7); 0; }
 }
 
 /* ---- furniture: tables, machine, counter ---- */
@@ -1491,7 +1493,7 @@ function unlockSera(instant) {
   potZone.group.visible = potOutZone.group.visible = true;
   if (instant) { zone2.lockedGroup.visible = false; zone2.groups.forEach(g => { g[0].visible = true; g[0].scale.setScalar(1); }); return; }
   zone2.popT = 0; zone2.popFlags = []; zone2.lockedGroup.dropping = 0;
-  confetti(33, 2, 0, 70); for (let i = 0; i < 16; i++) dust(rand(22, 44), 0.3, rand(-11, 11), 2, 0.9); ring(33, 0, 0xa64dff, 12); panTo(33, -2, 0.95, 1.8); vib(30);
+  confetti(33, 2, 0, 70); for (let i = 0; i < 16; i++) dust(rand(22, 44), 0.3, rand(-11, 11), 2, 0.9); ring(33, 0, 0xa64dff, 12); panReq('z_sera', 33, -2, 'SERA AÇILDI!'); vib(30);
 }
 function updateSera(dt) {
   if (!zone2) return;
@@ -1627,7 +1629,7 @@ function toVan(it, who) {
 function unlockVan(instant) {
   zone3.locked = false; vanZone.group.visible = vanMoneyZone.group.visible = true;
   if (instant) { zone3.lockedGroup.visible = false; zone3.groups.forEach(g => { g[0].visible = true; g[0].scale.setScalar(1); }); VAN.group.visible = true; return; }
-  zone3.popT = 0; zone3.lockedGroup.dropping = 0; confetti(18, 2, 24, 70); for (let i = 0; i < 14; i++) dust(rand(13, 24), 0.3, rand(17, 31), 2, 0.9); ring(18, 24, 0x0aa89a, 12); panTo(18, 22, 0.95, 1.8); vib(30);
+  zone3.popT = 0; zone3.lockedGroup.dropping = 0; confetti(18, 2, 24, 70); for (let i = 0; i < 14; i++) dust(rand(13, 24), 0.3, rand(17, 31), 2, 0.9); ring(18, 24, 0x0aa89a, 12); panReq('z_van', 18, 22, 'MİNİBÜS GELDİ!'); vib(30);
 }
 function updateVanZone(dt) {
   if (!zone3) return;
@@ -1752,12 +1754,12 @@ class Zone {
   constructor(o) {
     this.x = o.x; this.z = o.z; this.w = o.w; this.d = o.d || o.w; this.inside = false; this.color = o.color || '#ffd84a';
     this.group = new THREE.Group(); this.group.position.set(this.x, 0.04, this.z);
-    this.baseMat = new THREE.MeshBasicMaterial({ map: zoneBaseTex(this.color), transparent: true, depthWrite: false, fog: false });
+    this.baseMat = new THREE.MeshBasicMaterial({ map: zoneBaseTex(this.color), transparent: true, depthWrite: false, fog: false, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 });
     this.base = new THREE.Mesh(G.plane, this.baseMat); this.base.rotation.x = -Math.PI / 2; this.base.scale.set(this.w, this.d, 1); this.base.renderOrder = 2;
     this.group.add(this.base);
     const ls = o.labelSize || Math.min(this.w, this.d) * 0.78;
     this.lc = cv(o.res || 256, o.res || 256); this.lctx = this.lc.getContext('2d'); this.ltex = canvasTex(this.lc);
-    this.label = new THREE.Mesh(G.plane, new THREE.MeshBasicMaterial({ map: this.ltex, transparent: true, depthWrite: false, fog: false }));
+    this.label = new THREE.Mesh(G.plane, new THREE.MeshBasicMaterial({ map: this.ltex, transparent: true, depthWrite: false, fog: false, polygonOffset: true, polygonOffsetFactor: -5, polygonOffsetUnits: -5 }));
     this.label.rotation.order = 'YXZ'; this.label.rotation.set(-Math.PI / 2, CFG.yaw, 0); this.label.scale.set(ls, ls, 1); this.label.position.y = 0.012; this.label.renderOrder = 3;
     this.group.add(this.label); this.drawIcon = o.draw || null; this.redraw();
     world.add(this.group); zones.push(this); this.phase = rand(0, 6);
@@ -2186,7 +2188,7 @@ function updateGoalState() {
   curGoalIdx = goalIndex(); curGoal = curGoalIdx >= 0 ? GOALS[curGoalIdx] : null;
   if (curGoalIdx !== lastGoalIdx) {
     const first = lastGoalIdx === -2; lastGoalIdx = curGoalIdx;
-    if (curGoal && !first) { const u = upPads[curGoal.key]; u.shown = true; later(0.25, () => { u.group.visible = padVisible(u); if (u.group.visible && !u.done) { u.pop = 0.6; panTo(u.x, u.z, 1, 1.0); } }); }
+    if (curGoal && !first) { const u = upPads[curGoal.key]; u.shown = true; later(0.25, () => { u.group.visible = padVisible(u); if (u.group.visible && !u.done) { u.pop = 0.6; } }); }
     drawGoalIcon(); goalEl.classList.remove('pulse'); void goalEl.offsetWidth; goalEl.classList.add('pulse');
   }
 }
@@ -2239,6 +2241,7 @@ function purchase(u) {
   ring(P.group.position.x, P.group.position.z, 0x7dff7a, 3); sparkles(P.group.position.x, 0.6, P.group.position.z, 12, 0x9dffb0, 0.5); vib(18);
   popText(u.x, 2.6, u.z, '+ ' + UPG[key].name + '!', '#7dff7a');
   applyUpgrade(key, false);
+  { const gr = Object.values(GROLES).find(r => r.hireKey === key || r.evoKey === key), isEvo = gr && gr.evoKey === key; if (gr && (isEvo || gr.hireKey === key)) panReq((isEvo ? 'tr_' : 'w_') + key, gr.home[0], gr.home[1], isEvo ? 'TRAKTÖR!' : 'YENİ ÇALIŞAN: ' + gr.name.toUpperCase()); else if (HIREK.has(key)) panReq('w_' + key, u.x, u.z, 'YENİ ÇALIŞAN: ' + UPG[key].name.toUpperCase()); }
   if (MAIN_UNLOCKS[key]) { praise(UPG[key].name + ' açıldı!', true); flash(); coinBurstUI(); } else if (stats.upgrades % 3 === 0) praise(pick(PRAISE));
   if (key === 'carCap' && carrier) { const cp = carrier.group.position; popText(cp.x, 4.2, cp.z, 'Kapasite ' + (6 + 4 * S.lv.carCap), '#9dffb0'); sparkles(cp.x, 1.5, cp.z, 12, 0x9dffb0, 0.6); ring(cp.x, cp.z, 0x9dffb0, 3); }
   if (S.lv[key] >= u.max()) { u.done = true; u.group.visible = false; } else u.redraw();
@@ -2484,6 +2487,14 @@ const camFocus = new THREE.Vector3(CFG.start.x, 0, CFG.start.z); const inV = { x
 let T = 0, spawnT = 2, camInit = false;
 const nudge = { t: 99, x: 0, z: 0, w: 0.6, dur: 1.8, skip: 0 }; let camS = 1;
 function panTo(x, z, w, dur) { nudge.t = 0; nudge.x = x; nudge.z = z; nudge.w = w || 0.8; nudge.dur = dur || 1.8; nudge.skip = 0; }
+/* C5: kamera gezisi sadece önemli ilk olaylarda, her tür bir kez (S.seen), sıraya girer; oyuncu hareket ederken bekler */
+const PANQ = []; let panIdle = 0;
+function panReq(key, x, z, cap) { if (!introDone || S.seen[key]) return; S.seen[key] = 1; saveDirty = true; PANQ.push({ x, z, cap }); }
+function updatePanQ(dt) {
+  if (Math.hypot(inV.x, inV.z) > 0.3) panIdle = 0; else panIdle += dt;
+  if (!PANQ.length || nudge.t < nudge.dur + 0.4 || panIdle < 0.6) return;
+  const q = PANQ.shift(); panTo(q.x, q.z, 1, 5.4); if (q.cap) praise(q.cap, true);
+}
 
 let stepT = 0;
 function movePlayer(dt) {
@@ -2585,7 +2596,8 @@ function update(dt) {
   const fw = _v.set(-Math.sin(CFG.yaw), 0, -Math.cos(CFG.yaw));
   const tx = gp.x + P.vel.x * 0.25 + fw.x * 1.8, tz = gp.z + P.vel.z * 0.25 + fw.z * 1.8;
   if (!camInit) { camFocus.set(tx, 0, tz); camInit = true; }
-  if (nudge.t < 90) { if (Math.hypot(inV.x, inV.z) > 0.3) nudge.skip += dt; else nudge.skip = 0; if (nudge.skip > 0.25) nudge.t = 99; }
+  updatePanQ(dt);
+  if (nudge.t < 90) { if (Math.hypot(inV.x, inV.z) > 0.3) nudge.skip += dt; else nudge.skip = 0; if (nudge.skip > 1.2) nudge.t = 99; }
   nudge.t += dt; const nk = nudge.t / nudge.dur; const nw = nk >= 1 ? 0 : nk < 0.3 ? sstep(0, 1, nk / 0.3) : nk < 0.7 ? 1 : sstep(0, 1, (1 - nk) / 0.3);
   camFocus.x = damp(camFocus.x, lerp(tx, nudge.x, nw * nudge.w), 6, dt); camFocus.z = damp(camFocus.z, lerp(tz, nudge.z, nw * nudge.w), 6, dt);
   camS = damp(camS, 1 + (zone2 && !zone2.locked ? 0.2 : 0) + (zone3 && !zone3.locked ? 0.12 : 0) + 0.03 * EXTLIST.filter(q => !q.locked).length, 1.2, dt);
@@ -2954,7 +2966,7 @@ function showExt(z) {
 function unlockExt(z, instant) {
   z.locked = false; showExt(z); z.beds.forEach(b => b.flowers.forEach(f => { f.vis = true; f.t = instant ? rand(0, f.gt) : 0; }));
   if (instant) { z.lockedGroup.visible = false; z.groups.forEach(g => { g[0].visible = true; g[0].scale.setScalar(1); }); return; }
-  z.popT = 0; z.lockedGroup.dropping = 0; confetti(z.cx, 2, z.cz, 80); ring(z.cx, z.cz, 0xa64dff, 12); for (let i = 0; i < 14; i++) dust(rand(z.R.x0, z.R.x1), 0.3, rand(z.R.z0, z.R.z1), 2, 0.9); panTo(z.cx, z.cz + 6, 0.95, 1.8); vib(30);
+  z.popT = 0; z.lockedGroup.dropping = 0; confetti(z.cx, 2, z.cz, 80); ring(z.cx, z.cz, 0xa64dff, 12); for (let i = 0; i < 14; i++) dust(rand(z.R.x0, z.R.x1), 0.3, rand(z.R.z0, z.R.z1), 2, 0.9); panReq('z_' + z.id, z.cx, z.cz + 6, z.name.toUpperCase() + ' AÇILDI!'); vib(30);
 }
 function updateExtZones(dt) {
   for (const z of EXTLIST) {
@@ -3459,7 +3471,7 @@ function applyTier(id, instant) {
   setGlow('tier:' + id, [[(d.foot[0] + d.foot[1]) / 2, d.foot[3] + 0.3, Math.max(4.2, (d.foot[1] - d.foot[0]) * 0.55)]]);
   if (instant) { refs.forEach(o => { o.visible = false; }); if (d.kind === 'van') vanSkin(t); return; }
   kit.visible = false; kit.scale.setScalar(0.001); T0.anim = { t: 0, hid: false, conf: false, next: 0, scaf: makeScaffold(d) };
-  sfx('pack'); panTo(d.cx, d.cz + 5, 0.9, 1.8);
+  sfx('pack');
 }
 function updateTiers(dt) {
   for (const id in TK) {
@@ -3628,7 +3640,7 @@ function placeDecor(slot, instant) {
 }
 function buyDecor(slot) {
   if (S.decor[slot.id]) return; const before = BF.lvl; S.decor[slot.id] = 1; placeDecor(slot, false); bfEffects(); updateBeautyHUD(); saveDirty = true; stats.decor = (stats.decor || 0) + 1;
-  popText(slot.x, 4.6, slot.z, '+' + DECT[slot.type].pts + ' Güzellik', '#ff9ad0'); hearts(slot.x, 3, slot.z, 6); sfx('happy'); panTo(slot.x, slot.z + 2, 0.6, 1.2);
+  popText(slot.x, 4.6, slot.z, '+' + DECT[slot.type].pts + ' Güzellik', '#ff9ad0'); hearts(slot.x, 3, slot.z, 6); sfx('happy');
   if (BF.lvl > before) later(0.9, () => beautyUp(BF.lvl));
 }
 function initDecor() {
@@ -4341,7 +4353,7 @@ function portDone() {
 }
 function portSail() {
   const c = S.pt.cur; c.st = 'sail'; c.left = 60; c.until = Date.now() + 60000; PORT.st = 'depart'; PORT.anim = 0; PORT.t = 0; saveDirty = true; sfx('up'); vib(30); praise('Gemi yola çıktı!', true); stats.exports = (stats.exports || 0) + 1;
-  for (let i = 0; i < 6; i++) later(i * 0.2, () => fireworks(SHIP_X + rand(-8, 8), SHIP_Z + rand(-4, 2))); confetti(SHIP_X, 4, SHIP_Z, 60); panTo(SHIP_X, SHIP_Z + 6, 0.9, 2.2); writeSave();
+  for (let i = 0; i < 6; i++) later(i * 0.2, () => fireworks(SHIP_X + rand(-8, 8), SHIP_Z + rand(-4, 2))); confetti(SHIP_X, 4, SHIP_Z, 60); panReq('ship_first', SHIP_X, SHIP_Z + 6, 'İLK İHRACAT GEMİSİ!'); writeSave();
 }
 function portReturn() {
   const c = S.pt.cur, v = c.reward; c.st = 'back'; PORT.pend += v; S.pt.n++; stats.exportsDone = (stats.exportsDone || 0) + 1; PORT.st = 'arrive'; PORT.anim = 0; saveDirty = true;
@@ -4750,7 +4762,7 @@ for (const k in EXTAPPLY) if (S.lv[k] > 0) EXTAPPLY[k](true);
 for (const k in upPads) { const u = upPads[k]; if (S.lv[k] >= u.max()) { u.done = true; u.group.visible = false; } else { u.group.visible = padVisible(u); u.redraw(); } }
 restoreExtras(LOADED_X); for (const k in upPads) if (!upPads[k].done) upPads[k].redraw();
 for (let i = 0; i < 3; i++) { spawnCustomer(CFG.queueZ0 + i * CFG.queueGap); const c = customers[customers.length - 1]; c.group.position.x = CFG.queueX; c.yaw = 0; c.group.rotation.y = Math.PI; c.yaw = Math.PI; c.atSlot = true; }
-initC2(); initC3(); try { window.__padFix = fixPads(); } catch (e) {} buildAmbient(); setupPost(); onResize();
+initC2(); initC3(); try { window.__padFix = fixPads(); } catch (e) { window.__padFixErr = String(e.stack); } buildAmbient(); setupPost(); onResize();
 introDone = !(S.tut === 0 && S.money === 0 && !Object.keys(S.lv).some(k => S.lv[k] > 0));
 if (!introDone) introEl.style.display = 'block';
 curGoalIdx = goalIndex(); curGoal = curGoalIdx >= 0 ? GOALS[curGoalIdx] : null; lastGoalIdx = curGoalIdx; drawGoalIcon();
@@ -4758,17 +4770,23 @@ for (const k in upPads) { const u = upPads[k]; if (!u.done) { u.group.visible = 
 
 /* ---- pad çakışma denetimi: pad dikdörtgeni prop/collider ile kesişiyorsa en yakın boş yere taşınır ---- */
 function allPads() { const l = []; for (const k in upPads) l.push(upPads[k]); for (const c of CPADS) if (!c.o.dead) l.push(c); return l; }
+function roadsList() { return [[3.45, 7.35, -172, -11.5], [8.3, 11.7, 12, 47], [-11.1, -8.9, -11, 11], [-17.5, -10.5, -5.5, -2.5], [-17.5, -10.5, 2.5, 5.5], [-17.5, -10.5, -13.2, -10.5]]; } // sokak, minibüs yolu, toprak patikalar
+function bedRect(b) { return b.rc || (b.rc = (() => { let x0 = 1e9, x1 = -1e9, z0 = 1e9, z1 = -1e9; for (const f of b.flowers) { x0 = Math.min(x0, f.x); x1 = Math.max(x1, f.x); z0 = Math.min(z0, f.z); z1 = Math.max(z1, f.z); } return [x0 - 0.8, x1 + 0.8, z0 - 0.8, z1 + 0.8]; })()); }
+function padOnRoadOK(p) { return !!(p.key && (EXTZ[p.key] || p.key === 'sera' || p.key === 'van' || p.key === 'coll')); } // bölge açma pad'leri sokak üstünde durur
 function padHits(p, x, z, others) {
   const hw = p.w / 2 + 0.2, hd = p.d / 2 + 0.2, x0 = x - hw, x1 = x + hw, z0 = z - hd, z1 = z + hd;
   for (const b of PROPBOX) if (b[0] < x1 && b[1] > x0 && b[2] < z1 && b[3] > z0) return 'prop';
   for (const c of colliders) { if (c.active && !c.active()) continue; if (c.x0 < x1 && c.x1 > x0 && c.z0 < z1 && c.z1 > z0) return 'collider'; }
+  if (!padOnRoadOK(p)) for (const r of roadsList()) if (r[0] < x1 && r[1] > x0 && r[2] < z1 && r[3] > z0) return 'road';
+  for (const b of beds) { if (!b.flowers.length) continue; const r = bedRect(b); if (r[0] < x1 && r[1] > x0 && r[2] < z1 && r[3] > z0) return 'bed'; }
+  if (others) for (const q of others) { if (q === p) continue; if (p.o0 && q.o0 && Math.abs(p.o0[0] - q.o0[0]) < 0.05 && Math.abs(p.o0[1] - q.o0[1]) < 0.05) continue; if (Math.abs(q.x - x) < (q.w + p.w) / 2 - 1.5 && Math.abs(q.z - z) < (q.d + p.d) / 2 - 1.5) return 'pad'; }
   return null;
 }
 function fixPads() {
-  const pads = allPads(), moved = []; let bad = 0;
+  const pads = allPads(), moved = []; let bad = 0; for (const p of pads) if (!p.o0) p.o0 = [p.x, p.z];
   for (const p of pads) {
     if (!padHits(p, p.x, p.z, pads)) continue;
-    let done = false; for (let r = 0.8; r <= 5 && !done; r += 0.8) for (let a = 0; a < 16 && !done; a++) { const ang = a / 16 * TAU, nx = p.x + Math.cos(ang) * r, nz = p.z + Math.sin(ang) * r; if (nz < -170 || nz > 40 || nx < -26 || nx > 46) continue; if (!padHits(p, nx, nz, pads)) { moved.push([p.key || '?', +p.x.toFixed(1), +p.z.toFixed(1), +nx.toFixed(1), +nz.toFixed(1)]); p.x = nx; p.z = nz; p.group.position.set(nx, 0.04, nz); done = true; } }
+    let done = false; for (let r = 0.8; r <= 14 && !done; r += 0.8) for (let a = 0; a < 24 && !done; a++) { const ang = a / 24 * TAU, nx = p.x + Math.cos(ang) * r, nz = p.z + Math.sin(ang) * r; if (nz < -170 || nz > 40 || nx < -26 || nx > 46) continue; if (!padHits(p, nx, nz, pads)) { moved.push([p.key || '?', +p.x.toFixed(1), +p.z.toFixed(1), +nx.toFixed(1), +nz.toFixed(1)]); p.x = nx; p.z = nz; p.group.position.set(nx, 0.04, nz); done = true; } }
     if (!done) bad++;
   }
   return { moved, bad };
