@@ -12,7 +12,7 @@ Hedef: ilk 6 dk playable-reklam hızı ve 60 dk içerik korunur; 60–180 dk ara
 - **Kozmetik temalar:** oyuncu kıyafeti/şapkası, çalışan üniformaları, yol/zemin kaplaması (taş, tuğla, mozaik).
 - **Gün-gece döngüsü:** ~6 dk'lık döngü; gece fenerler, ateşböcekleri, ışıklı tabelalar.
 
-## C3 – Yeni içerik (60–180 dk)
+## C3 – Yeni içerik (60–180 dk) – TAMAMLANDI (bkz. DESIGN.md, ekran görüntüleri docs/c3/)
 - **Arıcılık** (~65 dk): kovanlar çiçek bölgelerinin yanında; arılar çiçeklerden bal yapar → Bal Kavanozu ürünü.
 - **Japon Bahçesi** (~80 dk): kiraz ağaçları + bonsai atölyesi → Bonsai ürünü; havuz, köprü, fener görseli.
 - **Nadir Çiçekler + Koleksiyon Defteri** (~90 dk): yataklarda nadiren altın/gökkuşağı varyantlar; toplanınca deftere eklenir, setler kalıcı bonus verir.

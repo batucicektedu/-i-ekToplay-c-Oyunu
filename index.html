@@ -2207,7 +2207,7 @@ window.addEventListener('keydown', e => { initAudio(); if (/^(Key[WASD]|Arrow)/.
 window.addEventListener('keyup', e => { keys[e.code] = false; });
 window.addEventListener('blur', () => { for (const k in keys) keys[k] = false; joy.id = null; joy.x = joy.y = 0; joyBase.style.display = 'none'; });
 function joyStart(e) {
-  if (e.target && e.target.closest && e.target.closest('button,#menu,#ward,#beauty')) return;
+  if (e.target && e.target.closest && e.target.closest('button,#menu,#ward,#beauty,.ovl,#evt')) return;
   initAudio();
   if (joy.id !== null) return;
   joy.id = e.pointerId; joy.ox = e.clientX; joy.oy = e.clientY; joy.x = joy.y = 0;
@@ -3701,8 +3701,9 @@ function initC2() { initTiers(); initDecor(); initCos(); initDN(); }
    18. C3 – ARICILIK / JAPON BAHÇESİ / NADİR ÇİÇEKLER / İHRACAT / FESTİVAL / MÜZE / GÖREVLER / ÇEVRİMDIŞI
    Yeni kayıt alanları (hepsi eklenen): S.lv.{bee..musTkt}, S.tier.{hon,bon}, S.cb, S.cs, S.pt, S.fe, S.q, S.bx, S.ts, S.op, S.mv
    ===================================================================== */
-const E3 = { bee: 70000, beeW: 9000, hiveN: 8000, hiveSpd: 6500, honSpd: 5000, jap: 160000, bonW: 22000, bonSpd: 9000, coll: 150000, port: 330000, portW: 45000, portBonus: 30000, fest: 520000, festBonus: 60000, mus: 900000, musTkt: 100000 };
+const E3 = { bee: 20000, beeW: 3000, hiveN: 3000, hiveSpd: 2500, honSpd: 2000, jap: 70000, bonW: 8000, bonSpd: 3500, coll: 50000, port: 140000, portW: 15000, portBonus: 12000, fest: 200000, festBonus: 25000, mus: 380000, musTkt: 40000 };
 PRICE.honey = 420; PRICE.bonsai = 1100;
+const vcMatI = LM({ vertexColors: true }); // instanceColor kullanan örnekleme için ayrı malzeme (program değişimi hatasını önler)
 const C3W = [];            // C3 çalışanları (üniforma/kozmetik için)
 const C3S = { bees: null, beeN: 0, petals: [], koi: null };
 const spdBonus = () => 1 + collBonus('spd');
@@ -3865,7 +3866,7 @@ function buildBee() {
     const stk = new Stack(scene, (k, out) => out.set(hx + (k - 1.5) * 0.42, 0.18, hz + 1.15), 4); stk.pend = 0;
     const hv = { x: hx, z: hz, mesh: m, stack: stk, t: rand(0, 6), on: false, pop: 0 }; hv.col = addCollider(hx - 0.7, hx + 0.7, hz - 0.7, hz + 0.7, () => hv.on); C3.hives.push(hv);
   });
-  const bm = new THREE.InstancedMesh(beeGeo(), vcMat, 18); bm.frustumCulled = false; bm.userData.dyn = true; bm.count = 0; scene.add(bm); C3S.bees = bm;
+  const bm = new THREE.InstancedMesh(beeGeo(), vcMat, 18); bm.frustumCulled = false; bm.userData.dyn = true; bm.count = 0; bm.visible = false; scene.add(bm); C3S.bees = bm;
   for (let i = 0; i < 18; i++) C3.bees.push({ i, st: 3, t: rand(0, 3), dur: 1, from: [0, 0, 0], to: [0, 0, 0], ph: rand(0, 6) });
   z.onShow = () => { st.ins[0].zone.group.visible = true; beeZone.group.visible = true; hivesRefresh(false); };
   extPad('bee', 'Arıcılık', [E3.bee], 5.4, -95.0, iconHive, null);
@@ -3972,7 +3973,7 @@ function buildJapan() {
   buildField(z, g1, 29.5, -101.2, 'sap', 6, 4);
   buildStation(z, g1, { id: 'bon', name: 'BONSAİ ATÖLYESİ', x: 20.5, z: -111, flip: true, awn: '#e8587a', col: '#ff7aa8', col2: 0xff9ec0, mcol: 0x6b8a4a, shirt: 0xffb3cf, inputs: [{ type: 'sap', n: 2 }], out: 'bonsai', base: 3.8, hire: 'bonW' });
   // koi (dinamik)
-  { const km = new THREE.InstancedMesh(koiGeo(), vcMat, 7); km.frustumCulled = false; km.userData.dyn = true; km.visible = false; scene.add(km); for (let i = 0; i < 7; i++) { km.setColorAt(i, new THREE.Color().setHSL(i % 3 === 0 ? 0.0 : 0.07 + (i % 2) * 0.03, 0.9, i % 2 ? 0.7 : 0.55)); JAP.koi.push({ a: rand(0, TAU), sp: rand(0.25, 0.5) * (i % 2 ? 1 : -1), rx: rand(1.0, 2.4), rz: rand(1.4, 3.3), ph: rand(0, 6) }); } JAP.koiM = km; }
+  { const km = new THREE.InstancedMesh(koiGeo(), vcMatI, 7); km.frustumCulled = false; km.userData.dyn = true; km.visible = false; scene.add(km); for (let i = 0; i < 7; i++) { km.setColorAt(i, new THREE.Color().setHSL(i % 3 === 0 ? 0.0 : 0.07 + (i % 2) * 0.03, 0.9, i % 2 ? 0.7 : 0.55)); JAP.koi.push({ a: rand(0, TAU), sp: rand(0.25, 0.5) * (i % 2 ? 1 : -1), rx: rand(1.0, 2.4), rz: rand(1.4, 3.3), ph: rand(0, 6) }); } JAP.koiM = km; }
   z.onShow = () => { JAP.koiM.visible = true; };
   extPad('jap', 'Japon Bahçesi', [E3.jap], 5.4, -98.5, iconTorii, null);
   extPad('bonW', 'Bonsai Ustası', [E3.bonW], 14, -94.6, iconHelper, () => unlockedZ('jap'));
@@ -4122,7 +4123,7 @@ function portManifest(L) {
   if (L >= 2 && unlockedZ('parf')) m.perfume = 6 + 2 * L; if (L >= 3 && S.lv.sera > 0) m.pot = 12 + 3 * L; if (L >= 4 && unlockedZ('sunf')) m.sbq = 8 + 2 * L;
   return m;
 }
-const portReward = (need, L) => { let v = 0; for (const t in need) v += need[t] * PRICE[t]; return Math.round(v * 3.4 * priceMul() * (1 + 0.15 * (S.lv.portBonus || 0)) * (1 + 0.05 * Math.min(L, 20))); };
+const portReward = (need, L) => { let v = 0; for (const t in need) v += need[t] * PRICE[t]; return Math.round(v * 3.6 * priceMul() * (1 + 0.15 * (S.lv.portBonus || 0)) * (1 + 0.05 * Math.min(L, 20))); };
 function portNew() { const L = S.pt.n, need = portManifest(L); S.pt.cur = { need, got: {}, reward: portReward(need, L), st: 'load', until: 0, lv: L }; PORT.st = 'load'; PORT.sig = ''; saveDirty = true; }
 function shipGeo() {
   return mkProdGeo('x_ship', () => {
@@ -4280,15 +4281,16 @@ C3OBJ.push((set, hold) => { if (!PORT.z || PORT.z.locked || S.lv.portW > 0) retu
 const FEST = { z: null, spr: null, ev: null, balloons: null, crowd: [], sig: '', lights: [], on: 0 };
 const ssum = () => { let n = 0; for (const k in stats) if (k.indexOf('s_') === 0) n += stats[k]; return n; };
 const FKINDS = [
-  { k: 'bouquet', txt: n => n + ' buket sat', ctr: () => stats.s_bouquet || 0, base: 40, step: 8, req: () => true, ic: iconBouquet },
-  { k: 'honey', txt: n => n + ' bal kavanozu sat', ctr: () => stats.s_honey || 0, base: 30, step: 6, req: () => unlockedZ('bee'), ic: iconHoney },
-  { k: 'bonsai', txt: n => n + ' bonsai sat', ctr: () => stats.s_bonsai || 0, base: 14, step: 3, req: () => unlockedZ('jap'), ic: iconBonsai },
-  { k: 'perfume', txt: n => n + ' parfüm sat', ctr: () => stats.s_perfume || 0, base: 28, step: 5, req: () => unlockedZ('parf'), ic: iconPerfume },
-  { k: 'any', txt: n => n + ' ürün sat', ctr: ssum, base: 110, step: 20, req: () => true, ic: iconSmile },
-  { k: 'sbq', txt: n => n + ' ayçiçeği buketi sat', ctr: () => stats.s_sbq || 0, base: 26, step: 5, req: () => unlockedZ('sunf'), ic: iconSbq }
+  { k: 'bouquet', txt: n => n + ' buket sat', ctr: () => stats.s_bouquet || 0, base: 26, step: 5, req: () => true, ic: iconBouquet },
+  { k: 'honey', txt: n => n + ' bal kavanozu sat', ctr: () => stats.s_honey || 0, base: 16, step: 4, req: () => unlockedZ('bee'), ic: iconHoney },
+  { k: 'bonsai', txt: n => n + ' bonsai sat', ctr: () => stats.s_bonsai || 0, base: 8, step: 2, req: () => unlockedZ('jap'), ic: iconBonsai },
+  { k: 'perfume', txt: n => n + ' parfüm sat', ctr: () => stats.s_perfume || 0, base: 14, step: 3, req: () => unlockedZ('parf'), ic: iconPerfume },
+  { k: 'any', txt: n => n + ' ürün sat', ctr: ssum, base: 70, step: 12, req: () => true, ic: iconSmile },
+  { k: 'sbq', txt: n => n + ' ayçiçeği buketi sat', ctr: () => stats.s_sbq || 0, base: 14, step: 3, req: () => unlockedZ('sunf'), ic: iconSbq }
 ];
-function festPick() { const l = FKINDS.filter(q => q.req()); return l[S.fe.n % l.length]; }
+function festPick() { const l = FKINDS.filter(q => q.req()); return l[(S.fe.n + (FEST.tries || 0)) % l.length]; }
 function festStart() {
+  FEST.tries = (FEST.tries || 0) + 1; // başarısız etkinlikten sonra farklı tür denenir
   const k = festPick(), n = k.base + k.step * Math.min(S.fe.n, 12), rate = incomeRate(), reward = Math.round(Math.max(12000, rate * 240) * (1 + 0.25 * (S.lv.festBonus || 0)) * (1 + 0.08 * Math.min(S.fe.n, 10)));
   FEST.ev = { k, n, base: k.ctr(), left: 180, reward }; FEST.sig = ''; praise('Çiçek Festivali başladı!', true); flash(); sfx('up'); vib(30); toast('3 dk\'da ' + k.txt(n) + '!'); confetti(P.group.position.x, 3, P.group.position.z, 50);
   for (let i = 0; i < 4; i++) later(i * 0.3, () => fireworks(P.group.position.x + rand(-6, 6), P.group.position.z + rand(-5, 1)));
@@ -4389,7 +4391,7 @@ function buildMuseum() {
   // colliders (duvarlar; kapı açık)
   addCollider(X0 - 0.3, X1 + 0.3, Z0 - 0.3, Z0 + 0.1, () => !z.locked); addCollider(X0 - 0.3, X1 + 0.3, Z1 - 0.1, Z1 + 0.3, () => !z.locked); addCollider(X0 - 0.3, X0 + 0.1, Z0, Z1, () => !z.locked); addCollider(X1 - 0.1, X1 + 0.3, Z0, -156.2, () => !z.locked); addCollider(X1 - 0.1, X1 + 0.3, -153.4, Z1, () => !z.locked);
   // sergi örnekleri (dinamik, instancing)
-  MUS.specs = SPECIES.map((sp, i) => { const m = new THREE.InstancedMesh(bloomGeo(sp[0], 0), vcMat, 3); m.frustumCulled = false; m.userData.dyn = true; m.count = 0; m.visible = false; for (let k = 0; k < 3; k++) m.setColorAt(k, new THREE.Color(1, 1, 1)); scene.add(m); return m; });
+  MUS.specs = SPECIES.map((sp, i) => { const m = new THREE.InstancedMesh(bloomGeo(sp[0], 0).clone(), vcMatI, 3); m.frustumCulled = false; m.userData.dyn = true; m.count = 0; m.visible = false; for (let k = 0; k < 3; k++) m.setColorAt(k, new THREE.Color(1, 1, 1)); scene.add(m); return m; });
   MUS.halo = new THREE.InstancedMesh(new THREE.PlaneGeometry(1, 1), RARE.halo.material, 18); MUS.halo.frustumCulled = false; MUS.halo.userData.dyn = true; MUS.halo.count = 0; MUS.halo.renderOrder = 5; for (let k = 0; k < 18; k++) MUS.halo.setColorAt(k, new THREE.Color(1, 1, 1)); MUS.halo.visible = false; scene.add(MUS.halo);
   MUS.dome = new THREE.InstancedMesh(new THREE.SphereGeometry(0.62, 12, 8), new THREE.MeshLambertMaterial({ color: 0xcfeeff, transparent: true, opacity: 0.22, depthWrite: false }), 18); MUS.dome.frustumCulled = false; MUS.dome.userData.dyn = true; MUS.dome.count = 0; MUS.dome.visible = false; MUS.dome.renderOrder = 7; scene.add(MUS.dome);
   z.onShow = () => { MUS.on = true; };
@@ -4510,10 +4512,10 @@ function showOffline(away) {
   const o = document.getElementById('offc'); if (!(S.op > 0)) return; document.getElementById('offAmt').textContent = '$' + fmt(S.op);
   const h = Math.floor(away / 3600), m = Math.floor(away % 3600 / 60); document.getElementById('offSub').textContent = away > 0 ? (h ? h + ' sa ' : '') + m + ' dk boyunca ' + workerCount() + ' çalışanın üretti' : 'Çalışanların senin için üretti';
   const cx = document.getElementById('offCv').getContext('2d'); cx.clearRect(0, 0, 160, 110); iconBill(cx, 50, 60, 70); iconBill(cx, 100, 52, 60); iconStar(cx, 80, 34, 54); iconBill(cx, 80, 80, 66);
-  o.style.display = 'flex'; sfx('up'); confetti(P.group.position.x, 3, P.group.position.z, 70); coinBurstUI(); vib(30);
+  o.style.display = 'flex'; sfx('up'); confetti(P.group.position.x, 3, P.group.position.z, 70); coinBurstUI();
 }
 function collectOffline() {
-  const o = document.getElementById('offc'); o.style.display = 'none'; let v = Math.floor(+S.op); S.op = 0; if (!isFinite(v) || v <= 0) return; v = Math.min(v, 1e11); S.money += v; stats.earned += v; gainAcc += v; saveDirty = true;
+  const o = document.getElementById('offc'); o.style.display = 'none'; let v = Math.floor(+S.op); S.op = 0; if (!isFinite(v) || v <= 0) return; v = Math.min(v, 1e11); S.money += v; gainAcc += v; saveDirty = true;
   praise('+' + fmt(v) + ' kazandın!', true); flash(); sfx('up'); coinBurstUI(); popText(P.group.position.x, 4.2, P.group.position.z, '+' + fmt(v), '#6dff6a'); confetti(P.group.position.x, 2.5, P.group.position.z, 90); for (let i = 0; i < 3; i++) later(i * 0.25, () => fireworks(P.group.position.x + rand(-5, 5), P.group.position.z + rand(-5, 1))); writeSave();
 }
 function checkOffline(force) {
@@ -4542,8 +4544,11 @@ Object.assign(AREA_MUL, { bee: 3, jap: 3, port: 3.5, fest: 3.5, mus: 4 });
 (function () { // C3 hedefleri, eski kuyruğun arasına serpiştirilir
   const i = GOALS.findIndex(q => q.key === 'citySpd' && q.lv === 2) + 1; GOALS.splice(i);
   const g = (k, l) => ({ key: k, lv: l });
-  GOALS.push(g('bee', 1), g('beeW', 1), g('hiveSpd', 1), g('honSpd', 1), g('hiveN', 1), g('honSpd', 2), g('hiveSpd', 2), g('stars', 4), g('hiveN', 2), g('honSpd', 3), g('sbqSpd', 5), g('hiveSpd', 3), g('citySpd', 3), g('honSpd', 4), g('hiveN', 3), g('sbqSpd', 6), g('hiveSpd', 4), g('citySpd', 4), g('honSpd', 5), g('hiveN', 4),
-    g('jap', 1), g('bonW', 1), g('bonSpd', 1), g('bonSpd', 2), g('honSpd', 6), g('stars', 5), g('bonSpd', 3), g('hiveSpd', 5), g('sbqSpd', 7), g('bonSpd', 4), g('honSpd', 7), g('citySpd', 5), g('bonSpd', 5), g('bonSpd', 6), g('citySpd', 6), g('bonSpd', 7), g('citySpd', 7), g('coll', 1), g('port', 1), g('portW', 1), g('portBonus', 1), g('portBonus', 2), g('portBonus', 3), g('portBonus', 4), g('portBonus', 5), g('fest', 1), g('festBonus', 1), g('festBonus', 2), g('festBonus', 3), g('festBonus', 4), g('mus', 1), g('musTkt', 1), g('stars', 6), g('musTkt', 2), g('stars', 7), g('musTkt', 3), g('stars', 8), g('musTkt', 4), g('stars', 9), g('musTkt', 5), g('stars', 10));
+  GOALS.push(g('bee', 1), g('beeW', 1), g('hiveSpd', 1), g('honSpd', 1), g('hiveN', 1), g('honSpd', 2), g('hiveSpd', 2), g('honSpd', 3), g('hiveN', 2), g('sbqSpd', 5), g('citySpd', 3), g('hiveSpd', 3), g('honSpd', 4),
+    g('jap', 1), g('bonW', 1), g('bonSpd', 1), g('bonSpd', 2), g('hiveN', 3), g('bonSpd', 3), g('stars', 4), g('coll', 1), g('bonSpd', 4), g('honSpd', 5), g('hiveN', 4), g('sbqSpd', 6), g('citySpd', 4),
+    g('port', 1), g('portW', 1), g('portBonus', 1), g('bonSpd', 5), g('portBonus', 2), g('hiveSpd', 4), g('honSpd', 6), g('portBonus', 3), g('bonSpd', 6), g('stars', 5), g('portBonus', 4), g('citySpd', 5), g('bonSpd', 7), g('portBonus', 5),
+    g('fest', 1), g('festBonus', 1), g('hiveSpd', 5), g('honSpd', 7), g('festBonus', 2), g('sbqSpd', 7), g('citySpd', 6), g('festBonus', 3), g('citySpd', 7), g('festBonus', 4),
+    g('mus', 1), g('musTkt', 1), g('stars', 6), g('musTkt', 2), g('stars', 7), g('musTkt', 3), g('stars', 8), g('musTkt', 4), g('stars', 9), g('musTkt', 5), g('stars', 10));
   for (const k in GFIRST) delete GFIRST[k]; GOALS.forEach((q, j) => { if (GFIRST[q.key] === undefined) GFIRST[q.key] = j; });
   Object.assign(MAIN_UNLOCKS, { bee: 1, beeW: 1, jap: 1, bonW: 1, coll: 1, port: 1, portW: 1, fest: 1, mus: 1 });
 })();
