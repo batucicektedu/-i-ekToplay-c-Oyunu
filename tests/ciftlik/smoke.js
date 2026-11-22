@@ -9,5 +9,5 @@ console.log(JSON.stringify(st));if(!st.raw)bad.push('save missing');if(st.old)ba
 // gate
 await page.evaluate(()=>{__game.tp(-6,14.4);__game.sim(1)});const card=await page.evaluate(()=>document.getElementById('chapCard').style.display+'|'+document.querySelector('#chapCard .ct').textContent);console.log('gate card',card);if(!card.includes('flex')||!card.includes('Sahil'))bad.push('gate card');
 // reload with save
-await page.reload();await page.waitForTimeout(1500);const m2=await page.evaluate(()=>({m:__game.S.money,lv:Object.keys(__game.S.lv).filter(k=>__game.S.lv[k]>0).length}));console.log('reload',JSON.stringify(m2));if(m2.m<st.money*0.9||m2.lv<st.up.length)bad.push('reload lost progress');
+await page.waitForTimeout(1500);await page.reload();await page.waitForTimeout(1500);const m2=await page.evaluate(()=>({m:__game.S.money,lv:Object.keys(__game.S.lv).filter(k=>__game.S.lv[k]>0).length}));console.log('reload',JSON.stringify(m2));if(m2.m<st.money*0.9||m2.lv<st.up.length)bad.push('reload lost progress');
 console.log(errs.slice(0,5));if(errs.length)bad.push('errors');console.log(bad.length?'FAIL '+bad:'PASS');await b.close();process.exit(bad.length?1:0)})();
