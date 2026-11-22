@@ -9,5 +9,7 @@ console.log(JSON.stringify(st));if(!st.raw)bad.push('save missing');if(st.old)ba
 // önceki bölüm kapısı kaldırıldı: kart çıkmamalı
 await page.evaluate(()=>{__game.tp(-8.2,15.4);__game.sim(1)});const card=await page.evaluate(()=>(document.getElementById('chapCard')||{style:{}}).style.display+'|');console.log('gate card',card);if(card.includes('flex'))bad.push('back gate card still shown');
 // reload with save
-await page.waitForTimeout(1500);await page.reload();await page.waitForTimeout(1500);const m2=await page.evaluate(()=>({m:__game.S.money,lv:Object.keys(__game.S.lv).filter(k=>__game.S.lv[k]>0).length}));console.log('reload',JSON.stringify(m2));if(m2.m<st.money*0.9||m2.lv<st.up.length)bad.push('reload lost progress');
+// tp+sim para harcayabilir (pad otomatik oder): referansi reload oncesi son durumdan al
+const st2=await page.evaluate(()=>{dispatchEvent(new Event('pagehide'));const lv=__game.S.lv;return {money:__game.S.money,n:Object.keys(lv).filter(k=>lv[k]>0).length}});
+await page.waitForTimeout(1500);await page.reload();await page.waitForTimeout(3000);const m2=await page.evaluate(()=>({m:__game.S.money,lv:Object.keys(__game.S.lv).filter(k=>__game.S.lv[k]>0).length}));console.log('reload',JSON.stringify(m2));if(m2.m<st2.money*0.9||m2.lv<st2.n)bad.push('reload lost progress');
 console.log(errs.slice(0,5));if(errs.length)bad.push('errors');console.log(bad.length?'FAIL '+bad:'PASS');await b.close();process.exit(bad.length?1:0)})();
