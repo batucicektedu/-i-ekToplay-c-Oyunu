@@ -224,7 +224,7 @@ function rm(o) { if (o && o.parent) o.parent.remove(o); }
 let fountainWater = null, clouds = [], butterflies = [];
 let LOADED_X = null, carpet1 = null, carpet2 = null;
 const MAIN_UNLOCKS = { bed: 1, helper: 1, cashier: 1, carrier: 1, sera: 1, van: 1 };
-const S = { money: 0, lv: { ranch: 0, horse: 0, rideSpd: 0, ticket: 0, instr: 0, foal: 0, show: 0, ata: 0, groom: 0, cap: 0, speed: 0, pack: 0, bed: 0, helper: 0, cashier: 0, carrier: 0, cashSpd: 0, carSpd: 0, carCap: 0, helpSpd: 0, sera: 0, van: 0, lav: 0, lavW: 0, keseSpd: 0, parf: 0, parfW: 0, parfSpd: 0, cafe: 0, cafeW: 0, teaSpd: 0, wed: 0, wedBonus: 0, sunf: 0, sunW: 0, sbqSpd: 0, city: 0, cityW: 0, citySpd: 0, stars: 0, bee: 0, beeW: 0, hiveN: 0, hiveSpd: 0, honSpd: 0, jap: 0, bonW: 0, bonSpd: 0, coll: 0, port: 0, portW: 0, portBonus: 0, fest: 0, festBonus: 0, mus: 0, musTkt: 0, wedW: 0, portSpd: 0, portCap: 0, helpCap: 0, helperN: 0, helperT: 0, lavCap: 0, lavN: 0, lavT: 0, parfCap: 0, parfN: 0, parfT: 0, cafeG: 0, cafeGCap: 0, cafeGN: 0, cafeGT: 0, sunCap: 0, sunN: 0, bonCap: 0, bonN: 0, bonT: 0, carN: 0, cashN: 0, wedSpd: 0, potSpd: 0, bus: 0, busSpd: 0, busCap: 0, busN: 0, wedN: 0, waitN: 0, cityN: 0, portN: 0, beeN: 0, gate: 0 }, ic: 0, tut: 0, tier: { pack: 0, flo: 0, pot: 0, van: 0, kese: 0, parf: 0, tea: 0, wed: 0, city: 0, hon: 0, bon: 0 }, decor: {}, cos: { hat: 'straw', fit: 0, uni: 0, floor: 0, own: [] }, dn: 0,
+const S = { money: 0, lv: { sheep: 0, sheep2: 0, knit: 0, cheese: 0, zoo: 0, zoo2: 0, orchard: 0, ranch: 0, horse: 0, rideSpd: 0, ticket: 0, instr: 0, foal: 0, show: 0, ata: 0, groom: 0, cap: 0, speed: 0, pack: 0, bed: 0, helper: 0, cashier: 0, carrier: 0, cashSpd: 0, carSpd: 0, carCap: 0, helpSpd: 0, sera: 0, van: 0, lav: 0, lavW: 0, keseSpd: 0, parf: 0, parfW: 0, parfSpd: 0, cafe: 0, cafeW: 0, teaSpd: 0, wed: 0, wedBonus: 0, sunf: 0, sunW: 0, sbqSpd: 0, city: 0, cityW: 0, citySpd: 0, stars: 0, bee: 0, beeW: 0, hiveN: 0, hiveSpd: 0, honSpd: 0, jap: 0, bonW: 0, bonSpd: 0, coll: 0, port: 0, portW: 0, portBonus: 0, fest: 0, festBonus: 0, mus: 0, musTkt: 0, wedW: 0, portSpd: 0, portCap: 0, helpCap: 0, helperN: 0, helperT: 0, lavCap: 0, lavN: 0, lavT: 0, parfCap: 0, parfN: 0, parfT: 0, cafeG: 0, cafeGCap: 0, cafeGN: 0, cafeGT: 0, sunCap: 0, sunN: 0, bonCap: 0, bonN: 0, bonT: 0, carN: 0, cashN: 0, wedSpd: 0, potSpd: 0, bus: 0, busSpd: 0, busCap: 0, busN: 0, wedN: 0, waitN: 0, cityN: 0, portN: 0, beeN: 0, gate: 0 }, ic: 0, tut: 0, tier: { pack: 0, flo: 0, pot: 0, van: 0, kese: 0, parf: 0, tea: 0, wed: 0, city: 0, hon: 0, bon: 0 }, decor: {}, cos: { hat: 'straw', fit: 0, uni: 0, floor: 0, own: [] }, dn: 0,
   cb: {}, cs: [], pt: { n: 0, cur: null }, fe: { n: 0, t: 420 }, q: { a: [], n: 0 }, bx: 0, ts: 0, op: 0, mv: 0, seen: {} };
 let saveDirty = false, saveTimer = 0;
 let introDone = false, curGoal = null, curGoalIdx = -1, lastGoalIdx = -2;
@@ -1443,9 +1443,7 @@ function updateChickens(dt, t) {
 
 function buildBeach() {
   buildFarmLandmarks();
-  hayStack(-22.5, 21, 3); hayStack(-28, 21.5, 2); hayBale(-23.4, 24.2, 0.4); hayBale(-24.5, 23.8, 1.2);
   for (const [x, z] of [[14.5, 17.5], [15.6, 17.6], [15.0, 17.6]]) hayBale(x, z, 0.1, x === 15.0 ? 0.9 : 0);
-  wFence(-20, 20, -12.6, 20); wFence(12.6, 20, 20.5, 20); wFence(20.5, 20, 20.5, 9);
   buildChickens();
 }
 const BEACH = { foam: [] };
@@ -2099,7 +2097,7 @@ function buildDecor() {
   const lamp = (x, z) => { GLOWS.push([x, z, 3.4]); const g = new THREE.Group(); g.position.set(x, 0, z); g.add(mk(G.cyl, mat(0x4a3320), 0.1, 3.0, 0.1, 0, 1.5, 0)); g.add(mk(G.cyl, mat(0x4a3320), 0.22, 0.15, 0.22, 0, 0.08, 0)); g.add(mk(G.box, mat(0x4a3320), 0.55, 0.06, 0.06, 0.25, 2.9, 0)); g.add(mk(G.sph, LAMPM, 0.22, 0.26, 0.22, 0.5, 2.7, 0)); g.traverse(m => { if (m.isMesh) m.castShadow = true; }); world.add(g); };
   [[-9.3, -5.2], [16.2, -5.2], [-9.3, 12], [7.9, 12.0], [12.1, 12.0], [16.2, 12]].forEach(a => lamp(a[0], a[1]));
   // taş kuyu (eski çeşme yerine)
-  { const fx = 4.8, fz = 3.4, fg = new THREE.Group(); fg.position.set(fx, 0, fz); const st = mat(0xa9a396), st2 = mat(0x8d8678);
+  { const fx = 4.9, fz = 1.7, fg = new THREE.Group(); fg.position.set(fx, 0, fz); const st = mat(0xa9a396), st2 = mat(0x8d8678);
     fg.add(mk(G.cyl, st, 1.25, 0.9, 1.25, 0, 0.45, 0)); fg.add(mk(G.cyl, st2, 1.3, 0.12, 1.3, 0, 0.95, 0)); fg.add(mk(G.cyl, mat(0x2a5a7a), 0.95, 0.05, 0.95, 0, 0.9, 0));
     for (const sx of [-1, 1]) fg.add(mk(G.box, mat(0x8a5a2a), 0.14, 2.1, 0.14, sx * 1.15, 1.5, 0)); fg.add(mk(G.box, mat(0x8a5a2a), 2.5, 0.12, 0.14, 0, 2.5, 0));
     for (const sz of [-1, 1]) { const r = mk(G.box, mat(0xc0392b), 2.9, 0.1, 1.3, 0, 2.85, sz * 0.5); r.rotation.x = -sz * 0.5; fg.add(r); }
@@ -2817,7 +2815,7 @@ function objective(out) {
   const hold0 = t => st.count(t); const set = (x, y, z, kind) => { out.x = x; out.y = y; out.z = z; out.kind = kind; out.ok = true; return out; };
   const gp = curGoal ? upPads[curGoal.key] : null;
   if (gp && gp.group.visible && !gp.done && S.money + gp.paid >= gp.cost()) return set(gp.x, 0.4, gp.z, 'pad');
-  { const ro = ranchObjective(set, hold0); if (ro) return ro; }
+  { const ro = ranchObjective(set, hold0) || farmObjective(set); if (ro) return ro; }
   const ripe = () => { let best = null, bd = 1e9; for (const bb of beds) { if (bb.locked || bb.nohelp) continue; for (const f of bb.flowers) if (f.t >= f.gt) { const d = (f.x - P.group.position.x) ** 2 + (f.z - P.group.position.z) ** 2; if (d < bd) { bd = d; best = f; } } } return best; };
   if (outZone.inside && outputPile.length > 0 && P.free() > 0 && nB < 14) return set(outZone.x, 0.4, outZone.z, 'out');
   const hold = t => st.count(t), prodHeld = PROD_LIST.some(t => hold(t) > 0);
@@ -2975,7 +2973,7 @@ function update(dt) {
   updateZoneActions(dt);
   updateGoalState(); updateUpgrades(dt); updateExpansion(dt, T);
   updatePacking(dt, T);
-  updateRanch(dt, T); updateHelper(dt, T); updateCashier(dt, T); updateCarrier(dt, T); updatePotting(dt, T); updateSera(dt); updateVan(dt, T); updateAmbient(dt, T);
+  updateRanch(dt, T); updateFarm(dt, T); updateHelper(dt, T); updateCashier(dt, T); updateCarrier(dt, T); updatePotting(dt, T); updateSera(dt); updateVan(dt, T); updateAmbient(dt, T);
   // customers spawning
   spawnT -= dt;
   if (queue.length < 3 && spawnT > CFG.spawnShortEvery) spawnT = CFG.spawnShortEvery;
@@ -3421,7 +3419,7 @@ function buildFarmGround() {
 function buildFarmLandmarks() {
   buildBarn(-11, -21, 1.25, 0); buildSilo(-1.2, -19, 1.15); buildSilo(1.3, -17.6, 0.85); buildWindmill(15.5, -20, 1.35);
   hayStack(-19.5, -17.5, 3); hayStack(-20, -12.8, 2); hayBale(10.4, -14.4, 0.3); hayBale(11.5, -14.2, 1.1); hayBale(11, -14.3, 0.2, 0.9);
-  for (const [k, x, z, s] of [['oak', -26, -6, 1.4], ['oak', -25, 6, 1.5], ['oak', -24, 17, 1.3], ['oak', 24, 18, 1.4], ['oak', 26, -20, 1.5], ['pop', -3, -26, 1.1], ['pop', 0, -27, 0.95], ['oak', 21, -28, 1.4], ['oak', -16, 21, 1.3], ['pop', 22.2, 22, 1.2], ['oak', -30, 24, 1.5], ['oak', 31, 30, 1.4], ['pop', -22, -26, 1.2], ['oak', -30, -20, 1.5]]) treeAt(k, x, z, s);
+  for (const [k, x, z, s] of [['oak', -26, -6, 1.4], ['oak', -25, 6, 1.5], ['oak', -24, 17, 1.3], ['oak', 24, 18, 1.4], ['oak', 26, -20, 1.5], ['pop', -3, -26, 1.1], ['pop', 0, -27, 0.95], ['oak', 21, -28, 1.4], ['pop', 22.2, 22, 1.2], ['oak', -30, 24, 1.5], ['oak', 31, 30, 1.4], ['pop', -22, -26, 1.2], ['oak', -30, -20, 1.5]]) treeAt(k, x, z, s);
   for (const [x, z, s] of [[-18, -9, 1], [-6, -9.5, 1.2], [0.5, -9, 1], [13, -8.5, 1.2], [-19.2, 13, 1], [18.5, 13, 1.1], [6, 13.4, 0.9]]) buildBush(x, z, s);
 }
 function woodFenceBox(cx, cz, w, d) { // eski çalı kutusu yerine ahşap çit (aynı çarpışma)
@@ -3498,7 +3496,7 @@ function buildRanchStatic() {
   // gölet + ağaçlar
   { const pm = new THREE.Mesh(new THREE.CircleGeometry(1, 28), new THREE.MeshStandardMaterial({ color: lc(0x3fa6e8), roughness: 0.2, transparent: true, opacity: 0.92, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -3 })); pm.rotation.x = -Math.PI / 2; pm.scale.set(7, 4.5, 1); pm.position.set(33, 0.04, -80); world.add(pm);
     for (let i = 0; i < 12; i++) { const a = i / 12 * TAU; world.add(mk(G.cyl, mat(0x7a5a3a), 0.5, 0.12, 0.5, 33 + Math.cos(a) * 7.3, 0.06, -80 + Math.sin(a) * 4.8)); } treeAt('oak', 27, -84, 1.5); treeAt('oak', 39, -83, 1.4); treeAt('pop', 25, -77, 1.2); }
-  for (const [k, x, z, s] of [['oak', -19, -64, 1.5], ['oak', -17, -78, 1.4], ['pop', -12, -60, 1.1], ['oak', 26, -62, 1.4], ['oak', 24, -72, 1.3], ['oak', 38, -58, 1.5], ['pop', 40, -66, 1.2], ['oak', -3, -84, 1.5], ['oak', 12, -85, 1.4], ['pop', 20, -84, 1.1], ['oak', 38, -32, 1.4], ['oak', -21, -50, 1.2], ['pop', 22.5, -32, 1.1], ['oak', -10, -30, 1.2]]) treeAt(k, x, z, s);
+  for (const [k, x, z, s] of [['oak', -19, -64, 1.5], ['oak', -17, -78, 1.4], ['pop', -12, -60, 1.1], ['oak', 26, -62, 1.4], ['oak', 24, -72, 1.3], ['oak', 38, -58, 1.5], ['pop', 40, -66, 1.2], ['oak', -3, -84, 1.5], ['oak', 12, -85, 1.4], ['pop', 20, -84, 1.1], ['oak', -21, -50, 1.2], ['pop', 22.5, -32, 1.1], ['oak', -10, -30, 1.2]]) treeAt(k, x, z, s);
   hayBale(T.cx - 15.5, T.cz + 3, 0.2); hayBale(T.cx + 16, T.cz - 3, 1.2); hayBale(T.cx + 16.1, T.cz - 3, 0.1, 0.9);
   // ana kapı + kilitli kapak
   const gt = new THREE.Group(), gx = P_.gate[0], gz = P_.gate[1]; gt.position.set(gx, 0, gz);
@@ -3618,8 +3616,8 @@ function updateCare(dt, t) {
   hayZone.tk = (hayZone.tk || 0) - dt; if (hayZone.inside && hayZone.tk <= 0 && P.free() > 0 && P.stack.count('hay') < 6) { hayZone.tk = 0.18; const it = ITEMF.hay(); it.position.set(RANCH.hay[0], 0.8, RANCH.hay[1] - 1.5); scene.add(it); sendToBack(P, it, 'hay', 1.2); sfx('pick'); }
   feedZone.tk = (feedZone.tk || 0) - dt;
   if (feedZone.inside && feedZone.tk <= 0) {
-    const ty = P.stack.count('carrot') > 0 ? 'carrot' : P.stack.count('hay') > 0 ? 'hay' : null;
-    if (ty) { let best = null; for (const h of RH) if (h.love < 96 && (!best || h.love < best.love)) best = h; if (best) { feedZone.tk = 0.3; const it = takeFromBack(P, ty); if (it) { const hh = best; fly(it.mesh, out => { out.set(hh.x, 2.8, hh.z); return 0; }, 0.35, 1.4, () => { rm(it.mesh); hh.love = Math.min(100, hh.love + (ty === 'carrot' ? 24 : 13)); hh.eatT = 1.4; hearts(hh.x, 3.7, hh.z, 3); sfx('happy'); stats.fed = (stats.fed || 0) + 1; }); } } }
+    const ty = P.stack.count('apple') > 0 ? 'apple' : P.stack.count('carrot') > 0 ? 'carrot' : P.stack.count('hay') > 0 ? 'hay' : null;
+    if (ty) { let best = null; for (const h of RH) if (h.love < 96 && (!best || h.love < best.love)) best = h; if (best) { feedZone.tk = 0.3; const it = takeFromBack(P, ty); if (it) { const hh = best; fly(it.mesh, out => { out.set(hh.x, 2.8, hh.z); return 0; }, 0.35, 1.4, () => { rm(it.mesh); hh.love = Math.min(100, hh.love + (ty === 'apple' ? 32 : ty === 'carrot' ? 24 : 13)); hh.eatT = 1.4; hearts(hh.x, 3.7, hh.z, 3); sfx('happy'); stats.fed = (stats.fed || 0) + 1; }); } } }
   }
 }
 function updateHorse(h, dt, t) {
@@ -3751,9 +3749,148 @@ function ranchObjective(set, hold) {
   if (SHOW.state === 'ready' && RH.some(rideReady)) return set(showZone.x, 0.4, showZone.z, 'show');
   if (!instructor && RC.some(r => r.st === 'queue' && r.qi === 0 && r.at && !r.h) && RH.some(rideReady)) return set(mountZone.x, 0.4, mountZone.z, 'ride');
   const low = RH.some(h => h.love < 50);
-  if (low) { if (P.stack.count('carrot') + P.stack.count('hay') > 0) return set(feedZone.x, 0.4, feedZone.z, 'feed'); if (P.free() > 0) { const c = CARROTS.find(q => q.t >= 1); if (c) return set(c.x, 1.0, c.z, 'carrot'); return set(hayZone.x, 0.4, hayZone.z, 'hay'); } }
+  if (low) { if (P.stack.count('carrot') + P.stack.count('hay') + P.stack.count('apple') > 0) return set(feedZone.x, 0.4, feedZone.z, 'feed'); if (P.free() > 0) { const c = CARROTS.find(q => q.t >= 1); if (c) return set(c.x, 1.0, c.z, 'carrot'); return set(hayZone.x, 0.4, hayZone.z, 'hay'); } }
   return null;
 }
+
+/* =====================================================================
+   KOYUN ÇAYIRI (yün -> Örgü Atölyesi kazak, Peynirhane), SEVİMLİ HAYVANLAR, MEYVE BAHÇESİ, FİNAL
+   ===================================================================== */
+const SHP = { x0: -22, x1: 5, z0: 18.5, z1: 40, gate: [5, 27.5], knitIn: [-18.6, 25.6], knitOut: [-15.2, 25.6], cheeseIn: [-9.6, 25.6], cheeseOut: [-6.2, 25.6], sell: [0.2, 24.6] };
+const ZOO = { x0: 27, x1: 43.5, z0: 15, z1: 28, gate: [27, 22.5] };
+const ORC = { cx: 35, cz: 39 };
+const SHEEP = [], ZANI = [], APPLES = [], ZV = []; const WS = {}; let farmBuilt = false, shGate = null, zooGate = null;
+const L_ = k => S.lv[k] > 0;
+ITEMF.wool = () => { const g = new THREE.Group(); g.add(new THREE.Mesh(woolGeo(), vcMat)); g.userData.prod = 'wool'; return g; };
+ITEMF.sweater = () => { const g = new THREE.Group(); g.add(new THREE.Mesh(sweaterGeo(), vcMat)); g.userData.prod = 'sweater'; return g; };
+ITEMF.cheese = () => { const g = new THREE.Group(); g.add(new THREE.Mesh(cheeseGeo(), vcMat)); g.userData.prod = 'cheese'; return g; };
+ITEMF.apple = () => { const g = new THREE.Group(); g.add(new THREE.Mesh(appleGeo(), vcMat)); g.userData.prod = 'apple'; return g; };
+let _g1 = null, _g2 = null, _g3 = null, _g4 = null;
+const woolGeo = () => _g1 || (_g1 = mergeParts([part(G.sphH, 0xfffdf6, 0, 0.2, 0, 0.26, 0.2, 0.26), part(G.sphH, 0xf2efe6, 0.14, 0.26, 0.05, 0.16, 0.14, 0.16), part(G.sphH, 0xf2efe6, -0.13, 0.22, -0.06, 0.15, 0.14, 0.15)]));
+const sweaterGeo = () => _g2 || (_g2 = mergeParts([part(G.box, 0xe8445a, 0, 0.16, 0, 0.42, 0.3, 0.14), part(G.box, 0xe8445a, -0.28, 0.14, 0, 0.16, 0.12, 0.12, 0, 0, 0.5), part(G.box, 0xe8445a, 0.28, 0.14, 0, 0.16, 0.12, 0.12, 0, 0, -0.5), part(G.box, 0xfff0d0, 0, 0.3, 0, 0.18, 0.05, 0.15)]));
+const cheeseGeo = () => _g3 || (_g3 = mergeParts([part(G.cyl, 0xf6c844, 0, 0.12, 0, 0.26, 0.24, 0.26), part(G.cyl, 0xe8b02c, 0, 0.12, 0, 0.27, 0.06, 0.27), part(G.sphH, 0xc98a14, 0.12, 0.2, 0.08, 0.05, 0.04, 0.05), part(G.sphH, 0xc98a14, -0.1, 0.1, 0.12, 0.04, 0.04, 0.04)]));
+const appleGeo = () => _g4 || (_g4 = mergeParts([part(G.sphH, 0xe8283a, 0, 0.14, 0, 0.15, 0.14, 0.15), part(G.cyl, 0x5a3a1a, 0, 0.3, 0, 0.015, 0.06, 0.015), part(G.sphH, 0x3fb04c, 0.06, 0.3, 0, 0.06, 0.02, 0.04)]));
+let _shW = null, _shB = null;
+function sheepGeos() {
+  if (_shW) return [_shW, _shB];
+  _shW = mergeParts([part(G.sphH, 0xfffbf0, 0, 0.62, 0, 0.5, 0.42, 0.62), part(G.sphH, 0xf3efe2, 0.22, 0.74, 0.2, 0.3, 0.26, 0.3), part(G.sphH, 0xf3efe2, -0.22, 0.74, 0.1, 0.3, 0.26, 0.3), part(G.sphH, 0xfffbf0, 0, 0.8, -0.25, 0.34, 0.3, 0.34), part(G.sphH, 0xf6f2e6, 0, 0.78, 0.42, 0.26, 0.24, 0.24)]);
+  _shB = mergeParts([part(G.sphH, 0xd9a89a, 0, 0.55, 0, 0.3, 0.25, 0.42), part(G.sphH, 0x3a3030, 0, 0.78, 0.62, 0.2, 0.22, 0.26), part(G.sphH, 0x3a3030, -0.2, 0.84, 0.55, 0.07, 0.04, 0.12, 0, 0, 0.5), part(G.sphH, 0x3a3030, 0.2, 0.84, 0.55, 0.07, 0.04, 0.12, 0, 0, -0.5), part(G.sphH, 0xffffff, -0.09, 0.84, 0.82, 0.03, 0.03, 0.03), part(G.sphH, 0xffffff, 0.09, 0.84, 0.82, 0.03, 0.03, 0.03),
+    ...[[-0.2, 0.3], [0.2, 0.3], [-0.2, -0.3], [0.2, -0.3]].map(([x, z]) => part(G.cyl, 0x3a3030, x, 0.2, z, 0.06, 0.42, 0.06))]);
+  return [_shW, _shB];
+}
+function makeSheep(wool) { const [gw, gb] = sheepGeos(), g = new THREE.Group(), w = new THREE.Mesh(gw, vcMat), b = new THREE.Mesh(gb, vcMat); w.castShadow = b.castShadow = true; g.add(b, w); g.scale.setScalar(1.35); g.userData.dyn = true; return { g, w, b }; }
+function makeSmall(kind) { // kuzu / keçi / tavşan
+  const c = kind === 'goat' ? 0xcaa070 : kind === 'rabbit' ? 0xf2efe8 : 0xfffbf0, s = kind === 'rabbit' ? 0.5 : kind === 'goat' ? 0.9 : 0.8, P_ = [part(G.sphH, c, 0, 0.5, 0, 0.3, 0.28, 0.45), part(G.sphH, kind === 'lamb' ? 0x3a3030 : c, 0, 0.72, 0.5, 0.2, 0.2, 0.24)];
+  for (const [x, z] of [[-0.14, 0.25], [0.14, 0.25], [-0.14, -0.25], [0.14, -0.25]]) P_.push(part(G.cyl, kind === 'rabbit' ? c : 0x3a3030, x, 0.2, z, 0.05, 0.4, 0.05));
+  if (kind === 'rabbit') { P_.push(part(G.sphH, c, -0.07, 1.0, 0.45, 0.05, 0.22, 0.05), part(G.sphH, c, 0.07, 1.0, 0.45, 0.05, 0.22, 0.05), part(G.sphH, 0xffffff, 0, 0.5, -0.42, 0.1, 0.1, 0.1)); }
+  else if (kind === 'goat') { P_.push(part(G.cone, 0x5a4a3a, -0.07, 0.95, 0.5, 0.04, 0.2, 0.04), part(G.cone, 0x5a4a3a, 0.07, 0.95, 0.5, 0.04, 0.2, 0.04), part(G.sphH, 0xfff0d0, 0, 0.62, 0.72, 0.05, 0.1, 0.05)); }
+  else P_.push(part(G.sphH, 0xfffbf0, 0, 0.58, 0.0, 0.34, 0.28, 0.4));
+  const m = new THREE.Mesh(mergeParts(P_), vcMat); m.castShadow = true; const g = new THREE.Group(); g.add(m); g.scale.setScalar(s * 1.3); g.userData.dyn = true; return g;
+}
+function mkWorkshop(o) { // o: id,x,z (bina merkezi), name, col, inType,inN,outType,time,price,inXY,outXY,sellLabel
+  const g = new THREE.Group(), wm = woodM(); g.position.set(o.x, 0, o.z);
+  g.add(rbox(4.6, 2.6, 3.2, 0.08, wm)).children[0].position.y = 1.3; const rf = mk(G.box, mat(o.col), 5.2, 0.16, 2.4, 0, 3.0, 0.9); rf.rotation.x = 0.4; g.add(rf); const rf2 = mk(G.box, mat(o.col), 5.2, 0.16, 2.4, 0, 3.0, -0.9); rf2.rotation.x = -0.4; g.add(rf2);
+  g.add(mk(G.box, mat(0x3a2a1a), 1.2, 1.8, 0.1, 1.2, 0.9, 1.62)); const sg = makeBoard(o.name, 4.2, 0.8, 'wood'); sg.position.set(0, 3.7, 1.7); sg.rotation.x = -0.15; g.add(sg); shadowAll(g, true, false); world.add(g); addCollider(o.x - 2.4, o.x + 2.4, o.z - 1.7, o.z + 1.7);
+  const w = Object.assign({ working: false, timer: 0, made: 0, pend: 0 }, o);
+  w.inStack = new Stack(scene, (i, out) => out.set(o.x + (-1.4 + (i % 4) * 0.5), 1.0 + Math.floor(i / 4) * 0.25, o.z + 1.9), 16); w.inStack.pend = 0;
+  w.outStack = new Stack(scene, (i, out) => out.set(o.x + 1.3 + (i % 3) * 0.55, 0.3 + Math.floor(i / 3) * 0.3, o.z + 2.4), 12); w.outStack.pend = 0;
+  w.inZone = new Zone({ x: o.inXY[0], z: o.inXY[1], w: 2.8, d: 2.6, color: '#ff8a1f', draw: drawZoneIcon(ICONF[o.inType]) }); w.outZone = new Zone({ x: o.outXY[0], z: o.outXY[1], w: 2.8, d: 2.6, color: '#2f7bff', draw: drawZoneIcon(ICONF[o.outType]) });
+  w.worker = makeChar({ shirt: o.col, pants: 0x4b3a8a, hair: 0x3a2314, hairStyle: 'ponytail', outfit: 'apron', apron: 0xffffff, skin: 0xf0b98a }); w.worker.group.position.set(o.x - 0.6, 0, o.z + 0.9); w.worker.group.rotation.y = 0; scene.add(w.worker.group);
+  w.on = false; w.inZone.group.visible = w.outZone.group.visible = w.worker.group.visible = false; WS[o.id] = w; return w;
+}
+function buildFarmStatic() {
+  // koyun çayırı
+  fencePath([[SHP.x0, SHP.z0], [SHP.x1, SHP.z0], [SHP.x1, SHP.gate[1] - 2.6]], {}); fencePath([[SHP.x1, SHP.gate[1] + 2.6], [SHP.x1, SHP.z1], [SHP.x0, SHP.z1], [SHP.x0, SHP.z0]], {});
+  laneRibbon([[8.4, SHP.gate[1]], [6, SHP.gate[1]], [2, SHP.gate[1] - 1], [-2, 24]], 3.4, 0.016); laneRibbon([[-17, 23.8], [-8, 23.8], [0, 23.6]], 3.0, 0.016);
+  { const gt = new THREE.Group(); gt.position.set(SHP.gate[0], 0, SHP.gate[1]); for (const sz of [-1, 1]) { gt.add(mk(G.cyl, mat(0x8a5a2a), 0.28, 3.8, 0.28, 0, 1.9, sz * 2.7)); } gt.add(mk(G.box, mat(0x8a5a2a), 0.3, 0.3, 5.7, 0, 3.7, 0)); const sgn = makeBoard('KOYUN ÇAYIRI', 4.6, 0.9, 'wood'); sgn.position.set(0, 4.5, 0); sgn.rotation.y = -Math.PI / 2; gt.add(sgn); shadowAll(gt, true, false); world.add(gt);
+    shGate = new THREE.Group(); shGate.position.set(SHP.gate[0], 0, SHP.gate[1]); shGate.userData.dyn = true; for (const y of [0.4, 0.9]) shGate.add(mk(G.box, mat(0xb07a40), 0.12, 0.14, 5.0, 0, y, 0)); scene.add(shGate); addCollider(SHP.x1 - 0.4, SHP.x1 + 0.4, SHP.gate[1] - 2.6, SHP.gate[1] + 2.6, () => !L_('sheep')); }
+  // pazar tezgahı
+  { const g = new THREE.Group(); g.position.set(SHP.sell[0], 0, SHP.sell[1] - 2.6); g.add(rbox(3.2, 1.0, 1.4, 0.06, woodM())).children[0].position.y = 0.5; const aw = mk(G.box, mat(0x2f9e5a), 3.8, 0.14, 1.8, 0, 2.5, 0.2); aw.rotation.x = 0.3; g.add(aw); for (const sx of [-1.7, 1.7]) g.add(mk(G.cyl, mat(0xffffff), 0.07, 2.5, 0.07, sx, 1.25, 0.8)); const sg = makeBoard('PAZAR', 2.2, 0.7, 'wood'); sg.position.set(0, 3.2, 0.5); g.add(sg); shadowAll(g, true, false); world.add(g); addCollider(SHP.sell[0] - 1.7, SHP.sell[0] + 1.7, SHP.sell[1] - 3.3, SHP.sell[1] - 1.9); }
+  // hayvanat bahçesi
+  fencePath([[ZOO.x0, ZOO.z0], [ZOO.x1, ZOO.z0], [ZOO.x1, ZOO.z1], [ZOO.x0, ZOO.z1], [ZOO.x0, ZOO.gate[1] + 2.4]], { white: true }); fencePath([[ZOO.x0, ZOO.gate[1] - 2.4], [ZOO.x0, ZOO.z0]], { white: true });
+  laneRibbon([[10.2, 34], [20, 34.6], [25, 30], [26.6, 24.5], [28.5, 22.5]], 3.2, 0.016); yardBlob(ZOO.x0 + 8, ZOO.z0 + 7.5, 17, 15, [[0.5, 0.5, 0.46, 0.46]], '#5aa844', ['rgba(255,255,255,.1)', 'rgba(30,110,40,.18)', 'rgba(40,120,50,.4)', 'rgba(200,240,130,.4)'], 0.021);
+  { const sg = makeBoard('SEVİMLİ HAYVANLAR', 5.6, 1.0, 'wood'); sg.position.set(ZOO.x0 - 0.2, 4.4, ZOO.gate[1]); sg.rotation.y = Math.PI / 2; world.add(sg); for (const sz of [-1, 1]) world.add(mk(G.cyl, mat(0x8a5a2a), 0.28, 3.8, 0.28, ZOO.x0, 1.9, ZOO.gate[1] + sz * 2.6)); world.add(mk(G.box, mat(0x8a5a2a), 0.3, 0.3, 5.7, ZOO.x0, 3.7, ZOO.gate[1]));
+    zooGate = new THREE.Group(); zooGate.position.set(ZOO.x0, 0, ZOO.gate[1]); zooGate.userData.dyn = true; for (const y of [0.4, 0.9]) zooGate.add(mk(G.box, mat(0xf6f1e4), 0.12, 0.14, 4.6, 0, y, 0)); scene.add(zooGate); addCollider(ZOO.x0 - 0.3, ZOO.x0 + 0.3, ZOO.gate[1] - 2.4, ZOO.gate[1] + 2.4, () => !L_('zoo')); }
+  for (const [x, z] of [[32, 18], [38, 25]]) { world.add(mk(G.box, woodM(), 2.4, 0.5, 1.0, x, 0.25, z)); world.add(mk(G.box, mat(0x5aa8d8), 2.2, 0.05, 0.8, x, 0.52, z)); }
+  hayStack(40.5, 18.5, 2);
+  // meyve bahçesi
+  for (let r = 0; r < 2; r++) for (let c = 0; c < 4; c++) { const x = ORC.cx - 7.5 + c * 5, z = ORC.cz - 2.5 + r * 5.5; treeAt('apple', x, z, 1.05); APPLES.push({ x, z: z + 1.6, t: 1, m: null, ox: x, oz: z }); }
+  laneRibbon([[25, 30], [26, 36], [28.5, 39]], 3.0, 0.016); fencePath([[ORC.cx - 10, ORC.cz - 5.5], [ORC.cx + 10, ORC.cz - 5.5]], {}); fencePath([[ORC.cx - 10, ORC.cz + 5.8], [ORC.cx + 10, ORC.cz + 5.8]], {});
+  const og = makeBoard('MEYVE BAHÇESİ', 4.6, 0.9, 'wood'); og.position.set(ORC.cx - 10.2, 3.6, ORC.cz + 0.2); og.rotation.y = Math.PI / 2; world.add(og); world.add(mk(G.cyl, mat(0x8a5a2a), 0.2, 3.0, 0.2, ORC.cx - 10.2, 1.5, ORC.cz - 2.4)); world.add(mk(G.cyl, mat(0x8a5a2a), 0.2, 3.0, 0.2, ORC.cx - 10.2, 1.5, ORC.cz + 2.8));
+}
+function buildFarmZones() {
+  Object.assign(LABELS, { sell: 'Pazarda sat', wool: 'Yün topla', apple: 'Elma topla' }); ICONF.sweater = iconKnit; ICONF.cheese = iconCheese; ICONF.apple = iconApple; ICONF.wool = iconSheep;
+  const mkp = (key, x, z, icon, vis, sub) => { const u = new UpgradePad(key, x, z, icon); u.vis = vis; if (sub) UPG[key].sub = sub; upPads[key] = u; return u; };
+  Object.assign(UPG, { sheep: { name: 'Koyun Çayırı', costs: [11000] }, sheep2: { name: 'Yeni Koyun', costs: [2500, 5500, 10000] }, knit: { name: 'Örgü Atölyesi', costs: [9000] }, cheese: { name: 'Peynirhane', costs: [14000] }, zoo: { name: 'Sevimli Hayvanlar', costs: [18000] }, zoo2: { name: 'Yeni Hayvan', costs: [3500, 7000, 12000] }, orchard: { name: 'Meyve Bahçesi', costs: [7000] } });
+  for (const k of ['sheep', 'sheep2', 'knit', 'cheese', 'zoo', 'zoo2', 'orchard']) if (S.lv[k] === undefined) S.lv[k] = 0;
+  const sOn = () => L_('sheep');
+  mkp('sheep', 6.3, 16.6, iconSheep, null, () => 'Yün topla, kazak yap');
+  mkp('sheep2', -3.4, 33.5, iconSheep, sOn, () => (6 + S.lv.sheep2 * 2) + ' → ' + (8 + S.lv.sheep2 * 2) + ' koyun');
+  mkp('knit', -17, 29.5, iconKnit, sOn, () => 'Yünden kazak');
+  mkp('cheese', -8, 29.5, iconCheese, sOn, () => 'Süt şişesinden peynir');
+  mkp('zoo', 24.3, 17.6, iconSheep, () => L_('van'), () => 'Ziyaretçi bileti');
+  mkp('zoo2', 37.5, 32.6, iconSheep, () => L_('zoo'), () => 'Zoo hayvanı ekle');
+  mkp('orchard', 31.4, 31.4, iconApple, () => L_('van'), () => 'Elma: atlara yem');
+  const gi = GOALS.findIndex(g => g.key === 'horse' && g.lv === 2);
+  GOALS.splice(gi + 1, 0, { key: 'sheep', lv: 1 }, { key: 'knit', lv: 1 }, { key: 'orchard', lv: 1 }, { key: 'sheep2', lv: 1 }, { key: 'cheese', lv: 1 }, { key: 'zoo', lv: 1 }, { key: 'sheep2', lv: 2 }, { key: 'zoo2', lv: 1 }, { key: 'zoo2', lv: 2 }, { key: 'sheep2', lv: 3 }, { key: 'zoo2', lv: 3 });
+  for (const k in GFIRST) delete GFIRST[k]; GOALS.forEach((g, i) => { if (GFIRST[g.key] === undefined) GFIRST[g.key] = i; });
+  Object.assign(MAIN_UNLOCKS, { sheep: 1, knit: 1, cheese: 1, zoo: 1, orchard: 1 });
+  WS.knit = mkWorkshop({ id: 'knit', x: -17, z: 21, name: 'ÖRGÜ ATÖLYESİ', col: 0xe8445a, inType: 'wool', inN: 2, outType: 'sweater', time: 5, price: 170, inXY: SHP.knitIn, outXY: SHP.knitOut });
+  WS.cheese = mkWorkshop({ id: 'cheese', x: -8, z: 21, name: 'PEYNİRHANE', col: 0xe0a020, inType: 'pot', inN: 2, outType: 'cheese', time: 6, price: 260, inXY: SHP.cheeseIn, outXY: SHP.cheeseOut });
+  sellZone = new Zone({ x: SHP.sell[0], z: SHP.sell[1], w: 3.2, d: 2.6, color: '#1ed760', draw: drawZoneIcon(iconStar, 0.55) }); sellZone.group.visible = false; sellZone.hidden = true;
+  EXTAPPLY.sheep = unlockSheep; EXTAPPLY.sheep2 = i => { while (SHEEP.length < 6 + 2 * S.lv.sheep2) addSheep(i); }; EXTAPPLY.knit = i => { WS.knit.on = true; wsShow(WS.knit, true); if (!i) panReq('knit1', WS.knit.x, WS.knit.z, 'ÖRGÜ ATÖLYESİ!'); }; EXTAPPLY.cheese = i => { WS.cheese.on = true; wsShow(WS.cheese, true); if (!i) panReq('cheese1', WS.cheese.x, WS.cheese.z, 'PEYNİRHANE!'); };
+  EXTAPPLY.zoo = i => { if (zooGate) zooGate.visible = false; while (ZANI.length < 2 + S.lv.zoo2) addZoo(ZANI.length, i); if (!i) panReq('zoo1', ZOO.x0 + 7, ZOO.z0 + 6, 'SEVİMLİ HAYVANLAR!'); }; EXTAPPLY.zoo2 = i => { while (ZANI.length < 2 + S.lv.zoo2) addZoo(ZANI.length, i); };
+  EXTAPPLY.orchard = i => { APPLES.forEach(a => { a.on = true; }); if (!i) panReq('orch1', ORC.cx, ORC.cz, 'MEYVE BAHÇESİ!'); };
+  WALKX.push({ x0: -21.6, x1: 4.8, z0: 15, z1: 39.6, on: sOn }, { x0: 4, x1: 12, z0: 15, z1: 32, on: sOn }, { x0: 24.5, x1: 43.2, z0: 12, z1: 45, on: () => L_('zoo') || L_('orchard') || L_('van') && false }, { x0: 12, x1: 26, z0: 32.5, z1: 36.5, on: () => L_('zoo') || L_('orchard') }, { x0: 8.4, x1: 12.4, z0: 15, z1: 36.5, on: () => L_('zoo') || L_('orchard') });
+}
+let sellZone = null;
+function wsShow(w, v) { w.inZone.group.visible = w.outZone.group.visible = w.worker.group.visible = v; w.inZone.hidden = w.outZone.hidden = !v; }
+function iconSheep(ctx, cx, cy, s) { ctx.lineJoin = 'round'; ctx.lineWidth = s * 0.05; ctx.strokeStyle = '#3a2a2a'; ctx.fillStyle = '#fffdf4'; for (const [x, y, r] of [[-0.18, -0.02, 0.22], [0.12, -0.08, 0.24], [0.0, 0.1, 0.24], [-0.22, 0.14, 0.18], [0.24, 0.1, 0.18]]) { ctx.beginPath(); ctx.arc(cx + x * s, cy + y * s, r * s, 0, TAU); ctx.fill(); ctx.stroke(); } ctx.fillStyle = '#3a2a2a'; ctx.beginPath(); ctx.ellipse(cx + s * 0.34, cy - s * 0.02, s * 0.12, s * 0.15, 0, 0, TAU); ctx.fill(); }
+function iconKnit(ctx, cx, cy, s) { ctx.lineJoin = 'round'; ctx.lineWidth = s * 0.05; ctx.strokeStyle = '#7a1a2a'; ctx.fillStyle = '#e8445a'; ctx.beginPath(); ctx.moveTo(cx - s * 0.18, cy - s * 0.34); ctx.lineTo(cx + s * 0.18, cy - s * 0.34); ctx.lineTo(cx + s * 0.46, cy - s * 0.12); ctx.lineTo(cx + s * 0.34, cy + s * 0.04); ctx.lineTo(cx + s * 0.22, cy - s * 0.06); ctx.lineTo(cx + s * 0.22, cy + s * 0.38); ctx.lineTo(cx - s * 0.22, cy + s * 0.38); ctx.lineTo(cx - s * 0.22, cy - s * 0.06); ctx.lineTo(cx - s * 0.34, cy + s * 0.04); ctx.lineTo(cx - s * 0.46, cy - s * 0.12); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.strokeStyle = '#fff0d0'; ctx.beginPath(); ctx.moveTo(cx - s * 0.22, cy + s * 0.26); ctx.lineTo(cx + s * 0.22, cy + s * 0.26); ctx.stroke(); }
+function iconCheese(ctx, cx, cy, s) { ctx.lineJoin = 'round'; ctx.lineWidth = s * 0.05; ctx.strokeStyle = '#7a5a10'; ctx.fillStyle = '#f6c844'; ctx.beginPath(); ctx.moveTo(cx - s * 0.42, cy + s * 0.2); ctx.lineTo(cx + s * 0.42, cy + s * 0.2); ctx.lineTo(cx + s * 0.42, cy - s * 0.02); ctx.lineTo(cx - s * 0.42, cy - s * 0.3); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#c98a14'; for (const [x, y] of [[-0.2, 0.08], [0.1, 0.1], [0.28, 0.0]]) { ctx.beginPath(); ctx.arc(cx + x * s, cy + y * s, s * 0.06, 0, TAU); ctx.fill(); } }
+function iconApple(ctx, cx, cy, s) { ctx.lineJoin = 'round'; ctx.lineWidth = s * 0.05; ctx.strokeStyle = '#7a1018'; ctx.fillStyle = '#e8283a'; ctx.beginPath(); ctx.arc(cx - s * 0.12, cy + s * 0.08, s * 0.3, 0, TAU); ctx.arc(cx + s * 0.12, cy + s * 0.08, s * 0.3, 0, TAU); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#35b04a'; ctx.beginPath(); ctx.ellipse(cx + s * 0.14, cy - s * 0.26, s * 0.14, s * 0.07, -0.5, 0, TAU); ctx.fill(); ctx.stroke(); }
+function addSheep(instant) { const m = makeSheep(), r = SHP; m.group = m.g; m.x = rand(r.x0 + 3, r.x1 - 3); m.z = rand(r.z0 + 8, r.z1 - 2.5); m.g.position.set(m.x, 0, m.z); m.yaw = rand(0, TAU); m.wool = instant ? 1 : 0.3; m.tx = m.x; m.tz = m.z; m.t = rand(1, 4); m.ph = rand(0, 6); scene.add(m.g); SHEEP.push(m); if (!instant) sparkles(m.x, 1.2, m.z, 8, 0xffffff, 0.5); }
+function unlockSheep(instant) { if (shGate) shGate.visible = false; while (SHEEP.length < 6 + 2 * S.lv.sheep2) addSheep(instant); if (!instant) { confetti(SHP.gate[0], 3, SHP.gate[1], 50); panReq('sheep1', -8, 30, 'KOYUN ÇAYIRI!'); } if (sellZone) { sellZone.group.visible = true; sellZone.hidden = false; } }
+function addZoo(i, instant) { const kind = ['lamb', 'goat', 'rabbit'][i % 3], g = makeSmall(kind); g.position.set(rand(ZOO.x0 + 3, ZOO.x1 - 3), 0, rand(ZOO.z0 + 3, ZOO.z1 - 3)); const o = { g, x: g.position.x, z: g.position.z, yaw: rand(0, TAU), tx: g.position.x, tz: g.position.z, t: rand(0, 3), kind, ph: rand(0, 6), group: g }; scene.add(g); ZANI.push(o); if (!instant) hearts(o.x, 2, o.z, 5); }
+function updateFarm(dt, t) {
+  if (!farmBuilt) return; const gp = P.group.position;
+  for (const s of SHEEP) { s.wool = Math.min(1, s.wool + dt / 26); s.w.scale.setScalar(Math.max(0.01, 0.3 + 0.7 * s.wool)); s.w.visible = s.wool > 0.08; s.t -= dt; let mv = 0;
+    if (s.t <= 0) { if (Math.random() < 0.5) { s.tx = rand(SHP.x0 + 2, SHP.x1 - 2); s.tz = rand(SHP.z0 + 7, SHP.z1 - 2); s.t = 8; } else { s.tx = s.x; s.tz = s.z; s.t = rand(2, 5); } }
+    const d = Math.hypot(s.tx - s.x, s.tz - s.z); if (d > 0.2) { stepTo(s, s.tx, s.tz, 1.0, dt); mv = 1; } s.g.position.y = mv ? Math.abs(Math.sin(t * 9 + s.ph)) * 0.08 : 0; s.g.rotation.z = Math.sin(t * 2 + s.ph) * 0.02 * (1 - mv);
+    if (s.wool >= 1 && P.free() > 0 && (s.x - gp.x) ** 2 + (s.z - gp.z) ** 2 < 2.2) { s.wool = 0.02; const it = ITEMF.wool(); it.position.set(s.x, 1.2, s.z); scene.add(it); sendToBack(P, it, 'wool', 1.2); sfx('pick'); sparkles(s.x, 1.2, s.z, 6, 0xffffff, 0.4); stats.sheared = (stats.sheared || 0) + 1; } }
+  for (const o of ZANI) { o.t -= dt; if (o.t <= 0) { if (Math.random() < 0.6) { o.tx = rand(ZOO.x0 + 2, ZOO.x1 - 2); o.tz = rand(ZOO.z0 + 2, ZOO.z1 - 2); o.t = 8; } else { o.tx = o.x; o.tz = o.z; o.t = rand(1.5, 4); } } const d = Math.hypot(o.tx - o.x, o.tz - o.z); let mv = 0; if (d > 0.2) { stepTo(o, o.tx, o.tz, o.kind === 'rabbit' ? 1.8 : 1.1, dt); mv = 1; } o.g.position.y = (o.kind === 'rabbit' ? (mv ? Math.abs(Math.sin(t * 8 + o.ph)) * 0.35 : 0) : mv ? Math.abs(Math.sin(t * 9 + o.ph)) * 0.08 : 0); }
+  for (const w of [WS.knit, WS.cheese]) updateWorkshop(w, dt, t);
+  if (L_('sheep') && sellZone.inside) { sellZone.tk = (sellZone.tk || 0) - dt; if (sellZone.tk <= 0) { const ty = P.stack.count('sweater') > 0 ? 'sweater' : P.stack.count('cheese') > 0 ? 'cheese' : null; if (ty) { sellZone.tk = 0.12; const it = takeFromBack(P, ty), v = Math.round((ty === 'sweater' ? WS.knit.price : WS.cheese.price) * (1 + 0.1 * S.lv.ticket)); fly(it.mesh, out => { out.set(SHP.sell[0], 2, SHP.sell[1] - 2.6); return 0; }, 0.3, 1.2, () => { rm(it.mesh); payDirect(SHP.sell[0], SHP.sell[1] - 2, v, ''); stats['s_' + ty] = (stats['s_' + ty] || 0) + 1; }); } } }
+  // elma
+  for (const a of APPLES) { if (!a.on) continue; a.t = Math.min(1, a.t + dt / 18); if (!a.m) { a.m = new THREE.Mesh(appleGeo(), vcMat); a.m.userData.dyn = true; a.m.position.set(a.x, 0.5, a.z); scene.add(a.m); } a.m.scale.setScalar(Math.max(0.001, a.t >= 1 ? 2.4 : a.t * 1.2)); if (a.t >= 1 && P.free() > 0 && (a.x - gp.x) ** 2 + (a.z - gp.z) ** 2 < 1.6) { a.t = 0; const it = ITEMF.apple(); it.position.set(a.x, 0.7, a.z); scene.add(it); sendToBack(P, it, 'apple', 1.2); sfx('pick'); } }
+  // ziyaretçiler
+  if (L_('zoo')) { ZV.t = (ZV.t === undefined ? 4 : ZV.t) - dt; if (ZV.t <= 0) { ZV.t = Math.max(4, 12 - 2.5 * ZANI.length); if (ZV.length < 3 + ZANI.length) { const c = newRider(); c.x = 10.2; c.z = 36; c.group.position.set(c.x, 0, c.z); ZV.push({ c, st: 'in', wp: [[10.2, 34.5], [20, 34.6], [25, 30], [26.6, 24.5], [29, 22.5], [32 + rand(-2, 2), 20 + rand(0, 6)]], t: 0 }); } }
+    for (let i = ZV.length - 1; i >= 0; i--) { const v = ZV[i], c = v.c; let mv = 0; if (v.st === 'in' || v.st === 'out') { const w = v.wp[0], d = stepTo(c, w[0], w[1], 4.5, dt); mv = 1; if (d < 0.4) { v.wp.shift(); if (!v.wp.length) { if (v.st === 'in') { v.st = 'look'; v.t = 5; } else { rm(c.group); ZV.splice(i, 1); continue; } } } } else if (v.st === 'look') { mv = 0; v.t -= dt; if (Math.random() < dt * 0.8) hearts(c.x, 3.4, c.z, 1); const an = ZANI[0]; if (an) faceChar(c, an.x - c.x, an.z - c.z, dt); if (v.t <= 0) { const val = Math.round((60 + 25 * ZANI.length) * (1 + 0.18 * S.lv.ticket)); payDirect(c.x, c.z, val, ''); v.st = 'out'; v.wp = [[29, 22.5], [26.6, 24.5], [25, 30], [20, 34.6], [10.2, 34.5], [10.2, 40]]; } } animChar(c, dt, mv, t); } }
+  // final kutlama
+  if (!S.seen.fin && S.lv.ranch && S.lv.show && S.lv.sheep && S.lv.knit && S.lv.cheese && S.lv.zoo && S.lv.orchard && S.lv.foal && S.lv.ata && S.lv.horse >= 4) { S.seen.fin = 1; saveDirty = true; praise('ÇİFTLİK TAMAMLANDI!', true); flash(); for (let k = 0; k < 10; k++) later(k * 0.4, () => fireworks(gp.x + rand(-8, 8), gp.z + rand(-6, 6))); confetti(gp.x, 4, gp.z, 120); }
+}
+function updateWorkshop(w, dt, t) {
+  if (!w.on) return; const o = w;
+  if (!w.working && w.outStack.length + w.pend < 12 && w.inStack.length >= o.inN) { for (let k = 0; k < o.inN; k++) { const it = w.inStack.takeLast(); if (it) fly(it.mesh, out => { out.set(o.x - 0.6, 1.4, o.z + 1.0); return 0; }, 0.15, 0.6, () => { rm(it.mesh); sfx('pack'); }); } w.working = true; w.timer = 0; }
+  if (w.working) { w.timer += dt; if (w.timer >= o.time * Math.pow(0.9, S.lv.cap)) { w.working = false; w.pend++; const it = ITEMF[o.outType](); it.position.set(o.x - 0.6, 1.4, o.z + 1.2); scene.add(it); const idx = w.outStack.length + w.pend - 1; sparkles(o.x - 0.6, 1.6, o.z + 1.2, 5, 0xfff2a0, 0.3); fly(it, out => { w.outStack.slotFn(Math.min(idx, 11), out); return 0; }, 0.3, 1.2, () => { w.pend--; w.outStack.add(it, o.outType); sfx('drop'); stats.made = (stats.made || 0) + 1; }); } }
+  const wk = w.working ? 1 : 0, ch = w.worker; animChar(ch, dt, 0, t); ch.armL.rotation.x = -1.2 * wk * (0.6 + 0.4 * Math.sin(t * 10)); ch.armR.rotation.x = -1.2 * wk * (0.6 + 0.4 * Math.sin(t * 10 + 2));
+  w.tk = (w.tk || 0) - dt;
+  if (w.tk <= 0) { if (w.inZone.inside && P.stack.count(o.inType) > 0 && w.inStack.length + w.inStack.pend < 16) { dropTo(w.inStack, P, o.inType); w.tk = 0.08; } else if (w.outZone.inside && w.outStack.length > 0 && P.free() > 0) { const it = w.outStack.takeLast(); if (it) { sendToBack(P, it.mesh, o.outType, 1.4); sfx('pick'); } w.tk = 0.08; } }
+  w.inStack.update(dt, t); w.outStack.update(dt, t);
+}
+function farmObjective(set) {
+  const st = P.stack;
+  if (L_('sheep')) {
+    if ((st.count('sweater') + st.count('cheese')) > 0) return set(sellZone.x, 0.4, sellZone.z, 'sell');
+    for (const w of [WS.knit, WS.cheese]) if (w.on) { if (st.count(w.inType) > 0 && w.inStack.length + w.inStack.pend < 16) return set(w.inZone.x, 0.4, w.inZone.z, 'drop'); }
+    for (const w of [WS.knit, WS.cheese]) if (w.on && w.outStack.length >= 2 && P.free() > 0) return set(w.outZone.x, 0.4, w.outZone.z, 'take');
+    if (WS.knit.on && P.free() > 0) { const s = SHEEP.find(q => q.wool >= 1); if (s && (WS.knit.inStack.length + st.count('wool') < 8)) return set(s.x, 1.0, s.z, 'wool'); }
+  }
+  if (L_('orchard') && RH.some(h => h.love < 40) && P.free() > 0 && !st.count('carrot') && !st.count('apple') && !st.count('hay')) { const a = APPLES.find(q => q.on && q.t >= 1); if (a && Math.random() < 2) return set(a.x, 1.0, a.z, 'apple'); }
+  return null;
+}
+
+function buildFarm() { buildFarmStatic(); buildFarmZones(); farmBuilt = true; }
 
 /* =====================================================================
    AT MODELİ: kutu/küre/silindirlerden; vertex-color; 14 mesh (gövde, boyun, kafa, 2 kulak, kuyruk, 8 bacak)
@@ -3966,7 +4103,7 @@ woodFenceBox(-17.85, 0, 0.8, 23.2); woodFenceBox(-14, -11.35, 7.4, 0.8); woodFen
 woodFenceBox(13.6, 12.9, 4.2, 0.9); woodFenceBox(5.2, 12.9, 6.4, 0.9);
 buildDecorFlowers();
 for (let i = 0; i < 3; i++) buildBed(i);
-buildStations(); buildDecor(); buildSera(); buildVan(); buildZones(); buildPlayer(); LANES.bouquet = shelfB; LANES.pot = shelfP; buildRanch(); finalizeWorld();
+buildStations(); buildDecor(); buildSera(); buildVan(); buildZones(); buildPlayer(); LANES.bouquet = shelfB; LANES.pot = shelfP; buildRanch(); buildFarm(); finalizeWorld();
 initGatePad();
 /* ---- C6: pad alt yazıları (etkisi belli olmayan her pad) ---- */
 { const L = k => S.lv[k] || 0, T = x => () => x, N = (k, w) => () => 'Şu an ' + (1 + L(k)) + ' ' + w, PC = (k, v) => () => '%' + v * (L(k) + 1);
