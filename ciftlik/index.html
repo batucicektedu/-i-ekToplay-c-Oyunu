@@ -182,7 +182,7 @@ const UPG = {
   pack:   { name: 'Paketleme Hızı', costs: geo(40, 5) },
   bed:    { name: 'Yeni Folluk',     costs: [150] },
   helper: { name: 'Yardımcı',       costs: [220] },
-  ranch:   { name: 'At Çiftliği',     costs: [20000] }, horse:   { name: 'Yeni At',         costs: [3000, 7500, 16000, 32000] },
+  ranch:   { name: 'At Çiftliği',     costs: [14000] }, horse:   { name: 'Yeni At',         costs: [3000, 7500, 16000, 32000] },
   rideSpd: { name: 'Biniş Hızı',      costs: geo(220, 5) }, ticket:  { name: 'Bilet Fiyatı',    costs: geo(260, 5) },
   instr:   { name: 'Binicilik Hocası', costs: [6000] }, foal: { name: 'Tay', costs: [9000] }, show: { name: 'Engelli Parkur', costs: [24000] },
   ata:     { name: 'Ata Bin',         costs: [3500] }, groom: { name: 'Seyis', costs: [5000] }
@@ -2824,6 +2824,11 @@ function objective(out) {
   }
   if (moneyPile.length + (moneyPile.extra || 0) > 0) return set(moneyZone.x, 0.8, moneyZone.z + 1.0, 'money');
   if (zone3 && !zone3.locked && vanPile.length + (vanPile.extra || 0) > 0) return set(vanMoneyZone.x, 0.8, vanMoneyZone.z, 'money');
+  if (P.free() <= 0) { // sırt çantası dolu: toplamak yerine bırakma yerini göster
+    if (nB + nP > 0 && PROD_LIST.some(t => hold(t) > 0 && canCounter(t))) return set(counterZone.x, 0.4, counterZone.z, 'counter');
+    if (nF > 0 && inputPile.length + (inputPile.pend || 0) < CFG.inputCap) return set(packZone.x, 0.4, packZone.z, 'pack');
+    if (nP > 0 && zone2 && !zone2.locked) return set(potZone.x, 0.4, potZone.z, 'pot');
+  }
   const thr = Math.min(P.capFn(), 20), fl = P.free() > 0 && nF < thr ? ripe() : null, canPack = nF > 0 && inputPile.length + (inputPile.pend || 0) < CFG.inputCap;
   if (canPack && (nF >= thr || (!fl && nF > 0))) return set(packZone.x, 0.4, packZone.z, 'pack');
   if (outputPile.length >= 3 && P.free() > 0 && nB < 12) return set(outZone.x, 0.4, outZone.z, 'out');
@@ -3821,7 +3826,7 @@ function buildFarmStatic() {
 function buildFarmZones() {
   Object.assign(LABELS, { sell: 'Pazarda sat', wool: 'Yün topla', apple: 'Elma topla' }); ICONF.sweater = iconKnit; ICONF.cheese = iconCheese; ICONF.apple = iconApple; ICONF.wool = iconSheep;
   const mkp = (key, x, z, icon, vis, sub) => { const u = new UpgradePad(key, x, z, icon); u.vis = vis; if (sub) UPG[key].sub = sub; upPads[key] = u; return u; };
-  Object.assign(UPG, { sheep: { name: 'Koyun Çayırı', costs: [11000] }, sheep2: { name: 'Yeni Koyun', costs: [2500, 5500, 10000] }, knit: { name: 'Örgü Atölyesi', costs: [9000] }, cheese: { name: 'Peynirhane', costs: [14000] }, zoo: { name: 'Sevimli Hayvanlar', costs: [18000] }, zoo2: { name: 'Yeni Hayvan', costs: [3500, 7000, 12000] }, orchard: { name: 'Meyve Bahçesi', costs: [7000] } });
+  Object.assign(UPG, { sheep: { name: 'Koyun Çayırı', costs: [6500] }, sheep2: { name: 'Yeni Koyun', costs: [2500, 5500, 10000] }, knit: { name: 'Örgü Atölyesi', costs: [5000] }, cheese: { name: 'Peynirhane', costs: [14000] }, zoo: { name: 'Sevimli Hayvanlar', costs: [18000] }, zoo2: { name: 'Yeni Hayvan', costs: [3500, 7000, 12000] }, orchard: { name: 'Meyve Bahçesi', costs: [4000] } });
   for (const k of ['sheep', 'sheep2', 'knit', 'cheese', 'zoo', 'zoo2', 'orchard']) if (S.lv[k] === undefined) S.lv[k] = 0;
   const sOn = () => L_('sheep');
   mkp('sheep', 6.3, 16.6, iconSheep, null, () => 'Yün topla, kazak yap');
@@ -3831,8 +3836,8 @@ function buildFarmZones() {
   mkp('zoo', 24.3, 17.6, iconSheep, () => L_('van'), () => 'Ziyaretçi bileti');
   mkp('zoo2', 37.5, 32.6, iconSheep, () => L_('zoo'), () => 'Zoo hayvanı ekle');
   mkp('orchard', 31.4, 31.4, iconApple, () => L_('van'), () => 'Elma: atlara yem');
-  const gi = GOALS.findIndex(g => g.key === 'horse' && g.lv === 2);
-  GOALS.splice(gi + 1, 0, { key: 'sheep', lv: 1 }, { key: 'knit', lv: 1 }, { key: 'orchard', lv: 1 }, { key: 'sheep2', lv: 1 }, { key: 'cheese', lv: 1 }, { key: 'zoo', lv: 1 }, { key: 'sheep2', lv: 2 }, { key: 'zoo2', lv: 1 }, { key: 'zoo2', lv: 2 }, { key: 'sheep2', lv: 3 }, { key: 'zoo2', lv: 3 });
+  { const g0 = GOALS.findIndex(g => g.key === 'cap' && g.lv === 3); GOALS.splice(g0 + 1, 0, { key: 'orchard', lv: 1 }, { key: 'sheep', lv: 1 }, { key: 'knit', lv: 1 }); }
+  { const gi = GOALS.findIndex(g => g.key === 'horse' && g.lv === 2); GOALS.splice(gi + 1, 0, { key: 'sheep2', lv: 1 }, { key: 'cheese', lv: 1 }, { key: 'zoo', lv: 1 }, { key: 'sheep2', lv: 2 }, { key: 'zoo2', lv: 1 }, { key: 'zoo2', lv: 2 }, { key: 'sheep2', lv: 3 }, { key: 'zoo2', lv: 3 }); }
   for (const k in GFIRST) delete GFIRST[k]; GOALS.forEach((g, i) => { if (GFIRST[g.key] === undefined) GFIRST[g.key] = i; });
   Object.assign(MAIN_UNLOCKS, { sheep: 1, knit: 1, cheese: 1, zoo: 1, orchard: 1 });
   WS.knit = mkWorkshop({ id: 'knit', x: -17, z: 21, name: 'ÖRGÜ ATÖLYESİ', col: 0xe8445a, inType: 'wool', inN: 2, outType: 'sweater', time: 5, price: 170, inXY: SHP.knitIn, outXY: SHP.knitOut });
@@ -3866,6 +3871,8 @@ function updateFarm(dt, t) {
   // ziyaretçiler
   if (L_('zoo')) { ZV.t = (ZV.t === undefined ? 4 : ZV.t) - dt; if (ZV.t <= 0) { ZV.t = Math.max(4, 12 - 2.5 * ZANI.length); if (ZV.length < 3 + ZANI.length) { const c = newRider(); c.x = 10.2; c.z = 36; c.group.position.set(c.x, 0, c.z); ZV.push({ c, st: 'in', wp: [[10.2, 34.5], [20, 34.6], [25, 30], [26.6, 24.5], [29, 22.5], [32 + rand(-2, 2), 20 + rand(0, 6)]], t: 0 }); } }
     for (let i = ZV.length - 1; i >= 0; i--) { const v = ZV[i], c = v.c; let mv = 0; if (v.st === 'in' || v.st === 'out') { const w = v.wp[0], d = stepTo(c, w[0], w[1], 4.5, dt); mv = 1; if (d < 0.4) { v.wp.shift(); if (!v.wp.length) { if (v.st === 'in') { v.st = 'look'; v.t = 5; } else { rm(c.group); ZV.splice(i, 1); continue; } } } } else if (v.st === 'look') { mv = 0; v.t -= dt; if (Math.random() < dt * 0.8) hearts(c.x, 3.4, c.z, 1); const an = ZANI[0]; if (an) faceChar(c, an.x - c.x, an.z - c.z, dt); if (v.t <= 0) { const val = Math.round((60 + 25 * ZANI.length) * (1 + 0.18 * S.lv.ticket)); payDirect(c.x, c.z, val, ''); v.st = 'out'; v.wp = [[29, 22.5], [26.6, 24.5], [25, 30], [20, 34.6], [10.2, 34.5], [10.2, 40]]; } } animChar(c, dt, mv, t); } }
+  if (introDone && !chapOpen) { const st_ = (k, tx) => { if (!S.seen[k]) { S.seen[k] = 1; saveDirty = true; toast(tx); return true; } return false; };
+    if (S.lv.ranch && st_('st_ranch', 'Ayşe Teyze: Atlar artık senin, binicilere iyi bak!')) { } else if ((stats.rides || 0) >= 1 && st_('st_ride', 'Ayşe Teyze: İlk bileti kestin, aferin!')) { } else if (S.lv.sheep && st_('st_sheep', 'Ayşe Teyze: Koyunları kırk, yünden kazak ör!')) { } else if ((stats.shows || 0) >= 1 && st_('st_show', 'Ayşe Teyze: Harika bir gösteri oldu!')) { } else if (S.lv.zoo && st_('st_zoo', 'Ayşe Teyze: Çocuklar minik hayvanlara bayılıyor!')) { } }
   // final kutlama
   if (!S.seen.fin && S.lv.ranch && S.lv.show && S.lv.sheep && S.lv.knit && S.lv.cheese && S.lv.zoo && S.lv.orchard && S.lv.foal && S.lv.ata && S.lv.horse >= 4) { S.seen.fin = 1; saveDirty = true; praise('ÇİFTLİK TAMAMLANDI!', true); flash(); for (let k = 0; k < 10; k++) later(k * 0.4, () => fireworks(gp.x + rand(-8, 8), gp.z + rand(-6, 6))); confetti(gp.x, 4, gp.z, 120); later(2.5, () => chapShow('<div class="big">Tebrikler!</div><div class="ct">Çiftlik tamamlandı</div><div class="cs">Yeni bölümler yakında!</div>', [{ t: 'Devam' }])); }
 }
@@ -4077,13 +4084,13 @@ function updateGates(dt, t) {
 }
 let gateNext = null;
 function initChapters() {
-  buildGate({ x: -6, z: 13.4, hw: 3.4, col: '#4aa8ff', hex: 0x2f9be8, t1: '◀ ÖNCEKİ BÖLÜM', t2: 'Sahil Balıkçısı', dir: 'w', go: () => chapConfirm2(CHAPS[1], true) });
+  buildGate({ x: -1.5, z: 13.7, hw: 3.4, col: '#4aa8ff', hex: 0x2f9be8, t1: '◀ ÖNCEKİ BÖLÜM', t2: 'Sahil Balıkçısı', dir: 'w', go: () => chapConfirm2(CHAPS[1], true) });
   // son bölüm: sonraki kapı yok (final: Çiftlik Şenliği)
   // ayar menüsüne "Bölümler"
   const box = menuEl.querySelector('.mbox'), b = document.createElement('button'); b.id = 'mChap'; b.textContent = 'Bölümler'; b.style.cssText = 'background:linear-gradient(#ffb04a,#ff8a1f);box-shadow:0 4px 0 #b85a00'; box.insertBefore(b, document.getElementById('mQ')); b.addEventListener('click', () => { menuEl.style.display = 'none'; chapMenu(); });
   // giriş kartı (ilk ziyaret)
   if (!S.ic && S.tut === 0 && S.money === 0) {
-    chapShow('<div class="cs">BÖLÜM 3</div><div class="big">Hayvan Çiftliği</div><div class="cs">Yumurta topla, sat. Çiftliği ve atları büyüt!</div>', [{ t: 'Başla' }]); window.__introCard = true;
+    chapShow('<div class="cs">AYŞE TEYZE</div><div class="ct">Hoş geldin evladım!</div><div class="cs">Yumurtaları topla, kolile, sat. Kazandıkça çiftliği büyüt: inek, koyun, hatta atlar bile var!</div>', [{ t: 'Başla' }]); window.__introCard = true;
   }
   S.ic = 1; saveDirty = true;
 }
