@@ -876,7 +876,7 @@ function mergeStatic(root, ao) {
     for (const ch of o.children.slice()) {
       if (ch.userData.dyn || ch.isSprite || ch.isInstancedMesh || ch.isPoints) continue;
       if (ch.isMesh) {
-        if (!ch.geometry || Array.isArray(ch.material) || !ch.geometry.attributes.position || ch.userData.keep) continue;
+        if (!ch.geometry || Array.isArray(ch.material) || !ch.geometry.attributes.position || ch.userData.keep || ch.userData.ib) continue;
         if (PBON) { const gg = ch.geometry; if (!gg.boundingBox) gg.computeBoundingBox(); _pbb.copy(gg.boundingBox).applyMatrix4(ch.matrixWorld); if (_pbb.max.y > 0.45 && _pbb.min.y < 1.2 && _pbb.max.x - _pbb.min.x < 30 && _pbb.max.z - _pbb.min.z < 30 && (_pbb.max.x - _pbb.min.x > 0.55 || _pbb.max.z - _pbb.min.z > 0.55)) PROPBOX.push([_pbb.min.x, _pbb.max.x, _pbb.min.z, _pbb.max.z]); }
         const g = ch.geometry, mt = ch.material, plain = (mt.isMeshLambertMaterial || (mt.isMeshStandardMaterial && mt.roughness === 0.78 && mt.metalness === 0)) && !mt.map && !mt.transparent && !mt.vertexColors && mt.side === THREE.FrontSide && !mt.emissiveMap;
         const tm = plain ? vcMat : mt, hasCol = plain || !!g.attributes.color, hasUv = !plain && !!g.attributes.uv;
@@ -903,6 +903,37 @@ function mergeStatic(root, ao) {
 }
 const vcMat = LM({ vertexColors: true });
 const vcMat2 = LM({ vertexColors: true, side: THREE.DoubleSide });
+/* ---- dinamik küçük nesneler (istif ürünleri, karakter gölgesi): aynı geometri+malzeme tek InstancedMesh çizim çağrısında ---- */
+const IB = { map: new Map(), frame: -1, fr: new THREE.Frustum(), pm: new THREE.Matrix4(), sph: new THREE.Sphere(new THREE.Vector3(), 1.4) };
+function ibBatch(geo, mt, ro) {
+  const k = geo.uuid + '|' + mt.uuid + '|' + ro; let b = IB.map.get(k); if (b) return b;
+  b = { k, geo, mt, ro, set: new Set(), cap: 0, im: null }; IB.map.set(k, b); return b;
+}
+function ibGrow(b) {
+  if (b.im && b.set.size <= b.cap) return;
+  const cap = Math.max(32, b.cap * 2, b.set.size + 16); if (b.im) { scene.remove(b.im); b.im.dispose(); }
+  const im = new THREE.InstancedMesh(b.geo, b.mt, cap); im.count = 0; im.frustumCulled = false; im.userData.dyn = true; im.renderOrder = b.ro; im.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+  im.onBeforeRender = (r, sc, cam) => ibRebuild(r, cam); b.im = im; b.cap = cap; scene.add(im);
+}
+function ibReg(mesh) { // mesh: gerçek Mesh (geometry/material/renderOrder hazır); çizim InstancedMesh'e devredilir
+  const u = mesh.userData; u.ib = 1; u.ibd = 0; mesh.layers.set(1); const b = ibBatch(mesh.geometry, mesh.material, mesh.renderOrder); b.set.add(mesh); u.ibk = b.k; ibGrow(b); return mesh;
+}
+function ibRekey(mesh) { const u = mesh.userData, ob = IB.map.get(u.ibk); if (ob) ob.set.delete(mesh); const b = ibBatch(mesh.geometry, mesh.material, mesh.renderOrder); b.set.add(mesh); u.ibk = b.k; ibGrow(b); }
+function ibRebuild(r, cam) {
+  const fr = r.info.render.frame; if (fr === IB.frame) return; IB.frame = fr;
+  IB.pm.multiplyMatrices(cam.projectionMatrix, cam.matrixWorldInverse); IB.fr.setFromProjectionMatrix(IB.pm);
+  for (const b of IB.map.values()) {
+    if (!b.im) continue; let n = 0; const arr = b.im.instanceMatrix.array;
+    for (const m of b.set) {
+      let p = m, vis = true; while (p.parent) { if (!p.visible) { vis = false; break; } p = p.parent; }
+      if (p !== scene) { if (++m.userData.ibd > 900) b.set.delete(m); continue; } m.userData.ibd = 0;
+      if (!vis || !m.visible) continue;
+      const e = m.matrixWorld.elements; IB.sph.center.set(e[12], e[13], e[14]); if (!IB.fr.intersectsSphere(IB.sph)) continue;
+      m.matrixWorld.toArray(arr, n * 16); n++;
+    }
+    b.im.count = n; b.im.instanceMatrix.needsUpdate = true;
+  }
+}
 const GREEN = 0x0f5f3a, GREEN2 = 0x1b7a4a;
 const STEM_H = 0.32;
 /* bloom parts: origin at stem top, growing along +y */
@@ -1015,7 +1046,7 @@ function potGeoRaw(up) {
   const W = up ? new THREE.Matrix4() : new THREE.Matrix4().makeScale(0.62, 0.62, 0.62);
   return (_gc[k] = mergeParts(P_, W));
 }
-function makePotItem(up) { const g = new THREE.Group(); g.add(new THREE.Mesh(potGeo(up !== false), vcMat2)); g.userData.pot = true; return g; }
+function makePotItem(up) { const g = new THREE.Group(); g.add(ibReg(new THREE.Mesh(potGeo(up !== false), vcMat2))); g.userData.pot = true; return g; }
 function sachetGeo() {
   return mkProdGeo('x_sachet', () => {
     const P_ = [part(new THREE.CylinderGeometry(0.26, 0.03, 0.3, 14), 0xd6f0ff, 0, 0.3, 0, 1, 1, 1), part(G.cyl, 0xd6f0ff, 0, 0.13, 0, 0.03, 0.2, 0.03), part(G.cyl, 0xd6f0ff, 0, 0.02, 0, 0.17, 0.04, 0.17), part(G.cyl, 0xe8442e, 0, 0.44, 0, 0.24, 0.03, 0.24)];
@@ -1048,7 +1079,7 @@ function hiveGeo() { // dev tuz yığını (tava merkezi)
 }
 
 function makeFlowerItem(ci, type) {
-  const g = new THREE.Group(); const m = new THREE.Mesh(itemGeo(type || 'tulip', ci), vcMat); g.add(m); return g;
+  const g = new THREE.Group(); const m = ibReg(new THREE.Mesh(itemGeo(type || 'tulip', ci), vcMat)); g.add(m); return g;
 }
 const WRAPS = [[0xc8893f, 0xdfa662, 0xf0c98a, 0xe8283c], [0xff4f93, 0xff86b4, 0xffd0e2, 0xffd400], [0xa070ff, 0xc6a6ff, 0xece0ff, 0xff1f8e], [0xf3ebe0, 0xffffff, 0xffe9f0, 0x8f2be8]];
 function wrapGeo(rTop, h, phase, crinkle) {
@@ -1064,8 +1095,8 @@ function wrapGeo(rTop, h, phase, crinkle) {
   const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setIndex(idx); g.computeVertexNormals(); return g;
 }
 const posable = m => m.userData.v !== undefined || !!m.userData.pot;
-function makeBouquetItem(v, up) { if (v === undefined) v = Math.floor(Math.random() * WRAPS.length); const g = new THREE.Group(); g.add(new THREE.Mesh(bouquetGeo(v, up), vcMat2)); g.userData.v = v; return g; }
-function bouquetPose(m, up) { m.children[0].geometry = m.userData.pot ? potGeo(up) : bouquetGeo(m.userData.v, up); }
+function makeBouquetItem(v, up) { if (v === undefined) v = Math.floor(Math.random() * WRAPS.length); const g = new THREE.Group(); g.add(ibReg(new THREE.Mesh(bouquetGeo(v, up), vcMat2))); g.userData.v = v; return g; }
+function bouquetPose(m, up) { const c = m.children[0]; c.geometry = m.userData.pot ? potGeo(up) : bouquetGeo(m.userData.v, up); if (c.userData.ib) ibRekey(c); }
 let _billMat = null;
 function fmt(n) { n = Math.round(n); if (n >= 1e6) return (n / 1e6).toFixed(n >= 1e7 ? 0 : 1).replace('.0', '') + 'M'; if (n >= 1e4) return (n / 1e3).toFixed(n >= 1e5 ? 0 : 1).replace('.0', '') + 'K'; return String(n); }
 const ITEMF = {};
@@ -1108,7 +1139,7 @@ function makeChar(o) {
   const g = new THREE.Group(), body = new THREE.Group(); g.add(body);
   const skin = mat(o.skin || 0xffcfa0), shirt = mat(o.shirt), pants = mat(o.pants || 0x3b5bdb), hair = mat(o.hair || 0x5a3a22), shoe = mat(o.shoe || 0x3a2a22);
   if (!_faceMat) { _faceMat = LM({ map: faceTexture(), transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 }); _shadowMat = new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.28, depthWrite: false }); }
-  const sh = new THREE.Mesh(shadowGeo, _shadowMat); sh.rotation.x = -Math.PI / 2; sh.position.y = 0.035; sh.scale.set(0.6, 0.45, 1); sh.userData.ns = true; sh.renderOrder = 1; g.add(sh);
+  const sh = new THREE.Mesh(shadowGeo, _shadowMat); sh.rotation.x = -Math.PI / 2; sh.position.y = 0.035; sh.scale.set(0.6, 0.45, 1); sh.userData.ns = true; sh.renderOrder = 1; g.add(ibReg(sh));
   const skirt = o.dress ? mat(o.dress) : null;
   // torso
   body.add(mk(G.sphC, skirt || pants, 0.27, 0.2, 0.23, 0, 0.62, 0));
@@ -1127,7 +1158,7 @@ function makeChar(o) {
   // head
   const head = new THREE.Group(); head.position.y = 1.6; body.add(head); head.scale.set(1, 0.96, 1);
   const hm = new THREE.Mesh(G.sphC, skin); hm.scale.setScalar(0.4); head.add(hm);
-  const face = new THREE.Mesh(faceGeo, _faceMat); face.scale.setScalar(0.404); face.userData.ns = true; head.add(face);
+  const face = new THREE.Mesh(faceGeo, _faceMat); face.scale.setScalar(0.404); face.userData.ns = true; head.add(ibReg(face));
   for (const sx of [-1, 1]) head.add(ns(mk(G.sphC, skin, 0.06, 0.085, 0.05, sx * 0.4, -0.02, 0)));
   const hr = new THREE.Mesh(hairCapGeo, hair); hr.scale.setScalar(0.43); hr.position.set(0, 0.03, -0.03); hr.rotation.x = -0.3; head.add(hr);
   const st = o.hairStyle || 'short';
@@ -1162,8 +1193,9 @@ function makeChar(o) {
     vel: new THREE.Vector3(), swayX: 0, swayZ: 0, incoming: 0, stack: null, anchor: new THREE.Group() };
   g.add(c.anchor);
   g.scale.setScalar(CHAR_S);
-  g.traverse(m => { if (m.isMesh) { m.castShadow = !m.userData.ns && m.scale.x >= 0.25; m.receiveShadow = false; } });
-  c.armL.userData.dyn = c.armR.userData.dyn = head.userData.dyn = true; mergeStatic(head); mergeStatic(body); mergeStatic(c.armL); mergeStatic(c.armR); mergeStatic(c.legL); mergeStatic(c.legR);
+  g.traverse(m => { if (m.isMesh) { m.castShadow = !m.userData.ib; m.receiveShadow = false; } }); // baş+gövde tek çizimde birleşsin diye hepsi gölge atar; uzuvlar atmaz
+  for (const l of [c.armL, c.armR, c.legL, c.legR]) l.traverse(m => { if (m.isMesh) m.castShadow = false; });
+  c.armL.userData.dyn = c.armR.userData.dyn = true; mergeStatic(body); mergeStatic(c.armL); mergeStatic(c.armR); mergeStatic(c.legL); mergeStatic(c.legR);
   return c;
 }
 function animChar(c, dt, moveAmt, t) {
@@ -1175,7 +1207,7 @@ function animChar(c, dt, moveAmt, t) {
   c.body.position.y = Math.abs(Math.sin(c.phase)) * 0.09 * c.moving;
   c.body.scale.y = 1 + Math.sin(t * 2.2) * 0.012;
   c.armL.rotation.z = 0.12; c.armR.rotation.z = -0.12;
-  c.body.rotation.x = 0.1 * c.moving; c.head.rotation.z = Math.sin(c.phase * 0.5) * 0.04 * c.moving;
+  c.body.rotation.x = 0.1 * c.moving;
 }
 function faceChar(c, dx, dz, dt) {
   if (dx * dx + dz * dz < 1e-6) return;
@@ -3087,7 +3119,7 @@ function iconShop(ctx, cx, cy, s) {
 Object.assign(ICONF, { bouquet: iconBouquet, pot: iconPot, sachet: iconSachet, perfume: iconPerfume, sbq: iconSbq, tea: iconTea, lav: iconLav, sun: iconSun, rosep: iconRoseP, orchid: iconOrchidF, flower: iconFlower });
 /* ---- product models ---- */
 function mkProdGeo(key, build) { return withLOD(2, () => _gc[key] || (_gc[key] = mergeParts(build()))); }
-for (const [k, fn] of [['sachet', sachetGeo], ['perfume', perfumeGeo], ['tea', teaGeo], ['sbq', sbqGeo]]) ITEMF[k] = () => { const g = new THREE.Group(); g.add(new THREE.Mesh(fn(), vcMat2)); g.userData.prod = k; return g; };
+for (const [k, fn] of [['sachet', sachetGeo], ['perfume', perfumeGeo], ['tea', teaGeo], ['sbq', sbqGeo]]) ITEMF[k] = () => { const g = new THREE.Group(); g.add(ibReg(new THREE.Mesh(fn(), vcMat2))); g.userData.prod = k; return g; };
 /* ---- genel: kilitli alan, bölge, istasyon ---- */
 const EXTZ = {}, EXTLIST = [], EXTSTACKS = [], STATIONS = [], GARD = [], EXTAPPLY = {};
 function buildLocked(z, label) {
@@ -3496,7 +3528,7 @@ function iconSand(ctx, cx, cy, s) { // balık-ekmek
   ctx.fillStyle = '#f6d28a'; ctx.beginPath(); ctx.ellipse(cx, cy - s * 0.14, s * 0.44, s * 0.2, 0, Math.PI, TAU); ctx.fill(); ctx.stroke();
 }
 ICONF.sand = iconSand;
-ITEMF.sand = () => { const g = new THREE.Group(); g.add(new THREE.Mesh(mkProdGeo('x_sand', () => [part(G.sph6, 0xe8b46a, 0, 0.12, 0, 0.3, 0.12, 0.2), part(G.sph6, 0x6fcf6a, 0, 0.2, 0, 0.27, 0.03, 0.17), part(G.sph6, 0xff8a3a, 0.02, 0.23, 0, 0.25, 0.04, 0.15), part(G.sph6, 0xf6d28a, 0, 0.3, 0, 0.3, 0.1, 0.2)]), vcMat2)); g.userData.prod = 'sand'; return g; };
+ITEMF.sand = () => { const g = new THREE.Group(); g.add(ibReg(new THREE.Mesh(mkProdGeo('x_sand', () => [part(G.sph6, 0xe8b46a, 0, 0.12, 0, 0.3, 0.12, 0.2), part(G.sph6, 0x6fcf6a, 0, 0.2, 0, 0.27, 0.03, 0.17), part(G.sph6, 0xff8a3a, 0.02, 0.23, 0, 0.25, 0.04, 0.15), part(G.sph6, 0xf6d28a, 0, 0.3, 0, 0.3, 0.1, 0.2)]), vcMat2))); g.userData.prod = 'sand'; return g; };
 function bubbleSmall(c) { // küçük istek balonu
   const draw = bubbleDraw('want', c.want - c.got, c.prod);
   if (!c.bubble) { c.bubble = makeSprite(256, 192, draw, 1.7, 1.28, false); c.bubble.position.set(0, 3.0, 0); c.group.add(c.bubble); } else redrawSprite(c.bubble, draw);
@@ -3618,9 +3650,9 @@ function iconCrab(ctx, cx, cy, s) {
 }
 ICONF.shrimp = iconSachet; ICONF.crab = iconCrab; ICONF.plate = iconTea;
 function scaleParts(P0, k, dx, dy, dz) { const M = new THREE.Matrix4().makeTranslation(dx || 0, dy || 0, dz || 0).multiply(new THREE.Matrix4().makeScale(k, k, k)); return P0.map(q => ({ g: q.g, c: q.c, m: M.clone().multiply(q.m) })); }
-ITEMF.shrimp = () => { const g = new THREE.Group(); g.add(new THREE.Mesh(mkProdGeo('x_shrimp', () => scaleParts(shrimpBloom(0xff8a6a), 1.7, -0.1, 0, 0).concat(scaleParts(shrimpBloom(0xff7a5a), 1.7, 0.2, 0, 0.1))), vcMat2)); g.userData.prod = 'shrimp'; return g; };
-ITEMF.crab = () => { const g = new THREE.Group(); g.add(new THREE.Mesh(mkProdGeo('x_crab', () => scaleParts(crabBloom(0xe8383a), 1.9, 0, 0.0, 0)), vcMat2)); g.userData.prod = 'crab'; return g; };
-ITEMF.plate = () => { const g = new THREE.Group(); g.add(new THREE.Mesh(mkProdGeo('x_plate', () => [part(G.cyl, 0xffffff, 0, 0.04, 0, 0.5, 0.07, 0.5), part(G.cyl, 0xcfe8f6, 0, 0.085, 0, 0.38, 0.02, 0.38)].concat(scaleParts(shrimpBloom(0xff8a6a), 1.3, -0.2, 0.08, 0.0), scaleParts(crabBloom(0xe8383a), 1.2, 0.18, 0.08, 0.0), [part(G.sph6, 0xffe14a, 0.0, 0.12, 0.28, 0.1, 0.05, 0.07), part(G.sph6, 0x3fae4a, -0.28, 0.12, 0.2, 0.08, 0.03, 0.05)])), vcMat2)); g.userData.prod = 'plate'; return g; };
+ITEMF.shrimp = () => { const g = new THREE.Group(); g.add(ibReg(new THREE.Mesh(mkProdGeo('x_shrimp', () => scaleParts(shrimpBloom(0xff8a6a), 1.7, -0.1, 0, 0).concat(scaleParts(shrimpBloom(0xff7a5a), 1.7, 0.2, 0, 0.1))), vcMat2))); g.userData.prod = 'shrimp'; return g; };
+ITEMF.crab = () => { const g = new THREE.Group(); g.add(ibReg(new THREE.Mesh(mkProdGeo('x_crab', () => scaleParts(crabBloom(0xe8383a), 1.9, 0, 0.0, 0)), vcMat2))); g.userData.prod = 'crab'; return g; };
+ITEMF.plate = () => { const g = new THREE.Group(); g.add(ibReg(new THREE.Mesh(mkProdGeo('x_plate', () => [part(G.cyl, 0xffffff, 0, 0.04, 0, 0.5, 0.07, 0.5), part(G.cyl, 0xcfe8f6, 0, 0.085, 0, 0.38, 0.02, 0.38)].concat(scaleParts(shrimpBloom(0xff8a6a), 1.3, -0.2, 0.08, 0.0), scaleParts(crabBloom(0xe8383a), 1.2, 0.18, 0.08, 0.0), [part(G.sph6, 0xffe14a, 0.0, 0.12, 0.28, 0.1, 0.05, 0.07), part(G.sph6, 0x3fae4a, -0.28, 0.12, 0.2, 0.08, 0.03, 0.05)])), vcMat2))); g.userData.prod = 'plate'; return g; };
 const CAGES = [];
 function buildCage(g, def) { // vinç + kafes + tepsi
   const P_ = [];
@@ -3630,11 +3662,12 @@ function buildCage(g, def) { // vinç + kafes + tepsi
   P_.push(part(G.box, 0x8a5a30, def.tx, 0.45, def.tz, 2.6, 0.12, 1.7), part(G.box, 0xb98040, def.tx, 0.32, def.tz, 2.4, 0.2, 1.5));
   for (const [dx, dz] of [[-1.2, -0.7], [1.2, -0.7], [-1.2, 0.7], [1.2, 0.7]]) P_.push(part(G.box, 0x5a3a1c, def.tx + dx, 0.2, def.tz + dz, 0.14, 0.4, 0.14));
   const fr = new THREE.Mesh(mergeParts(P_), vcMat); fr.castShadow = true; g.add(fr); fr.position.set(-g.userData.px, 0, -g.userData.pz);
-  const cage = new THREE.Group(); cage.userData.dyn = true; const cm = LM({ color: lc(def.col) });
-  const cb = new THREE.Mesh(G.box, cm); cb.scale.set(1.5, 1.0, 1.1); cage.add(cb); for (const sx of [-0.75, 0.75]) for (const sz of [-0.55, 0.55]) { const bar = mk(G.cyl, mat(0x333c44), 0.05, 1.05, 0.05, sx, 0, sz); cage.add(bar); }
-  cage.add(mk(G.box, mat(0x333c44), 1.55, 0.06, 1.15, 0, 0.5, 0)); for (let i = 0; i < 3; i++) cage.add(mk(G.box, mat(0x333c44), 1.55, 0.05, 0.05, 0, -0.3 + i * 0.3, 0.57));
+  const cage = new THREE.Group(); cage.userData.dyn = true; const CP = [part(G.box, def.col, 0, 0, 0, 1.5, 1.0, 1.1)];
+  for (const sx of [-0.75, 0.75]) for (const sz of [-0.55, 0.55]) CP.push(part(G.cyl, 0x333c44, sx, 0, sz, 0.05, 1.05, 0.05));
+  CP.push(part(G.box, 0x333c44, 0, 0.5, 0, 1.55, 0.06, 1.15)); for (let i = 0; i < 3; i++) CP.push(part(G.box, 0x333c44, 0, -0.3 + i * 0.3, 0.57, 1.55, 0.05, 0.05));
+  cage.add(new THREE.Mesh(mergeParts(CP), vcMat));
   cage.traverse(m => { m.userData.dyn = true; }); cage.position.set(def.x, WATER_Y - 0.4, def.z + 1.4); cage.visible = false; world.add(cage);
-  const rope = mk(G.cyl, mat(0xd8c9a0), 0.04, 1, 0.04, def.x, 2, def.z + 1.4); rope.userData.dyn = true; rope.visible = false; world.add(rope);
+  const rope = ibReg(mk(G.cyl, mat(0xd8c9a0), 0.04, 1, 0.04, def.x, 2, def.z + 1.4)); rope.userData.dyn = true; rope.visible = false; world.add(rope);
   const C = { def, cage, rope, st: 'down', t: rand(0, def.per * 0.5), tray: new Stack(scene, (i, out) => out.set(def.tx - 0.9 + (i % 4) * 0.6, 0.72 + Math.floor(i / 8) * 0.22, def.tz - 0.3 + (Math.floor(i / 4) % 2) * 0.6), 16) };
   C.tray.pend = 0; EXTSTACKS.push(C.tray);
   C.zone = new Zone({ x: def.tx, z: def.tz - 2.3, w: 2.8, d: 2.2, color: def.zcol, draw: drawZoneIcon(ICONF[def.type]) }); C.zone.group.visible = false; CAGES.push(C); return C;
