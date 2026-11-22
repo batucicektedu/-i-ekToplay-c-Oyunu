@@ -181,7 +181,11 @@ const UPG = {
   speed:  { name: 'Hız',            costs: geo(25, 5) },
   pack:   { name: 'Paketleme Hızı', costs: geo(40, 5) },
   bed:    { name: 'Yeni Folluk',     costs: [150] },
-  helper: { name: 'Yardımcı',       costs: [220] }
+  helper: { name: 'Yardımcı',       costs: [220] },
+  ranch:   { name: 'At Çiftliği',     costs: [20000] }, horse:   { name: 'Yeni At',         costs: [3000, 7500, 16000, 32000] },
+  rideSpd: { name: 'Biniş Hızı',      costs: geo(220, 5) }, ticket:  { name: 'Bilet Fiyatı',    costs: geo(260, 5) },
+  instr:   { name: 'Binicilik Hocası', costs: [6000] }, foal: { name: 'Tay', costs: [9000] }, show: { name: 'Engelli Parkur', costs: [24000] },
+  ata:     { name: 'Ata Bin',         costs: [3500] }, groom: { name: 'Seyis', costs: [5000] }
 };
 const GOALS = [
   { key: 'speed', lv: 1 }, { key: 'pack', lv: 1 }, { key: 'cap', lv: 1 }, { key: 'cashier', lv: 1 }, { key: 'bed', lv: 1 }, { key: 'helper', lv: 1 },
@@ -220,11 +224,11 @@ function rm(o) { if (o && o.parent) o.parent.remove(o); }
 let fountainWater = null, clouds = [], butterflies = [];
 let LOADED_X = null, carpet1 = null, carpet2 = null;
 const MAIN_UNLOCKS = { bed: 1, helper: 1, cashier: 1, carrier: 1, sera: 1, van: 1 };
-const S = { money: 0, lv: { cap: 0, speed: 0, pack: 0, bed: 0, helper: 0, cashier: 0, carrier: 0, cashSpd: 0, carSpd: 0, carCap: 0, helpSpd: 0, sera: 0, van: 0, lav: 0, lavW: 0, keseSpd: 0, parf: 0, parfW: 0, parfSpd: 0, cafe: 0, cafeW: 0, teaSpd: 0, wed: 0, wedBonus: 0, sunf: 0, sunW: 0, sbqSpd: 0, city: 0, cityW: 0, citySpd: 0, stars: 0, bee: 0, beeW: 0, hiveN: 0, hiveSpd: 0, honSpd: 0, jap: 0, bonW: 0, bonSpd: 0, coll: 0, port: 0, portW: 0, portBonus: 0, fest: 0, festBonus: 0, mus: 0, musTkt: 0, wedW: 0, portSpd: 0, portCap: 0, helpCap: 0, helperN: 0, helperT: 0, lavCap: 0, lavN: 0, lavT: 0, parfCap: 0, parfN: 0, parfT: 0, cafeG: 0, cafeGCap: 0, cafeGN: 0, cafeGT: 0, sunCap: 0, sunN: 0, bonCap: 0, bonN: 0, bonT: 0, carN: 0, cashN: 0, wedSpd: 0, potSpd: 0, bus: 0, busSpd: 0, busCap: 0, busN: 0, wedN: 0, waitN: 0, cityN: 0, portN: 0, beeN: 0, gate: 0 }, ic: 0, tut: 0, tier: { pack: 0, flo: 0, pot: 0, van: 0, kese: 0, parf: 0, tea: 0, wed: 0, city: 0, hon: 0, bon: 0 }, decor: {}, cos: { hat: 'straw', fit: 0, uni: 0, floor: 0, own: [] }, dn: 0,
+const S = { money: 0, lv: { ranch: 0, horse: 0, rideSpd: 0, ticket: 0, instr: 0, foal: 0, show: 0, ata: 0, groom: 0, cap: 0, speed: 0, pack: 0, bed: 0, helper: 0, cashier: 0, carrier: 0, cashSpd: 0, carSpd: 0, carCap: 0, helpSpd: 0, sera: 0, van: 0, lav: 0, lavW: 0, keseSpd: 0, parf: 0, parfW: 0, parfSpd: 0, cafe: 0, cafeW: 0, teaSpd: 0, wed: 0, wedBonus: 0, sunf: 0, sunW: 0, sbqSpd: 0, city: 0, cityW: 0, citySpd: 0, stars: 0, bee: 0, beeW: 0, hiveN: 0, hiveSpd: 0, honSpd: 0, jap: 0, bonW: 0, bonSpd: 0, coll: 0, port: 0, portW: 0, portBonus: 0, fest: 0, festBonus: 0, mus: 0, musTkt: 0, wedW: 0, portSpd: 0, portCap: 0, helpCap: 0, helperN: 0, helperT: 0, lavCap: 0, lavN: 0, lavT: 0, parfCap: 0, parfN: 0, parfT: 0, cafeG: 0, cafeGCap: 0, cafeGN: 0, cafeGT: 0, sunCap: 0, sunN: 0, bonCap: 0, bonN: 0, bonT: 0, carN: 0, cashN: 0, wedSpd: 0, potSpd: 0, bus: 0, busSpd: 0, busCap: 0, busN: 0, wedN: 0, waitN: 0, cityN: 0, portN: 0, beeN: 0, gate: 0 }, ic: 0, tut: 0, tier: { pack: 0, flo: 0, pot: 0, van: 0, kese: 0, parf: 0, tea: 0, wed: 0, city: 0, hon: 0, bon: 0 }, decor: {}, cos: { hat: 'straw', fit: 0, uni: 0, floor: 0, own: [] }, dn: 0,
   cb: {}, cs: [], pt: { n: 0, cur: null }, fe: { n: 0, t: 420 }, q: { a: [], n: 0 }, bx: 0, ts: 0, op: 0, mv: 0, seen: {} };
 let saveDirty = false, saveTimer = 0;
 let introDone = false, curGoal = null, curGoalIdx = -1, lastGoalIdx = -2;
-const SAVE_VER = 7, BAK_KEY = SAVE_KEY + '_bak', TMP_KEY = SAVE_KEY + '_tmp';
+const SAVE_VER = 8, BAK_KEY = SAVE_KEY + '_bak', TMP_KEY = SAVE_KEY + '_tmp';
 let SAVE_BLOCKED = false; // okuma bozuk/başarısızsa eski kaydın üzerine yazma
 function readSaveKey(k) { try { const r = localStorage.getItem(k); if (r === null) return { none: true }; const o = JSON.parse(r); return o && typeof o === 'object' && !Array.isArray(o) ? { o, raw: r } : { bad: true, raw: r }; } catch (e) { return { bad: true }; } }
 const hasProgress = o => !!o && (+o.money > 0 || (o.lv && Object.keys(o.lv).some(k => +o.lv[k] > 0)) || +o.tut > 0);
@@ -234,6 +238,7 @@ function migrateSave(s) { // ver alanı yoksa 1 sayılır; sadece alan ekler, hi
   if (v < 3) { /* v2 -> v3: tier, decor, cos, dn alanları eklendi; eksikse yüklemede varsayılanla dolar */ }
   if (v < 4) { /* v3 -> v4 (C3): cb, cs, pt, fe, q, bx, ts, op, mv ve yeni lv/tier anahtarları eklendi; eksikse varsayılan */ }
   if (v < 5) { /* v4 -> v5 (C5): toplayıcı kapasite/eleman/traktör, otobüs, hız anahtarları eklendi (hepsi varsayılan 0); sunW>0 traktör sahibi kalır */ }
+  if (v < 8) { /* v7 -> v8 (Bölüm 3 at çiftliği): lv.ranch/horse/rideSpd/ticket/instr/foal/show/ata/groom ve x.rl (at sevgisi) eklendi; varsayılan 0, eski kayıtlar aynen korunur */ }
   if (v < 7) { /* v6 -> v7 (Bölüm 2): ic (giriş kartı görüldü), lv.gate (bölüm kapısı) eklendi; varsayılan 0 */ }
   if (v < 6) { /* v5 -> v6 (C6): +1 Eleman anahtarları eklendi (wedN, waitN, cityN, portN, beeN; varsayılan 0) */ }
   s.ver = SAVE_VER; return s;
@@ -2215,7 +2220,7 @@ function buildPlayer() {
   scene.add(c.group); P = c; P.cd = 0;
   maxSprite = makeSprite(256, 96, textSpriteDraw('MAX', '#ffb703'), 2.0, 0.75, false); maxSprite.position.set(0, 3.0, 0); maxSprite.visible = false; c.group.add(maxSprite);
 }
-const speedOf = () => CFG.baseSpeed * (1 + CFG.speedStep * S.lv.speed);
+const speedOf = () => CFG.baseSpeed * (1 + CFG.speedStep * S.lv.speed) * (window.__riding ? 1.75 : 1);
 const packInterval = () => CFG.packBase * Math.pow(CFG.packMul, S.lv.pack);
 
 const helperCapNow = () => helper && helper.tr ? 30 + 6 * (S.lv.helpCap || 0) : 6 + 2 * (S.lv.helpCap || 0);
@@ -2593,6 +2598,7 @@ function updateUpgrades(dt) {
     }
     if (u.inside && S.money <= 0 && !u.locked) { u.warn = (u.warn || 0) - dt; if (u.warn <= 0) { u.warn = 1.4; u.pop = 0.4; popText(u.x, 2.4, u.z, 'Yetersiz para: ' + fmt(Math.max(0, u.cost() - u.paid)), '#ff6b6b'); sfx('drop'); } }
     if (!u.inside || S.money <= 0) { u.hold = 0; continue; }
+    if (zones.some(q => q !== u && !(q instanceof UpgradePad) && q.inside && Math.abs(q.x - u.x) < (q.w + u.w) / 2 && Math.abs(q.z - u.z) < (q.d + u.d) / 2)) { u.hold = 0; continue; } // etkileşim alanındayken pad para çekmez
     u.hold += dt;
     u.tick -= dt; if (u.tick > 0) continue; u.tick = 0.03;
     const cost = u.cost(), rem = cost - u.paid, perSec = cost / payDur(cost) * (1 + u.hold * 0.8), amt = Math.min(S.money, rem, Math.max(1, Math.ceil(perSec * 0.03)));
@@ -2808,9 +2814,10 @@ const canCounter = t => PROD_LIST.includes(t) && (cashier ? shelfFree(t) > 0 : (
 function objective(out) {
   out.ok = false; if (!introDone) return out;
   const st = P.stack, nF = st.count('flower'), nB = st.count('bouquet'), nO = st.count('orchid'), nP = st.count('pot');
-  const set = (x, y, z, kind) => { out.x = x; out.y = y; out.z = z; out.kind = kind; out.ok = true; return out; };
+  const hold0 = t => st.count(t); const set = (x, y, z, kind) => { out.x = x; out.y = y; out.z = z; out.kind = kind; out.ok = true; return out; };
   const gp = curGoal ? upPads[curGoal.key] : null;
   if (gp && gp.group.visible && !gp.done && S.money + gp.paid >= gp.cost()) return set(gp.x, 0.4, gp.z, 'pad');
+  { const ro = ranchObjective(set, hold0); if (ro) return ro; }
   const ripe = () => { let best = null, bd = 1e9; for (const bb of beds) { if (bb.locked || bb.nohelp) continue; for (const f of bb.flowers) if (f.t >= f.gt) { const d = (f.x - P.group.position.x) ** 2 + (f.z - P.group.position.z) ** 2; if (d < bd) { bd = d; best = f; } } } return best; };
   if (outZone.inside && outputPile.length > 0 && P.free() > 0 && nB < 14) return set(outZone.x, 0.4, outZone.z, 'out');
   const hold = t => st.count(t), prodHeld = PROD_LIST.some(t => hold(t) > 0);
@@ -2872,7 +2879,7 @@ function updatePanQ(dt) {
 const WALKX = []; // ek dikdörtgenler: {x0,x1,z0,z1,on:()=>bool}
 function walkRects() {
   const B = CFG.bounds, z1 = zone3 && !zone3.locked ? 31.5 : 16, x1 = Math.max(zone2 && !zone2.locked ? 44.5 : B.x1, zone3 && !zone3.locked ? 24.2 : 0);
-  B.z1 = z1; const l = [[B.x0, x1, B.z0, z1], [2.4, 9.6, -26, B.z0 + 0.5]];
+  B.z1 = z1; const l = [[B.x0, x1, B.z0, z1], [1, 11, -26, B.z0 + 0.5]];
   for (const w of WALKX) if (!w.on || w.on()) l.push([w.x0, w.x1, w.z0, w.z1]);
   return l;
 }
@@ -2968,7 +2975,7 @@ function update(dt) {
   updateZoneActions(dt);
   updateGoalState(); updateUpgrades(dt); updateExpansion(dt, T);
   updatePacking(dt, T);
-  updateHelper(dt, T); updateCashier(dt, T); updateCarrier(dt, T); updatePotting(dt, T); updateSera(dt); updateVan(dt, T); updateAmbient(dt, T);
+  updateRanch(dt, T); updateHelper(dt, T); updateCashier(dt, T); updateCarrier(dt, T); updatePotting(dt, T); updateSera(dt); updateVan(dt, T); updateAmbient(dt, T);
   // customers spawning
   spawnT -= dt;
   if (queue.length < 3 && spawnT > CFG.spawnShortEvery) spawnT = CFG.spawnShortEvery;
@@ -3003,14 +3010,14 @@ function restoreCarried(pc) { // kayıtlı taşınan ürünler: kapasite aşıls
 }
 function snapshot() {
   const paid = {}, shown = {}; for (const k in upPads) { if (upPads[k].paid > 0) paid[k] = upPads[k].paid; if (upPads[k].shown) shown[k] = 1; }
-  const x = { paid, shown, mp: pileVal(moneyPile), vp: pileVal(vanPile), sb: shelfB.length, sp: shelfP.length, pi: potInput.length, po: potOutput.length, ii: inputPile.length, oo: outputPile.length, pc: carriedCounts() };
+  const x = { paid, shown, mp: pileVal(moneyPile), vp: pileVal(vanPile), sb: shelfB.length, sp: shelfP.length, pi: potInput.length, po: potOutput.length, ii: inputPile.length, oo: outputPile.length, pc: carriedCounts(), rl: RH.map(h => Math.round(h.love)) };
   const away = VAN.state === 'away' || VAN.state === 'depart' || VAN.state === 'return';
   x.van = { away, load: vanLoad.length + (VAN.state === 'loading' ? vanCap() - vanLoad.length : 0), sum: VAN.sum, until: away ? Date.now() + Math.max(0, 20 - VAN.trip) * 1000 : 0 };
   return x;
 }
 function fillStack(st, n, maker, type) { for (let i = 0; i < n && st.length < st.cap; i++) st.add(maker(), type); }
 function restoreExtras(x) {
-  if (!x) return; restoreCarried(x.pc);
+  if (!x) return; restoreCarried(x.pc); if (Array.isArray(x.rl)) x.rl.forEach((v, i) => { if (RH[i] && isFinite(+v)) RH[i].love = clamp(+v, 0, 100); });
   const num = v => Math.max(0, Math.floor(+v || 0));
   for (const k in (x.paid || {})) if (upPads[k]) upPads[k].paid = Math.min(num(x.paid[k]), Math.max(0, (upPads[k].cost() || 1) - 1));
   for (const k in (x.shown || {})) if (upPads[k]) upPads[k].shown = true;
@@ -3403,10 +3410,9 @@ function buildFarmGround() {
   const tone = new THREE.Mesh(G.plane, new THREE.MeshBasicMaterial({ map: tt, transparent: true, depthWrite: false, fog: true })); tone.rotation.x = -Math.PI / 2; tone.scale.set(300, 300, 1); tone.position.set(10, 0.006, -30); tone.renderOrder = 1; world.add(tone);
   // yuvarlak tepeler (yürünmeyen çevre)
   const hc = [0x3f9e3a, 0x49a840, 0x3a9436, 0x52b048];
-  for (let i = 0; i < 34; i++) { const a = i / 34 * TAU + rand(-0.1, 0.1), rr = rand(78, 118), cx = 10 + Math.cos(a) * rr * 1.25, cz = -34 + Math.sin(a) * rr; hillAt(cx, cz, rand(14, 30), rand(5, 11), hc[i % 4]); }
-  for (const [x, z, r, h] of [[-46, -8, 16, 5], [-52, 18, 18, 6], [58, -12, 18, 6], [66, 14, 16, 5], [-44, -42, 18, 7], [60, -48, 20, 7], [-20, -112, 26, 9], [30, -118, 30, 10], [-62, -70, 20, 7], [74, -80, 22, 8]]) hillAt(x, z, r, h, 0x479f3d);
+  for (let i = 0; i < 34; i++) { const a = i / 34 * TAU + rand(-0.1, 0.1), rr = rand(100, 140), cx = 10 + Math.cos(a) * rr * 1.25, cz = -34 + Math.sin(a) * rr; hillAt(cx, cz, rand(12, 22), rand(6, 12), hc[i % 4]); }
   // avlu lekeleri (merkez barınak avlusu) + yollar
-  yardBlob(3.65, 3.35, 38, 29, [[0.5, 0.5, 0.45, 0.36], [0.34, 0.45, 0.2, 0.3], [0.7, 0.55, 0.26, 0.3]], '#b88a50', DIRTD, 0.02);
+  yardBlob(3.65, 3.35, 38, 29, [[0.5, 0.5, 0.45, 0.36], [0.34, 0.45, 0.2, 0.3], [0.7, 0.55, 0.26, 0.3]], '#a9794a', DIRTD, 0.02);
   laneRibbon([[10, 11], [10, 22], [10.2, 34], [10, 48]], 3.9, 0.014);
   laneRibbon([[-9, -4], [-13, -4], [-17.4, -4]], 3.0, 0.015); laneRibbon([[-9, 4], [-13, 4], [-17.4, 4]], 3.0, 0.015); laneRibbon([[-10, -9.5], [-10, 0], [-10, 11]], 3.0, 0.015); laneRibbon([[-9, -11.8], [-13, -11.9], [-17.4, -11.9]], 2.6, 0.015);
   laneRibbon([[5, -9], [4.2, -17], [4.8, -25], [6.5, -33], [7.2, -44]], 4.4, 0.016);
@@ -3421,6 +3427,332 @@ function buildFarmLandmarks() {
 function woodFenceBox(cx, cz, w, d) { // eski çalı kutusu yerine ahşap çit (aynı çarpışma)
   if (w >= d) fencePath([[cx - w / 2, cz], [cx + w / 2, cz]], { collide: false }); else fencePath([[cx, cz - d / 2], [cx, cz + d / 2]], { collide: false });
   addCollider(cx - w / 2, cx + w / 2, cz - d / 2, cz + d / 2);
+}
+
+/* =====================================================================
+   AT ÇİFTLİĞİ: sahne, binicilik, bakım, Ata Bin, tay, Engelli Parkur
+   ===================================================================== */
+const RANCH = { gate: [5.5, -27], yard: [6, -38], track: { cx: 8, cz: -64, a: 12.2, b: 7.2, fa: 14, fb: 9 }, mount: [8, -52.4], paddock: { x0: -19.2, x1: -5, z0: -47.4, z1: -36 }, stable: { x0: -20, x1: -5, z0: -54, z1: -49 },
+  feed: [-12, -41.5], hay: [-2.3, -44.5], cash: [16.6, -45.2], cashZ: [16.6, -42.3], booth: [14.6, -48.4], showF: { cx: 33.5, cz: -43, w: 15, d: 18 }, showZ: [24.4, -43], ata: [-0.6, -34.5], carrots: [-16.8, -30.6], q0: [11.8, -49.6] };
+const COAT_ORDER = ['chestnut', 'white', 'black', 'palomino', 'pinto'];
+const RH = [], RC = [], RDEC = []; let ranchGate = null, ranchPile, mountZone, feedZone, hayZone, cashZone, showZone, ataZone, instructor = null, foal = null, PH = null, ranchBuilt = false;
+const SHOW = { state: 'off', cd: 0, run: [], t: 0 };
+const CARROTS = []; let hayPileItems = null;
+const R_ = () => S.lv.ranch > 0;
+const nHorses = () => 1 + S.lv.horse;
+const rideV = lv => [2.4, 3.2, 4.6, 5.4, 7.2, 8.4][Math.min(5, lv)];
+/* ---- ikonlar ---- */
+function iconHorseR(ctx, cx, cy, s) {
+  ctx.lineJoin = 'round'; ctx.lineWidth = s * 0.05; ctx.strokeStyle = '#4a2410'; ctx.fillStyle = '#b4621f';
+  ctx.beginPath(); ctx.moveTo(cx - s * 0.32, cy + s * 0.42); ctx.lineTo(cx - s * 0.3, cy - s * 0.08); ctx.lineTo(cx - s * 0.1, cy - s * 0.4); ctx.lineTo(cx + s * 0.04, cy - s * 0.46); ctx.lineTo(cx + s * 0.1, cy - s * 0.34); ctx.lineTo(cx + s * 0.34, cy + s * 0.12); ctx.lineTo(cx + s * 0.4, cy + s * 0.3); ctx.lineTo(cx + s * 0.26, cy + s * 0.36); ctx.lineTo(cx + s * 0.08, cy + s * 0.1); ctx.lineTo(cx - s * 0.02, cy + s * 0.42); ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#4a2410'; ctx.beginPath(); ctx.moveTo(cx - s * 0.3, cy - s * 0.08); ctx.lineTo(cx - s * 0.12, cy - s * 0.42); ctx.lineTo(cx - s * 0.02, cy - s * 0.4); ctx.lineTo(cx - s * 0.2, cy + s * 0.05); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(cx + s * 0.12, cy - s * 0.2, s * 0.04, 0, TAU); ctx.fill(); ctx.fillStyle = '#111'; ctx.beginPath(); ctx.arc(cx + s * 0.13, cy - s * 0.2, s * 0.025, 0, TAU); ctx.fill();
+}
+function iconCarrotP(ctx, cx, cy, s) { ctx.lineJoin = 'round'; ctx.fillStyle = '#ff8a1f'; ctx.strokeStyle = '#8a3a00'; ctx.lineWidth = s * 0.05; ctx.beginPath(); ctx.moveTo(cx - s * 0.18, cy - s * 0.12); ctx.lineTo(cx + s * 0.18, cy - s * 0.12); ctx.lineTo(cx, cy + s * 0.46); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#35b04a'; for (const d of [-1, 0, 1]) { ctx.beginPath(); ctx.ellipse(cx + d * s * 0.1, cy - s * 0.28, s * 0.06, s * 0.17, d * 0.4, 0, TAU); ctx.fill(); ctx.stroke(); } }
+function iconTicket(ctx, cx, cy, s) { ctx.lineJoin = 'round'; ctx.fillStyle = '#ffd23f'; ctx.strokeStyle = '#8a5a00'; ctx.lineWidth = s * 0.05; rrect(ctx, cx - s * 0.42, cy - s * 0.22, s * 0.84, s * 0.44, s * 0.06); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#8a5a00'; ctx.fillRect(cx - s * 0.04, cy - s * 0.2, s * 0.03, s * 0.4); otext(ctx, '$', cx + s * 0.22, cy + 2, s * 0.3, '#fff', '#8a5a00'); iconStar(ctx, cx - s * 0.2, cy, s * 0.3); }
+function iconHay(ctx, cx, cy, s) { ctx.lineJoin = 'round'; ctx.fillStyle = '#e8c860'; ctx.strokeStyle = '#7a5a10'; ctx.lineWidth = s * 0.05; rrect(ctx, cx - s * 0.4, cy - s * 0.25, s * 0.8, s * 0.5, s * 0.08); ctx.fill(); ctx.stroke(); ctx.strokeStyle = '#a98a30'; for (const d of [-0.2, 0.2]) { ctx.beginPath(); ctx.moveTo(cx + d * s, cy - s * 0.25); ctx.lineTo(cx + d * s, cy + s * 0.25); ctx.stroke(); } }
+function iconRide(ctx, cx, cy, s) { iconHorseR(ctx, cx, cy, s); iconStar(ctx, cx + s * 0.3, cy - s * 0.32, s * 0.28); }
+/* ---- ürün modelleri ---- */
+let _carG = null, _hayG = null;
+function carrotGeo() { if (_carG) return _carG; return (_carG = mergeParts([part(G.cone, 0xff8a1f, 0, 0.0, 0, 0.12, 0.42, 0.12, Math.PI), part(G.cone, 0x3fb04c, 0, 0.3, 0, 0.05, 0.22, 0.05, 0.4, 0, 0.3), part(G.cone, 0x3fb04c, 0.04, 0.3, 0, 0.05, 0.24, 0.05, -0.1, 0, -0.3), part(G.cone, 0x2f9a40, -0.03, 0.3, 0.03, 0.05, 0.2, 0.05, 0.2, 0, 0)])); }
+function hayGeo() { if (_hayG) return _hayG; return (_hayG = mergeParts([part(G.box, 0xe8c860, 0, 0.12, 0, 0.46, 0.24, 0.3), part(G.box, 0xc9a448, 0, 0.12, 0.0, 0.48, 0.25, 0.04), part(G.box, 0xf2d878, 0.08, 0.25, 0.04, 0.3, 0.05, 0.2)])); }
+ITEMF.carrot = () => { const g = new THREE.Group(); const m = new THREE.Mesh(carrotGeo(), vcMat); m.rotation.z = 0.6; m.position.y = 0.2; g.add(m); g.userData.prod = 'carrot'; return g; };
+ITEMF.hay = () => { const g = new THREE.Group(); g.add(new THREE.Mesh(hayGeo(), vcMat)); g.userData.prod = 'hay'; g.scale.setScalar(1.1); return g; };
+ICONF.carrot = iconCarrotP; ICONF.hay = iconHay;
+/* ---- sahne ---- */
+function ovalPts(cx, cz, a, b, n) { const l = []; for (let i = 0; i < n; i++) { const t = i / n * TAU; l.push([cx + Math.sin(t) * a, cz + Math.cos(t) * b]); } return l; }
+function buildRanchStatic() {
+  const T = RANCH.track, P_ = RANCH;
+  // çevre çiti (kilitliyken kapı kapalı)
+  fencePath([[-22, -27], [-22, -88], [41.5, -88], [41.5, -27], [8.1, -27]], { gaps: [], });
+  fencePath([[2.9, -27], [-22, -27]], {});
+  // yol: avlu + dalları
+  laneRibbon([[7.2, -44], [8, -49], [8, -53]], 4.0, 0.016);
+  laneRibbon([[6.8, -42], [0, -43.5], [-4.2, -42.2]], 3.2, 0.016); laneRibbon([[7, -42], [14, -43], [24.6, -43]], 3.2, 0.016);
+  yardBlob(P_.yard[0] + 2, P_.yard[1] - 5, 34, 26, [[0.5, 0.5, 0.46, 0.4], [0.28, 0.55, 0.2, 0.3], [0.74, 0.4, 0.22, 0.3]], '#a9794a', DIRTD, 0.02);
+  // koşu pisti: toprak oval + çim ortası
+  yardBlob(T.cx, T.cz, 36, 26, [[0.5, 0.5, 0.47, 0.47]], '#b78752', DIRTD, 0.022);
+  { const inf = new THREE.Mesh(new THREE.CircleGeometry(1, 36), LM({ map: (() => { const t = grassTex(); t.repeat.set(5, 4); return t; })(), polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -3 })); inf.rotation.x = -Math.PI / 2; inf.scale.set(T.a - 2.4, T.b - 2.4, 1); inf.position.set(T.cx, 0.03, T.cz); inf.renderOrder = 2; inf.userData.keep = true; inf.position.y = 0.045; world.add(inf); }
+  fencePath(ovalPts(T.cx, T.cz, T.fa, T.fb, 44), { closed: true, white: true, gaps: [[T.cx, T.cz + T.fb, 2.7]], h: 1.2, step: 2.0 });
+  // pist ortası: engeller (süs), saman
+  for (const [x, z, r] of [[T.cx - 5, T.cz, 0], [T.cx + 5, T.cz, 0]]) { for (const sx of [-0.9, 0.9]) world.add(mk(G.cyl, mat(0xffffff), 0.08, 0.9, 0.08, x + sx * Math.cos(r), 0.45, z)); world.add(mk(G.box, mat(0xe8283a), 1.9, 0.1, 0.1, x, 0.8, z)); world.add(mk(G.box, mat(0xffffff), 1.9, 0.1, 0.1, x, 0.55, z)); }
+  // ahır
+  { const S_ = P_.stable, W = S_.x1 - S_.x0, cx = (S_.x0 + S_.x1) / 2, cz = (S_.z0 + S_.z1) / 2, g = new THREE.Group(), red = mat(0xb8323a), wd = woodM(), wh = mat(0xfff4e0);
+    g.add(mk(G.box, red, W, 3.4, 0.3, cx, 1.7, S_.z0)); for (const sx of [S_.x0, S_.x1]) g.add(mk(G.box, red, 0.3, 3.4, 5.2, sx, 1.7, cz));
+    for (const s of [-1, 1]) { const rf = mk(G.box, mat(0x5a4636), W + 1, 0.22, 3.6, cx, 4.0, cz + s * 1.35); rf.rotation.x = -s * 0.55; g.add(rf); }
+    g.add(mk(G.box, wh, W + 0.2, 0.22, 0.22, cx, 3.4, S_.z1)); for (let i = 1; i < 5; i++) g.add(mk(G.box, wd, 0.2, 2.0, 4.6, S_.x0 + i * W / 5, 1.0, cz - 0.2));
+    for (let i = 0; i < 5; i++) { const sx = S_.x0 + (i + 0.5) * W / 5; g.add(mk(G.box, mat(0xe8c860), 1.8, 0.2, 0.9, sx, 0.2, S_.z0 + 0.8)); g.add(mk(G.box, wd, 1.8, 0.5, 0.12, sx, 1.0, S_.z1 - 0.1)); g.add(mk(G.box, mat(0x8a5a2a), 0.5, 0.35, 0.5, sx + 0.8, 0.18, S_.z0 + 1.6)); }
+    const sg = makeBoard('AHIR', 3.4, 0.9, 'wood'); sg.position.set(cx, 3.9, S_.z1 + 0.2); g.add(sg); shadowAll(g, true, true); world.add(g); addCollider(S_.x0 - 0.2, S_.x1 + 0.2, S_.z0 - 0.3, S_.z0 + 1.2); addCollider(S_.x0 - 0.3, S_.x0 + 0.1, S_.z0, S_.z1); addCollider(S_.x1 - 0.1, S_.x1 + 0.3, S_.z0, S_.z1); }
+  // padok çiti
+  const pd = P_.paddock; fencePath([[pd.x0, pd.z1 + 0.5], [pd.x0, pd.z0 + 0.6]], { white: true }); fencePath([[pd.x0, pd.z1 + 0.5], [pd.x1, pd.z1 + 0.5]], { white: true, gaps: [[(pd.x0 + pd.x1) / 2 + 1, pd.z1 + 0.5, 1.6]] }); fencePath([[pd.x1, pd.z0 + 0.6], [pd.x1, pd.z1 + 0.5]], { white: true, gaps: [[pd.x1, -42, 2.0]] });
+  // bilet kulübesi
+  { const g = new THREE.Group(), b = P_.booth; g.position.set(b[0], 0, b[1]); g.add(rbox(3.0, 2.2, 2.0, 0.06, woodM())).children[0].position.y = 1.1; const aw = mk(G.box, mat(0xe8283a), 3.6, 0.14, 1.6, 0, 2.35, 1.2); aw.rotation.x = 0.35; g.add(aw); for (const i of [-1, 0, 1]) g.add(mk(G.box, mat(0xffffff), 0.5, 0.15, 1.62, i * 1.0, 2.36, 1.2)).rotation.x = 0.35; const sg = makeBoard('BİLET', 2.2, 0.7, 'wood'); sg.position.set(0, 3.2, 0.9); g.add(sg); shadowAll(g, true, false); world.add(g); addCollider(b[0] - 1.6, b[0] + 1.6, b[1] - 1.1, b[1] + 1.1); }
+  // havuç tarlası
+  { const c = P_.carrots; world.add(mk(G.box, mat(0x6b4226), 7.4, 0.12, 4.2, c[0], 0.06, c[1])); for (let i = -1; i <= 1; i++) world.add(mk(G.box, mat(0x58351c), 7.0, 0.14, 0.5, c[0], 0.08, c[1] + i * 1.2)); fencePath([[c[0] - 4.1, c[1] - 2.4], [c[0] + 4.1, c[1] - 2.4], [c[0] + 4.1, c[1] + 2.4], [c[0] - 4.1, c[1] + 2.4]], { closed: true, collide: false, h: 0.7, gaps: [[c[0] + 4.1, c[1], 1.3]] }); }
+  // saman yığını (kaynak)
+  hayStack(P_.hay[0] + 0.3, P_.hay[1] - 1.9, 3);
+  // gösteri sahası
+  { const f = P_.showF, x0 = f.cx - f.w / 2, x1 = f.cx + f.w / 2, z0 = f.cz - f.d / 2, z1 = f.cz + f.d / 2; fencePath([[x0, z0], [x1, z0], [x1, z1], [x0, z1], [x0, f.cz + 2.6]], { white: true, h: 1.2 }); fencePath([[x0, f.cz - 2.6], [x0, z0]], { white: true, h: 1.2 });
+    for (const [x, z, rz] of [[f.cx, f.cz - 5.2, 0], [f.cx + 5, f.cz, 1], [f.cx, f.cz + 5.2, 0], [f.cx - 5, f.cz, 1]]) { const k = rz ? [0.1, 1.9] : [1.9, 0.1]; for (const s of [-1, 1]) world.add(mk(G.cyl, mat(0xffffff), 0.1, 1.2, 0.1, x + (rz ? 0 : s * 1.0), 0.6, z + (rz ? s * 1.0 : 0))); for (const [yy, c] of [[1.05, 0xe8283a], [0.75, 0xffffff], [0.45, 0x2f7bff]]) world.add(mk(G.box, mat(c), k[0], 0.12, k[1], x, yy, z)); }
+    const sg = makeBoard('PARKUR', 3.0, 0.8, 'wood'); sg.position.set(P_.showZ[0] - 1.4, 2.2, P_.showZ[1] - 2); world.add(sg); }
+  // gölet + ağaçlar
+  { const pm = new THREE.Mesh(new THREE.CircleGeometry(1, 28), new THREE.MeshStandardMaterial({ color: lc(0x3fa6e8), roughness: 0.2, transparent: true, opacity: 0.92, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -3 })); pm.rotation.x = -Math.PI / 2; pm.scale.set(7, 4.5, 1); pm.position.set(33, 0.04, -80); world.add(pm);
+    for (let i = 0; i < 12; i++) { const a = i / 12 * TAU; world.add(mk(G.cyl, mat(0x7a5a3a), 0.5, 0.12, 0.5, 33 + Math.cos(a) * 7.3, 0.06, -80 + Math.sin(a) * 4.8)); } treeAt('oak', 27, -84, 1.5); treeAt('oak', 39, -83, 1.4); treeAt('pop', 25, -77, 1.2); }
+  for (const [k, x, z, s] of [['oak', -19, -64, 1.5], ['oak', -17, -78, 1.4], ['pop', -12, -60, 1.1], ['oak', 26, -62, 1.4], ['oak', 24, -72, 1.3], ['oak', 38, -58, 1.5], ['pop', 40, -66, 1.2], ['oak', -3, -84, 1.5], ['oak', 12, -85, 1.4], ['pop', 20, -84, 1.1], ['oak', 38, -32, 1.4], ['oak', -21, -50, 1.2], ['pop', 22.5, -32, 1.1], ['oak', -10, -30, 1.2]]) treeAt(k, x, z, s);
+  hayBale(T.cx - 15.5, T.cz + 3, 0.2); hayBale(T.cx + 16, T.cz - 3, 1.2); hayBale(T.cx + 16.1, T.cz - 3, 0.1, 0.9);
+  // ana kapı + kilitli kapak
+  const gt = new THREE.Group(), gx = P_.gate[0], gz = P_.gate[1]; gt.position.set(gx, 0, gz);
+  for (const sx of [-1, 1]) { gt.add(mk(G.cyl, mat(0x8a5a2a), 0.3, 4.6, 0.3, sx * 3.0, 2.3, 0)); gt.add(mk(G.box, mat(0x7a4a22), 0.7, 0.2, 0.7, sx * 3.0, 4.7, 0)); }
+  gt.add(mk(G.box, mat(0x8a5a2a), 6.8, 0.35, 0.35, 0, 4.4, 0)); const sgn = makeBoard('AT ÇİFTLİĞİ', 5.2, 1.0, 'wood'); sgn.position.set(0, 5.2, 0.1); gt.add(sgn);
+  shadowAll(gt, true, false); world.add(gt); addCollider(gx - 3.3, gx - 2.7, gz - 0.3, gz + 0.3); addCollider(gx + 2.7, gx + 3.3, gz - 0.3, gz + 0.3);
+  ranchGate = new THREE.Group(); ranchGate.position.set(gx, 0, gz); ranchGate.userData.dyn = true;
+  for (const sx of [-1, 1]) { const d = new THREE.Group(); d.position.set(sx * 2.7, 0, 0); for (const y of [0.4, 0.9, 1.4]) d.add(mk(G.box, mat(0xb07a40), 2.6, 0.14, 0.12, -sx * 1.3, y, 0)); d.add(mk(G.box, mat(0xb07a40), 0.14, 1.5, 0.12, -sx * 1.3, 0.75, 0)); d.add(mk(G.box, mat(0xb07a40), 0.14, 1.5, 0.12, -sx * 2.5, 0.75, 0)); ranchGate.add(d); }
+  const lk = makeSprite(128, 128, ctx => { ctx.fillStyle = '#ffb703'; ctx.strokeStyle = '#7a4a00'; ctx.lineWidth = 8; rrect(ctx, 24, 56, 80, 62, 14); ctx.fill(); ctx.stroke(); ctx.beginPath(); ctx.arc(64, 56, 24, Math.PI, 0); ctx.stroke(); ctx.fillStyle = '#7a4a00'; ctx.beginPath(); ctx.arc(64, 84, 8, 0, TAU); ctx.fill(); }, 2.2, 2.2, false); lk.position.set(0, 2.6, 0.4); ranchGate.add(lk);
+  scene.add(ranchGate); addCollider(gx - 2.8, gx + 2.8, gz - 0.4, gz + 0.4, () => !R_());
+}
+/* ---- bölgeler / pad'ler ---- */
+function buildRanchZones() {
+  const Z = (xy, w, d, col, icon, sc) => { const z = new Zone({ x: xy[0], z: xy[1], w, d, color: col, draw: drawZoneIcon(icon, sc) }); z.group.visible = false; z.hidden = true; return z; };
+  mountZone = Z(RANCH.mount, 3.4, 2.8, '#ff2fa0', iconRide); feedZone = Z(RANCH.feed, 4.4, 3.6, '#35b04a', iconCarrotP); hayZone = Z(RANCH.hay, 2.8, 2.6, '#e8c040', iconHay);
+  cashZone = Z(RANCH.cashZ, 3.2, 3.0, '#1ed760', iconBill_); showZone = Z(RANCH.showZ, 3.4, 3.4, '#ffc21a', iconStar, 0.55); ataZone = Z(RANCH.ata, 3.2, 3.2, '#8f5a2a', iconHorseR);
+  cashZone.label.visible = false;
+  ranchPile = new Stack(scene, (i, out) => { const per = 12, l = Math.floor(i / per), r = i % per; out.set(RANCH.cash[0] + ((r % 3) - 1) * 0.98, 0.14 + l * 0.14, RANCH.cash[1] + (Math.floor(r / 3) - 1.5) * 0.6); }, 60); ranchPile.extra = 0; ranchPile.jitter = 0.07;
+  const mkp = (key, x, z, icon, vis, sub) => { const u = new UpgradePad(key, x, z, icon); u.vis = vis; if (sub) UPG[key].sub = sub; upPads[key] = u; return u; };
+  const on = () => R_();
+  mkp('ranch', 9.6, -23, iconHorseR, null, () => 'Atlar, biniş, gösteri');
+  mkp('horse', -1.2, -38.8, iconHorseR, on, () => (nHorses()) + ' → ' + (nHorses() + 1) + ' at');
+  mkp('ata', RANCH.ata[0] - 5.2, RANCH.ata[1] - 0.2, iconHorseR, on, () => 'Kendi atına bin');
+  mkp('rideSpd', 12.2, -36, iconBolt, on, () => 'Atlar daha hızlı');
+  mkp('ticket', 16.4, -36, iconTicket, on, () => 'Bilet +%18');
+  mkp('instr', 12.4, -40.6, iconHelper, on, () => 'Binişi otomatik başlatır');
+  mkp('foal', -7.6, -31.2, iconHorseR, on, () => 'Anneyi izleyen tay');
+  mkp('show', 24.4, -38, iconStar, on, () => 'Parkur gösterisi, büyük ödül');
+  Object.assign(LABELS, { ride: 'Biniş başlat', feed: 'Atı besle', hay: 'Saman al', show: 'Gösteriyi başlat', carrot: 'Havuç topla' });
+  HIREK.add('instr'); Object.assign(MAIN_UNLOCKS, { ranch: 1, instr: 1, show: 1, horse: 1, ata: 1, foal: 1 });
+  const gi = GOALS.findIndex(g => g.key === 'cap' && g.lv === 3);
+  GOALS.splice(gi + 1, 0, { key: 'ranch', lv: 1 }, { key: 'horse', lv: 1 }, { key: 'ata', lv: 1 }, { key: 'rideSpd', lv: 1 }, { key: 'ticket', lv: 1 }, { key: 'instr', lv: 1 }, { key: 'horse', lv: 2 }, { key: 'rideSpd', lv: 2 }, { key: 'ticket', lv: 2 }, { key: 'foal', lv: 1 }, { key: 'horse', lv: 3 }, { key: 'rideSpd', lv: 3 }, { key: 'show', lv: 1 }, { key: 'ticket', lv: 3 }, { key: 'horse', lv: 4 }, { key: 'rideSpd', lv: 4 }, { key: 'ticket', lv: 4 }, { key: 'rideSpd', lv: 5 }, { key: 'ticket', lv: 5 });
+  for (const k in GFIRST) delete GFIRST[k]; GOALS.forEach((g, i) => { if (GFIRST[g.key] === undefined) GFIRST[g.key] = i; });
+  EXTAPPLY.ranch = unlockRanch; EXTAPPLY.horse = i => { while (RH.length < nHorses()) addHorse(RH.length, i); }; EXTAPPLY.ata = enableAta; EXTAPPLY.instr = spawnInstructor; EXTAPPLY.foal = spawnFoal; EXTAPPLY.show = i => { if (SHOW.state === 'off') { SHOW.state = 'cd'; SHOW.cd = i ? 20 : 90; } };
+  WALKX.push({ x0: -21.6, x1: 41.2, z0: -87.5, z1: -26.4, on: R_ });
+}
+function iconBill_(ctx, cx, cy, s) { iconBill(ctx, cx, cy, s); }
+function buildRanch() {
+  buildRanchStatic(); buildRanchZones(); ranchBuilt = true;
+  // kilitliyken otlayan süs atları
+  RDEC.push(makeDec('chestnut', 6, -66, 0.8), makeDec('white', 14, -61, 2.2));
+  if (S.lv.ranch > 0) RDEC.forEach(d => { scene.remove(d.group); });
+  for (let i = 0; i < 10; i++) { const m = new THREE.Mesh(carrotGeo(), vcMat), cx = RANCH.carrots[0] + ((i % 5) - 2) * 1.35, cz = RANCH.carrots[1] + (i < 5 ? -1.2 : 1.2); m.position.set(cx, 0.28, cz); m.scale.setScalar(0.001); m.userData.dyn = true; m.userData.ci = i; scene.add(m); CARROTS.push({ m, x: cx, z: cz, t: Math.random() * 6 }); }
+  PH = makeHorse('black', { tack: true }); PH.group.visible = false; scene.add(PH.group); PH.group.position.set(RANCH.ata[0] + 1.6, 0, RANCH.ata[1]); PH.mode = 'stand';
+}
+function makeDec(coat, x, z, yaw) { const h = makeHorse(coat, { tack: false }); h.group.position.set(x, 0, z); h.group.rotation.y = yaw; h.mode = 'graze'; scene.add(h.group); return h; }
+
+/* ---- at nesneleri ve hareket ---- */
+function addHorse(i, instant) {
+  const coat = COAT_ORDER[i % 5], h = makeHorse(coat, { tack: true }), pd = RANCH.paddock;
+  h.x = rand(pd.x0 + 2, pd.x1 - 2); h.z = rand(pd.z0 + 2, pd.z1 - 2); h.group.position.set(h.x, 0, h.z); h.yaw = rand(0, TAU); h.group.rotation.y = h.yaw;
+  h.state = 'idle'; h.love = 55; h.rest = 0; h.idleT = rand(1, 4); h.tx = h.x; h.tz = h.z; h.walkK = 0; h.idx = i; h.eatT = 0; h.wp = null; h.rider = null; h.mode = 'graze';
+  scene.add(h.group); RH.push(h);
+  if (!instant) { sparkles(h.x, 2, h.z, 14, 0xfff2a0, 0.8); hearts(h.x, 3.6, h.z, 6); ring(h.x, h.z, 0xffc21a, 3); panReq('horse' + (i === 0 ? '1' : 'n' + i), h.x, h.z, i === 0 ? 'İLK ATIN!' : 'YENİ AT: ' + COATS[coat].n.toUpperCase()); }
+  return h;
+}
+function unlockRanch(instant) {
+  if (ranchGate) ranchGate.visible = false; RDEC.forEach(d => scene.remove(d.group));
+  zonesOn(true); if (!instant) { confetti(RANCH.gate[0], 3, RANCH.gate[1], 70); flash(); }
+  EXTAPPLY.horse(instant);
+}
+function zonesOn(v) { for (const z of [mountZone, feedZone, hayZone, cashZone]) { z.group.visible = v; z.hidden = !v; } }
+function spawnInstructor(instant) {
+  if (instructor) return; const c = makeChar({ shirt: 0x2f7bff, pants: 0xf4f0e6, hair: 0x2a1a10, hairStyle: 'short', hat: 'beret', hatColor: 0x1a1a40, skin: 0xe8b88a, shoe: 0x2a1a10 });
+  c.group.position.set(RANCH.mount[0] + 2.0, 0, RANCH.mount[1] - 0.6); c.yaw = Math.PI; c.group.rotation.y = Math.PI; c.cd = 0; scene.add(c.group); instructor = c; popInWorker(c, instant);
+}
+function spawnFoal(instant) {
+  if (foal) return; foal = makeHorse('chestnut', { tack: false, scale: 0.55 }); foal.x = RANCH.paddock.x0 + 3; foal.z = -42; foal.group.position.set(foal.x, 0, foal.z); foal.mode = 'stand'; scene.add(foal.group); foal.yaw = 0; foal.t1 = 0;
+  if (!instant) { hearts(foal.x, 2.4, foal.z, 8); sparkles(foal.x, 1.2, foal.z, 10, 0xfff2a0, 0.5); panReq('foal1', foal.x, foal.z, 'MİNİK TAY!'); }
+}
+function stepTo(o, tx, tz, spd, dt) { const dx = tx - o.x, dz = tz - o.z, d = Math.hypot(dx, dz); if (d > 0.02) { const st = Math.min(d, spd * dt); o.x += dx / d * st; o.z += dz / d * st; o.yaw += angDiff(o.yaw, Math.atan2(dx, dz)) * (1 - Math.exp(-7 * dt)); } o.group.position.set(o.x, o.group.position.y, o.z); o.group.rotation.y = o.yaw; return d; }
+const horseGait = v => v < 3.4 ? 0 : v < 6 ? 1 : 2;
+function seatRider(h, c) {
+  h.rider = c; h.root.add(c.group); c.group.position.set(0, 2.1, -0.08); c.group.rotation.set(0, 0, 0); c.seat = true;
+  c.legL.rotation.set(-1.2, 0, 0.5); c.legR.rotation.set(-1.2, 0, -0.5); c.armL.rotation.set(-1.0, 0, 0.1); c.armR.rotation.set(-1.0, 0, -0.1); const sh = c.group.children.find(o => o.renderOrder === 1); if (sh) sh.visible = false;
+}
+function unseatRider(h, c) {
+  const p = h.group.position; scene.add(c.group); c.group.position.set(p.x + 1.4, 0, p.z); c.seat = false; c.legL.rotation.z = c.legR.rotation.z = 0; c.armL.rotation.z = 0.12; c.armR.rotation.z = -0.12; c.body.position.y = 0; const sh = c.group.children.find(o => o.renderOrder === 1); if (sh) sh.visible = true; h.rider = null; c.x = c.group.position.x; c.z = c.group.position.z;
+}
+function newRider() {
+  const fem = Math.random() < 0.5, c = makeChar({ shirt: pick(SHIRTS), pants: pick([0xc9b48a, 0x3b4a6b, 0xe8e0d0]), hair: pick(HAIRS), skin: pick(SKINS), hairStyle: fem ? pick(['bob', 'long', 'ponytail', 'bun']) : pick(['short', 'spiky']), hat: Math.random() < 0.5 ? 'cap' : null, hatColor: pick([0xe8283a, 0x2f7bff, 0xffd23f]), shoe: 0x4a2a14 });
+  c.x = 10.2; c.z = 38; c.group.position.set(c.x, 0, c.z); c.yaw = Math.PI; c.group.rotation.y = Math.PI; scene.add(c.group); return c;
+}
+const WP_IN = [[10.2, 36], [10.2, 14], [8.2, 10], [6, 4], [5.5, -8], [5.3, -18], [5.5, -27], [6.5, -34], [9, -42]];
+const qSlot = i => [RANCH.q0[0], RANCH.q0[1] + i * 1.6];
+const rideReady = h => h.state === 'idle' && h.rest <= 0;
+function spawnRC() { const c = newRider(); RC.push({ c, st: 'in', wp: WP_IN.slice(), h: null, price: 0, wait: 0 }); }
+function ridePrice(h) { return Math.round(90 * (1 + 0.18 * S.lv.ticket) * (0.7 + 0.8 * h.love / 100)); }
+function spawnBillTo(pile, x, z, v) {
+  const b = makeBill(); b.userData.v = v; b.position.set(x, 2.0, z); scene.add(b); const idx = pile.length + (pile.pend || 0); pile.pend = (pile.pend || 0) + 1;
+  fly(b, out => { pile.slotFn(Math.min(idx, pile.cap - 1), out); return 0; }, 0.5, 1.8, () => { pile.pend--; if (pile.length >= pile.cap) { pile.extra += b.userData.v; rm(b); } else pile.add(b, 'bill'); sfx('cash'); });
+}
+function paySplit(pile, x, z, total, lab) { const n = clamp(Math.round(total / 20), 1, 8), bv = total / n; for (let k = 0; k < n; k++) later(0.1 + k * 0.1, () => spawnBillTo(pile, x, z, bv)); popText(x, 4.4, z, '+' + fmt(total), '#6dff6a'); if (lab) popText(x, 5.4, z, lab, '#ffd400'); coins(x, 2.6, z, 8); }
+/* ---- ana güncelleme ---- */
+function updateRanch(dt, t) {
+  if (!ranchBuilt) return;
+  for (const d of RDEC) if (!R_()) animHorse(d, dt, t, 0, 0, 'graze');
+  if (!R_()) { updateCarrots(dt); return; }
+  const gp = P.group.position;
+  // zone eylemleri
+  if (S.lv.ata > 0) { if (ataZone.inside && !ataZone._in) toggleRide(); ataZone._in = ataZone.inside; }
+  if (cashZone.inside && ranchPile.length + ranchPile.extra > 0) { cashZone.tk = (cashZone.tk || 0) - dt; if (cashZone.tk <= 0) { collectMoney(ranchPile); cashZone.tk = 0.025; } }
+  if (instructor) { instructor.cd -= dt; if (instructor.cd <= 0 && ranchPile.length + ranchPile.extra > 0) { instructor.cd = 0.15; const it = ranchPile.takeLast('bill'); if (it) { const p = instructor.group.position; fly(it.mesh, out => { out.set(p.x, 1.3, p.z); return 0; }, 0.2, 1.2, () => { rm(it.mesh); addMoney(it.mesh.userData.v || 20); stats.collected++; }); } else if (ranchPile.extra > 0) { addMoney(ranchPile.extra); ranchPile.extra = 0; } }
+    animChar(instructor, dt, 0, t); faceChar(instructor, -0.3, -1, dt); }
+  ranchPile.update(dt, t); updateCarrots(dt); updateCare(dt, t);
+  for (const h of RH) updateHorse(h, dt, t);
+  updateRiders(dt, t); updateFoal(dt, t); updateShow(dt, t); updatePH(dt, t);
+}
+function updateCarrots(dt) {
+  for (const c of CARROTS) { c.t = Math.min(1, c.t + dt / 14); const k = c.t >= 1 ? 1 : c.t < 0.2 ? 0.001 : (c.t - 0.2) / 0.8; c.m.scale.setScalar(Math.max(0.001, k * 1.5)); }
+  if (!R_() || !P || P.free() <= 0) return; const gp = P.group.position;
+  for (const c of CARROTS) if (c.t >= 1 && (c.x - gp.x) ** 2 + (c.z - gp.z) ** 2 < 1.2) { c.t = 0; const it = ITEMF.carrot(); it.position.set(c.x, 0.5, c.z); scene.add(it); sendToBack(P, it, 'carrot', 1.2); sfx('pick'); stats.carrots = (stats.carrots || 0) + 1; break; }
+}
+function carePrio(h) { return h.love; }
+function updateCare(dt, t) {
+  const gp = P.group.position;
+  hayZone.tk = (hayZone.tk || 0) - dt; if (hayZone.inside && hayZone.tk <= 0 && P.free() > 0 && P.stack.count('hay') < 6) { hayZone.tk = 0.18; const it = ITEMF.hay(); it.position.set(RANCH.hay[0], 0.8, RANCH.hay[1] - 1.5); scene.add(it); sendToBack(P, it, 'hay', 1.2); sfx('pick'); }
+  feedZone.tk = (feedZone.tk || 0) - dt;
+  if (feedZone.inside && feedZone.tk <= 0) {
+    const ty = P.stack.count('carrot') > 0 ? 'carrot' : P.stack.count('hay') > 0 ? 'hay' : null;
+    if (ty) { let best = null; for (const h of RH) if (h.love < 96 && (!best || h.love < best.love)) best = h; if (best) { feedZone.tk = 0.3; const it = takeFromBack(P, ty); if (it) { const hh = best; fly(it.mesh, out => { out.set(hh.x, 2.8, hh.z); return 0; }, 0.35, 1.4, () => { rm(it.mesh); hh.love = Math.min(100, hh.love + (ty === 'carrot' ? 24 : 13)); hh.eatT = 1.4; hearts(hh.x, 3.7, hh.z, 3); sfx('happy'); stats.fed = (stats.fed || 0) + 1; }); } } }
+  }
+}
+function updateHorse(h, dt, t) {
+  h.love = Math.max(0, h.love - dt * 0.2); h.rest = Math.max(0, h.rest - dt); h.eatT = Math.max(0, h.eatT - dt);
+  if (h.love > 72 && Math.random() < dt * 0.15) hearts(h.x, 3.8, h.z, 1);
+  // sevgi balonu
+  const need = h.love < 30 && h.state === 'idle';
+  if (need && !h.bub) { h.bub = makeSprite(160, 128, (ctx, w, hh) => { ctx.fillStyle = '#fff'; ctx.strokeStyle = '#16324a'; ctx.lineWidth = 7; rrect(ctx, 8, 6, w - 16, 84, 26); ctx.fill(); ctx.stroke(); ctx.beginPath(); ctx.moveTo(w / 2 - 14, 88); ctx.lineTo(w / 2, 118); ctx.lineTo(w / 2 + 14, 88); ctx.closePath(); ctx.fill(); ctx.stroke(); iconCarrotP(ctx, w / 2, 48, 70); }, 1.5, 1.2, false); h.bub.position.set(0, 4.6, 0); h.group.add(h.bub); }
+  if (h.bub) h.bub.visible = need;
+  const pd = RANCH.paddock;
+  if (h.state === 'idle') {
+    h.idleT -= dt;
+    if (h.idleT <= 0) { if (h.walkK === 0 && Math.random() < 0.55) { h.walkK = 1; h.tx = rand(pd.x0 + 1.5, pd.x1 - 1.5); h.tz = rand(pd.z0 + 1.5, pd.z1 - 1.5); h.idleT = 9; } else { h.walkK = 0; h.idleT = rand(3, 7); } }
+    let mv = 0; if (h.walkK === 1) { const d = stepTo(h, h.tx, h.tz, 1.15, dt); if (d < 0.2) { h.walkK = 0; h.idleT = rand(3, 6); } else mv = 1; }
+    h.mode = (mv === 0 && (h.eatT > 0 || h.idleT > 0)) ? 'graze' : 'stand'; if (need) h.mode = 'stand';
+    animHorse(h, dt, t, mv, 0, h.mode); return;
+  }
+  h.mode = 'stand';
+  if (h.state === 'toMount' || h.state === 'back') {
+    const w = h.wp[0]; let mv = 1; const d = stepTo(h, w[0], w[1], 2.6, dt);
+    if (d < 0.25) { h.wp.shift(); if (!h.wp.length) { if (h.state === 'toMount') { h.state = 'waitRider'; } else { h.state = 'idle'; h.idleT = rand(2, 4); h.walkK = 0; } mv = 0; } }
+    animHorse(h, dt, t, mv, 0, 'stand'); return;
+  }
+  if (h.state === 'waitRider') { stepTo(h, h.x, h.z, 0, dt); h.yaw += angDiff(h.yaw, 0) * (1 - Math.exp(-5 * dt)); h.group.rotation.y = h.yaw; animHorse(h, dt, t, 0, 0, 'stand'); return; }
+  if (h.state === 'ride' || h.state === 'gateOut' || h.state === 'gateIn') {
+    const T_ = RANCH.track; let v = h.v, gait = horseGait(v), mv = 1;
+    if (h.state === 'gateOut') { const d = stepTo(h, T_.cx, T_.cz + T_.b, 2.6, dt); v = 2.6; gait = 0; if (d < 0.3) { h.state = 'ride'; h.phi = 0; panReq('ride1', T_.cx, T_.cz, 'İLK BİNİŞ!'); } }
+    else if (h.state === 'gateIn') { const d = stepTo(h, RANCH.mount[0], RANCH.mount[1] - 0.2, 2.6, dt); gait = 0; if (d < 0.3) { h.state = 'dismount'; h.dm = 0; } }
+    else {
+      const dd = Math.sqrt((T_.a * Math.cos(h.phi)) ** 2 + (T_.b * Math.sin(h.phi)) ** 2); h.phi += v * dt / dd; const nx = T_.cx + T_.a * Math.sin(h.phi), nz = T_.cz + T_.b * Math.cos(h.phi);
+      h.yaw = Math.atan2(T_.a * Math.cos(h.phi), -T_.b * Math.sin(h.phi)); h.x = nx; h.z = nz; h.group.position.set(nx, 0, nz); h.group.rotation.y = h.yaw;
+      if (h.phi >= TAU) { h.state = 'gateIn'; }
+    }
+    animHorse(h, dt, t, mv, gait, 'stand'); const c = h.rider; if (c) { const bnc = Math.abs(Math.sin(h.phase * 2)) * (0.05 + 0.04 * gait); c.group.position.y = 2.1 + bnc; c.armL.rotation.x = -1.0 + Math.sin(t * 8) * 0.1 * gait; } return;
+  }
+  if (h.state === 'dismount') {
+    h.dm += dt; animHorse(h, dt, t, 0, 0, 'stand');
+    if (h.dm > 0.4) { const rc = RC.find(r => r.h === h); if (rc) finishRide(rc, h); }
+    return;
+  }
+  if (h.state === 'show') { animHorse(h, dt, t, 1, 2, 'stand'); return; }
+  animHorse(h, dt, t, 0, 0, 'stand');
+}
+function finishRide(rc, h) {
+  unseatRider(h, rc.c); const price = ridePrice(h); let tip = 0; if (Math.random() < 0.12 + (foal ? 0.18 : 0) + (h.love > 70 ? 0.1 : 0)) tip = Math.round(price * 0.3);
+  paySplit(ranchPile, RANCH.cash[0], RANCH.cash[1], price + tip, tip ? 'Bahşiş!' : ''); hearts(rc.c.group.position.x, 3.4, rc.c.group.position.z, 4); sfx('happy'); stats.rides = (stats.rides || 0) + 1;
+  h.love = Math.max(0, h.love - 6); h.rest = h.love < 12 ? 12 : 4; h.state = 'back'; h.wp = [[7, -49], [2, -45], [-4, -42], [-9, -42]]; rc.st = 'out'; rc.wp = WP_IN.slice().reverse(); rc.h = null; rc.c.group.position.x = rc.c.x; h.rider = null;
+}
+function updateRiders(dt, t) {
+  // doğuş
+  RC.spawnT = (RC.spawnT === undefined ? 3 : RC.spawnT) - dt; const waiting = RC.filter(r => r.st === 'in' || r.st === 'queue').length;
+  if (RC.spawnT <= 0) { RC.spawnT = Math.max(3.5, 10 - 1.3 * RH.length); if (waiting < 3 + Math.min(2, RH.length)) spawnRC(); }
+  const queued = RC.filter(r => r.st === 'queue').sort((a, b) => a.qi - b.qi);
+  queued.forEach((r, i) => r.qi = i);
+  for (let i = RC.length - 1; i >= 0; i--) {
+    const r = RC[i], c = r.c, o = c; let mv = 0;
+    if (r.st === 'in') {
+      const w = r.wp[0]; const d = stepTo(c, w[0], w[1], 5, dt); mv = 1; if (d < 0.4) { r.wp.shift(); if (!r.wp.length) { r.st = 'queue'; r.qi = 99; } }
+    } else if (r.st === 'queue') {
+      const q = qSlot(Math.min(r.qi, 6)); const d = stepTo(c, q[0], q[1], 4.5, dt); mv = d > 0.15 ? 1 : 0; r.at = d < 0.3;
+      if (!mv) { c.yaw += angDiff(c.yaw, -Math.PI / 2 * 0) * (1 - Math.exp(-6 * dt)); c.group.rotation.y = c.yaw; faceChar(c, -1, 0.3, dt); }
+      if (r.qi === 0 && r.at && !r.h && !RC.some(q => q.st === 'wait') && (instructor || mountZone.inside)) { const hh = RH.filter(rideReady).sort((a, b) => b.love - a.love)[0]; if (hh) { r.h = hh; hh.state = 'toMount'; hh.wp = [[-4, -42], [2, -45], [7, -49], [RANCH.mount[0] - 0.6, RANCH.mount[1]]]; r.st = 'wait'; } }
+    } else if (r.st === 'wait') {
+      const h = r.h, d = stepTo(c, RANCH.mount[0] + 1.6, RANCH.mount[1] - 0.2, 4.5, dt); mv = d > 0.2 ? 1 : 0;
+      if (h.state === 'waitRider' && d < 0.4) { seatRider(h, c); r.st = 'ride'; h.v = rideV(S.lv.rideSpd) * (h.love > 70 ? 1.1 : 1); h.state = 'gateOut'; sfx('pick'); }
+    } else if (r.st === 'out') {
+      const w = r.wp[0]; const d = stepTo(c, w[0], w[1], 5, dt); mv = 1; if (d < 0.4) { r.wp.shift(); if (!r.wp.length) { rm(c.group); RC.splice(i, 1); continue; } }
+    }
+    if (!c.seat) animChar(c, dt, mv, t); else { c.body.position.y = 0; }
+  }
+}
+function updateFoal(dt, t) {
+  if (!foal) return; const m = RH[0]; let tx = foal.x, tz = foal.z, mv = 0;
+  if (m && m.state === 'idle') { tx = m.x - Math.sin(m.yaw) * 2.4 + 1.2; tz = m.z - Math.cos(m.yaw) * 2.4; } else { tx = RANCH.paddock.x0 + 4 + Math.sin(t * 0.3) * 2; tz = -42 + Math.cos(t * 0.4) * 2; }
+  const d = Math.hypot(tx - foal.x, tz - foal.z); if (d > 0.5) { stepTo(foal, tx, tz, d > 4 ? 3.4 : 1.6, dt); mv = 1; } else { foal.group.position.set(foal.x, 0, foal.z); }
+  foal.group.position.y = (d > 4 ? 0 : 0) + (mv === 0 && Math.sin(t * 2.2) > 0.97 ? 0.3 : 0);
+  animHorse(foal, dt, t, mv, d > 4 ? 1 : 0, mv ? 'stand' : 'graze');
+}
+/* ---- Ata Bin: oyuncu kendi atına biner ---- */
+function toggleRide() {
+  const on = !window.__riding; window.__riding = on; PH.group.visible = true;
+  if (on) { PH.group.position.set(P.group.position.x, 0, P.group.position.z); PH.yaw = P.yaw; PH.rider = P; P.group.position.y = 2.1; P.legL.rotation.set(-1.2, 0, 0.5); P.legR.rotation.set(-1.2, 0, -0.5); sparkles(P.group.position.x, 1.5, P.group.position.z, 12, 0xfff2a0, 0.6); sfx('up'); popText(P.group.position.x, 5.5, P.group.position.z, 'Yeehaw!', '#ffd400'); const sh = P.group.children.find(o => o.renderOrder === 1); if (sh) sh.visible = false; }
+  else { PH.rider = null; P.group.position.y = 0; P.legL.rotation.z = P.legR.rotation.z = 0; PH.group.position.set(P.group.position.x + 1.6, 0, P.group.position.z); const sh = P.group.children.find(o => o.renderOrder === 1); if (sh) sh.visible = true; sfx('drop'); }
+}
+function enableAta(instant) { ataZone.group.visible = true; ataZone.hidden = false; if (!instant) { PH.group.visible = true; panReq('ata1', RANCH.ata[0], RANCH.ata[1], 'ATA BİN!'); } else PH.group.visible = true; }
+function updatePH(dt, t) {
+  if (!PH || !PH.group.visible) return;
+  if (window.__riding) { const sp = Math.hypot(P.vel.x, P.vel.z), mv = clamp(sp / 4, 0, 1); PH.x = P.group.position.x; PH.z = P.group.position.z; PH.group.position.set(PH.x, 0, PH.z); PH.yaw = P.yaw; PH.group.rotation.y = PH.yaw; animHorse(PH, dt, t, mv, sp > 6.8 ? 2 : sp > 4.5 ? 1 : 0, 'stand'); P.group.position.y = 2.1 + Math.abs(Math.sin(PH.phase * 2)) * 0.06 * mv; P.body.position.y = 0; P.legL.rotation.set(-1.2, 0, 0.5); P.legR.rotation.set(-1.2, 0, -0.5); P.armL.rotation.x = -0.9; P.armR.rotation.x = -0.9; }
+  else animHorse(PH, dt, t, 0, 0, 'graze');
+}
+/* ---- Engelli Parkur ---- */
+const SHOWF = () => { const f = RANCH.showF; return [[f.cx - 4.2, f.cz - 3.8, 1], [f.cx, f.cz - 5.2, 1], [f.cx + 4.8, f.cz - 2, 0], [f.cx + 5, f.cz, 1], [f.cx + 4, f.cz + 3.8, 0], [f.cx, f.cz + 5.2, 1], [f.cx - 4.5, f.cz + 3, 0], [f.cx - 5, f.cz, 1]]; };
+function updateShow(dt, t) {
+  if (S.lv.show <= 0) { showZone.group.visible = false; showZone.hidden = true; return; }
+  showZone.hidden = SHOW.state !== 'ready'; showZone.group.visible = SHOW.state === 'ready';
+  if (SHOW.state === 'cd') { SHOW.cd -= dt; if (SHOW.cd <= 0) { SHOW.state = 'ready'; praise('PARKUR GÖSTERİSİ HAZIR!', true); sfx('up'); } }
+  else if (SHOW.state === 'ready') { if (showZone.inside) { const hs = RH.filter(rideReady).sort((a, b) => b.love - a.love).slice(0, 3); if (hs.length) startShow(hs); } }
+  else if (SHOW.state === 'run') {
+    SHOW.t += dt; let alive = 0; const F = SHOWF(), f = RANCH.showF;
+    for (const e of SHOW.run) { const h = e.h; if (e.done) continue; alive++; if (SHOW.t < e.delay) continue;
+      if (!e.started) { e.started = true; h.state = 'show'; h.wp = null; h.love = Math.max(0, h.love); seatRider(h, e.c); h.x = RANCH.showZ[0] + 1.5; h.z = f.cz; h.group.position.set(h.x, 0, h.z); h.yaw = Math.PI / 2; e.i = 0; }
+      if (e.out) { const d = stepTo(h, RANCH.showZ[0] - 0.5, f.cz, 4, dt); if (d < 0.5) { endShowHorse(e); } continue; }
+      const tgt = F[e.i]; if (!tgt) { e.out = true; continue; }
+      // engel öncesi yaklaşma noktası
+      const d = stepTo(h, tgt[0], tgt[1], 6.2, dt);
+      if (d < 1.6 && !e.jt) e.jt = 0.001;
+      if (e.jt) { e.jt += dt / 0.8; const k = Math.min(1, e.jt); h.jump = Math.sin(k * Math.PI) * 1.1; h.jumpK = k; if (k >= 1) { e.jt = 0; h.jump = 0; e.i++; sparkles(h.x, 1, h.z, 5, 0xfff2a0, 0.4); sfx('pick'); } }
+      if (d < 0.2 && !e.jt) e.i++;
+      if (h.rider) h.rider.group.position.y = 2.1 + (h.jump || 0) * 0.15;
+    }
+    if (!alive) finishShow();
+  }
+}
+function startShow(hs) {
+  SHOW.state = 'run'; SHOW.t = 0; SHOW.run = hs.map((h, i) => ({ h, c: newRider(), delay: i * 3.2, started: false, i: 0, jt: 0, done: false, out: false })); SHOW.run.forEach(e => { scene.remove(e.c.group); e.h.state = 'showWait'; });
+  panReq('show1', RANCH.showF.cx, RANCH.showF.cz, 'İLK GÖSTERİ!'); praise('GÖSTERİ BAŞLADI!', true); sfx('up');
+}
+function endShowHorse(e) { const h = e.h; e.done = true; h.jump = 0; h.root.position.y = 0; unseatRider(h, e.c); rm(e.c.group); h.state = 'back'; h.rest = 6; h.wp = [[RANCH.showZ[0] - 3, -43], [6, -44], [-4, -42], [-9, -42]]; h.love = Math.max(0, h.love - 8); }
+function finishShow() {
+  const n = SHOW.run.length, avg = SHOW.run.reduce((a, e) => a + e.h.love, 0) / n, total = Math.round(700 * n * (0.8 + 0.8 * avg / 100) * (1 + 0.15 * S.lv.ticket));
+  SHOW.state = 'cd'; SHOW.cd = 200; SHOW.run = []; const f = RANCH.showF; confetti(f.cx, 3, f.cz, 90); flash(); for (let k = 0; k < 4; k++) later(k * 0.3, () => fireworks(f.cx + rand(-6, 6), f.cz + rand(-4, 4)));
+  paySplit(ranchPile, f.cx, f.cz, total, 'GÖSTERİ ÖDÜLÜ!'); praise('HARİKA GÖSTERİ!', true); stats.shows = (stats.shows || 0) + 1;
+}
+/* ---- bot / ipucu hedefi ---- */
+function ranchObjective(set, hold) {
+  if (!R_()) return null;
+  const pile = ranchPile.length + ranchPile.extra;
+  if (pile >= 3 || (pile > 0 && cashZone.inside)) return set(cashZone.x, 0.6, cashZone.z, 'money');
+  if (SHOW.state === 'ready' && RH.some(rideReady)) return set(showZone.x, 0.4, showZone.z, 'show');
+  if (!instructor && RC.some(r => r.st === 'queue' && r.qi === 0 && r.at && !r.h) && RH.some(rideReady)) return set(mountZone.x, 0.4, mountZone.z, 'ride');
+  const low = RH.some(h => h.love < 50);
+  if (low) { if (P.stack.count('carrot') + P.stack.count('hay') > 0) return set(feedZone.x, 0.4, feedZone.z, 'feed'); if (P.free() > 0) { const c = CARROTS.find(q => q.t >= 1); if (c) return set(c.x, 1.0, c.z, 'carrot'); return set(hayZone.x, 0.4, hayZone.z, 'hay'); } }
+  return null;
 }
 
 /* =====================================================================
@@ -3634,7 +3966,7 @@ woodFenceBox(-17.85, 0, 0.8, 23.2); woodFenceBox(-14, -11.35, 7.4, 0.8); woodFen
 woodFenceBox(13.6, 12.9, 4.2, 0.9); woodFenceBox(5.2, 12.9, 6.4, 0.9);
 buildDecorFlowers();
 for (let i = 0; i < 3; i++) buildBed(i);
-buildStations(); buildDecor(); buildSera(); buildVan(); buildZones(); buildPlayer(); LANES.bouquet = shelfB; LANES.pot = shelfP; finalizeWorld();
+buildStations(); buildDecor(); buildSera(); buildVan(); buildZones(); buildPlayer(); LANES.bouquet = shelfB; LANES.pot = shelfP; buildRanch(); finalizeWorld();
 initGatePad();
 /* ---- C6: pad alt yazıları (etkisi belli olmayan her pad) ---- */
 { const L = k => S.lv[k] || 0, T = x => () => x, N = (k, w) => () => 'Şu an ' + (1 + L(k)) + ' ' + w, PC = (k, v) => () => '%' + v * (L(k) + 1);
@@ -3669,6 +4001,7 @@ function padHits(p, x, z, others) {
   const hw = p.w / 2 + 0.2, hd = p.d / 2 + 0.2, x0 = x - hw, x1 = x + hw, z0 = z - hd, z1 = z + hd;
   for (const b of PROPBOX) if (b[0] < x1 && b[1] > x0 && b[2] < z1 && b[3] > z0) return 'prop';
   for (const c of colliders) { if (c.active && !c.active()) continue; if (c.x0 < x1 && c.x1 > x0 && c.z0 < z1 && c.z1 > z0) return 'collider'; }
+  for (const q of zones) { if (q instanceof UpgradePad || q.noPadCheck) continue; if (Math.abs(q.x - x) < q.w / 2 + p.w / 2 + 0.8 && Math.abs(q.z - z) < q.d / 2 + p.d / 2 + 0.8) return 'zone'; }
   if (!padOnRoadOK(p)) for (const r of roadsList()) if (r[0] < x1 && r[1] > x0 && r[2] < z1 && r[3] > z0) return 'road';
   for (const b of beds) { if (!b.flowers.length) continue; const r = bedRect(b); if (r[0] < x1 && r[1] > x0 && r[2] < z1 && r[3] > z0) return 'bed'; }
   if (others) for (const q of others) { if (q === p) continue; if (p.o0 && q.o0 && Math.abs(p.o0[0] - q.o0[0]) < 0.05 && Math.abs(p.o0[1] - q.o0[1]) < 0.05) continue; if (Math.abs(q.x - x) < (q.w + p.w) / 2 - 1.5 && Math.abs(q.z - z) < (q.d + p.d) / 2 - 1.5) return 'pad'; }
@@ -3690,7 +4023,7 @@ window.__game = {
   path(tx, tz) { return findPath(P.group.position.x, P.group.position.z, tx, tz); }, colliders,
   EXTZ, STN, GARD, GROLES, roleEvolve, give(type, n) { n = Math.min(n, Math.max(0, P.free())); for (let i = 0; i < n; i++) P.stack.add(['orchid', 'lav', 'sun', 'rosep', 'flower'].includes(type) ? makeFlowerItem(0, type === 'flower' ? 'tulip' : type) : makeItemOf(type), type); },
   bot(x, z) { BOT = (x || z) ? { x, z } : null; if (BOT) hideIntro(); }, hideIntro, objective() { objective(_obj); return Object.assign({}, _obj); }, get goal() { return curGoal; }, GOALS, UPG,
-  S, stats, P: () => P, queue, beds, machine, inputPile, outputPile, moneyPile, get shelf() { return shelfB; }, get shelfP() { return shelfP; }, get potInput() { return potInput; }, get potOutput() { return potOutput; }, get zone2() { return zone2; }, get zone3() { return zone3; }, VAN, get vanLoad() { return vanLoad; }, get vanPile() { return vanPile; }, get cashier() { return cashier; }, get carrier() { return carrier; }, upPads, zones, customers, CFG, POS,
+  RH, RC, SHOW, ranchPile: () => ranchPile, RANCH, toggleRide, S, stats, P: () => P, queue, beds, machine, inputPile, outputPile, moneyPile, get shelf() { return shelfB; }, get shelfP() { return shelfP; }, get potInput() { return potInput; }, get potOutput() { return potOutput; }, get zone2() { return zone2; }, get zone3() { return zone3; }, VAN, get vanLoad() { return vanLoad; }, get vanPile() { return vanPile; }, get cashier() { return cashier; }, get carrier() { return carrier; }, upPads, zones, customers, CFG, POS,
   helper: () => helper,
   carry(n) { while (P.stack.length) P.stack.items.pop(); n = Math.min(n, P.capFn()); for (let i = 0; i < n; i++) P.stack.add(makeFlowerItem(0, "tulip"), "flower"); },
   tp(x, z) { P.group.position.set(x, 0, z); P.vel.set(0, 0, 0); camInit = false; },
