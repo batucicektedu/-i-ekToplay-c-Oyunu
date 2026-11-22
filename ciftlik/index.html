@@ -224,11 +224,11 @@ function rm(o) { if (o && o.parent) o.parent.remove(o); }
 let fountainWater = null, clouds = [], butterflies = [];
 let LOADED_X = null, carpet1 = null, carpet2 = null;
 const MAIN_UNLOCKS = { bed: 1, helper: 1, cashier: 1, carrier: 1, sera: 1, van: 1 };
-const S = { money: 0, lv: { groomN: 0, shep: 0, shepN: 0, seller: 0, sellerN: 0, fwSpd: 0, fwCap: 0, sheep: 0, sheep2: 0, knit: 0, cheese: 0, zoo: 0, zoo2: 0, orchard: 0, ranch: 0, horse: 0, rideSpd: 0, ticket: 0, instr: 0, foal: 0, show: 0, ata: 0, groom: 0, cap: 0, speed: 0, pack: 0, bed: 0, helper: 0, cashier: 0, carrier: 0, cashSpd: 0, carSpd: 0, carCap: 0, helpSpd: 0, sera: 0, van: 0, lav: 0, lavW: 0, keseSpd: 0, parf: 0, parfW: 0, parfSpd: 0, cafe: 0, cafeW: 0, teaSpd: 0, wed: 0, wedBonus: 0, sunf: 0, sunW: 0, sbqSpd: 0, city: 0, cityW: 0, citySpd: 0, stars: 0, bee: 0, beeW: 0, hiveN: 0, hiveSpd: 0, honSpd: 0, jap: 0, bonW: 0, bonSpd: 0, coll: 0, port: 0, portW: 0, portBonus: 0, fest: 0, festBonus: 0, mus: 0, musTkt: 0, wedW: 0, portSpd: 0, portCap: 0, helpCap: 0, helperN: 0, helperT: 0, lavCap: 0, lavN: 0, lavT: 0, parfCap: 0, parfN: 0, parfT: 0, cafeG: 0, cafeGCap: 0, cafeGN: 0, cafeGT: 0, sunCap: 0, sunN: 0, bonCap: 0, bonN: 0, bonT: 0, carN: 0, cashN: 0, wedSpd: 0, potSpd: 0, bus: 0, busSpd: 0, busCap: 0, busN: 0, wedN: 0, waitN: 0, cityN: 0, portN: 0, beeN: 0, gate: 0 }, ic: 0, tut: 0, tier: { pack: 0, flo: 0, pot: 0, van: 0, kese: 0, parf: 0, tea: 0, wed: 0, city: 0, hon: 0, bon: 0 }, decor: {}, cos: { hat: 'straw', fit: 0, uni: 0, floor: 0, own: [] }, dn: 0,
+const S = { money: 0, lv: { carT: 0, groomN: 0, shep: 0, shepN: 0, seller: 0, sellerN: 0, fwSpd: 0, fwCap: 0, sheep: 0, sheep2: 0, knit: 0, cheese: 0, zoo: 0, zoo2: 0, orchard: 0, ranch: 0, horse: 0, rideSpd: 0, ticket: 0, instr: 0, foal: 0, show: 0, ata: 0, groom: 0, cap: 0, speed: 0, pack: 0, bed: 0, helper: 0, cashier: 0, carrier: 0, cashSpd: 0, carSpd: 0, carCap: 0, helpSpd: 0, sera: 0, van: 0, lav: 0, lavW: 0, keseSpd: 0, parf: 0, parfW: 0, parfSpd: 0, cafe: 0, cafeW: 0, teaSpd: 0, wed: 0, wedBonus: 0, sunf: 0, sunW: 0, sbqSpd: 0, city: 0, cityW: 0, citySpd: 0, stars: 0, bee: 0, beeW: 0, hiveN: 0, hiveSpd: 0, honSpd: 0, jap: 0, bonW: 0, bonSpd: 0, coll: 0, port: 0, portW: 0, portBonus: 0, fest: 0, festBonus: 0, mus: 0, musTkt: 0, wedW: 0, portSpd: 0, portCap: 0, helpCap: 0, helperN: 0, helperT: 0, lavCap: 0, lavN: 0, lavT: 0, parfCap: 0, parfN: 0, parfT: 0, cafeG: 0, cafeGCap: 0, cafeGN: 0, cafeGT: 0, sunCap: 0, sunN: 0, bonCap: 0, bonN: 0, bonT: 0, carN: 0, cashN: 0, wedSpd: 0, potSpd: 0, bus: 0, busSpd: 0, busCap: 0, busN: 0, wedN: 0, waitN: 0, cityN: 0, portN: 0, beeN: 0, gate: 0 }, ic: 0, tut: 0, tier: { pack: 0, flo: 0, pot: 0, van: 0, kese: 0, parf: 0, tea: 0, wed: 0, city: 0, hon: 0, bon: 0 }, decor: {}, cos: { hat: 'straw', fit: 0, uni: 0, floor: 0, own: [] }, dn: 0,
   cb: {}, cs: [], pt: { n: 0, cur: null }, fe: { n: 0, t: 420 }, q: { a: [], n: 0 }, bx: 0, ts: 0, op: 0, mv: 0, seen: {} };
 let saveDirty = false, saveTimer = 0;
 let introDone = false, curGoal = null, curGoalIdx = -1, lastGoalIdx = -2;
-const SAVE_VER = 9, BAK_KEY = SAVE_KEY + '_bak', TMP_KEY = SAVE_KEY + '_tmp';
+const SAVE_VER = 10, BAK_KEY = SAVE_KEY + '_bak', TMP_KEY = SAVE_KEY + '_tmp';
 let SAVE_BLOCKED = false; // okuma bozuk/başarısızsa eski kaydın üzerine yazma
 function readSaveKey(k) { try { const r = localStorage.getItem(k); if (r === null) return { none: true }; const o = JSON.parse(r); return o && typeof o === 'object' && !Array.isArray(o) ? { o, raw: r } : { bad: true, raw: r }; } catch (e) { return { bad: true }; } }
 const hasProgress = o => !!o && (+o.money > 0 || (o.lv && Object.keys(o.lv).some(k => +o.lv[k] > 0)) || +o.tut > 0);
@@ -238,6 +238,7 @@ function migrateSave(s) { // ver alanı yoksa 1 sayılır; sadece alan ekler, hi
   if (v < 3) { /* v2 -> v3: tier, decor, cos, dn alanları eklendi; eksikse yüklemede varsayılanla dolar */ }
   if (v < 4) { /* v3 -> v4 (C3): cb, cs, pt, fe, q, bx, ts, op, mv ve yeni lv/tier anahtarları eklendi; eksikse varsayılan */ }
   if (v < 5) { /* v4 -> v5 (C5): toplayıcı kapasite/eleman/traktör, otobüs, hız anahtarları eklendi (hepsi varsayılan 0); sunW>0 traktör sahibi kalır */ }
+  if (v < 10) { /* v9 -> v10: lv.carT (Süt Traktörü) eklendi; helperN/carN/cashN/helperT/helpCap artık çiftlik pad'leriyle kullanılır; varsayılan 0, eski kayıt aynen korunur */ }
   if (v < 9) { /* v8 -> v9: lv.groom/groomN/shep/shepN/seller/sellerN/fwSpd/fwCap (çiftlik işçileri) eklendi; varsayılan 0 */ }
   if (v < 8) { /* v7 -> v8 (Bölüm 3 at çiftliği): lv.ranch/horse/rideSpd/ticket/instr/foal/show/ata/groom ve x.rl (at sevgisi) eklendi; varsayılan 0, eski kayıtlar aynen korunur */ }
   if (v < 7) { /* v6 -> v7 (Bölüm 2): ic (giriş kartı görüldü), lv.gate (bölüm kapısı) eklendi; varsayılan 0 */ }
@@ -2308,7 +2309,7 @@ function spawnCarrier(instant) {
   if (carrier) return;
   const c = makeChar({ shirt: 0xff7a00, pants: 0x2f3542, hair: 0x2a1a10, hairStyle: 'short', hat: 'cap', hatColor: 0xff7a00, skin: 0xc68863, shoe: 0xffffff });
   c.group.position.set(5.0, 0, 3.4); scene.add(c.group); carrier = c; c.state = 'idle'; c.cd = 0;
-  attachBackStack(c, () => 6 + 4 * S.lv.carCap); popInWorker(c, instant);
+  attachBackStack(c, () => (c.tr ? 18 : 6) + 4 * S.lv.carCap); popInWorker(c, instant);
 }
 const srcOf = t => t === 'pot' ? potOutput : t === 'bouquet' ? outputPile : (SRCS[t] ? SRCS[t]() : null);
 const outSources = () => PROD_LIST.map(srcOf).filter(Boolean);
@@ -2322,13 +2323,13 @@ function carrierPick(load, self) {
   if (!opts.length) return null; opts.sort((a, b) => b.def - a.def); return opts[0].t;
 }
 const CARRIERS = () => carrier ? [carrier].concat(CARX) : CARX;
-function spawnCarrierX(instant) { const c = makeChar({ shirt: 0x2f9e5a, pants: 0x2f3542, hair: 0x2a1a10, hairStyle: 'short', hat: 'cap', hatColor: 0x2f9e5a, skin: 0xe8b88a, shoe: 0xffffff }); c.group.position.set(5.0 + CARX.length * 1.2, 0, 3.4); scene.add(c.group); c.state = 'idle'; c.cd = 0; c.idx = CARX.length + 1; attachBackStack(c, () => 6 + 4 * S.lv.carCap); popInWorker(c, instant); CARX.push(c); }
+function spawnCarrierX(instant) { const c = makeChar({ shirt: 0x2f9e5a, pants: 0x2f3542, hair: 0x2a1a10, hairStyle: 'short', hat: 'cap', hatColor: 0x2f9e5a, skin: 0xe8b88a, shoe: 0xffffff }); c.group.position.set(5.0 + CARX.length * 1.2, 0, 3.4); scene.add(c.group); c.state = 'idle'; c.cd = 0; c.idx = CARX.length + 1; attachBackStack(c, () => (c.tr ? 18 : 6) + 4 * S.lv.carCap); popInWorker(c, instant); CARX.push(c); }
 function updateCarrier(dt, t) { if (carrier) updateCarrierW(carrier, dt, t); for (const c of CARX) updateCarrierW(c, dt, t); }
 const cityNeed = ty => city && !city.z.locked && city.cashier ? Math.max(0, Math.min(4 - city.stock.count(ty), 28 - city.stock.length - (city.stock.pend || 0))) : 0;
 function cityPickT(load, self) { if (!city || city.z.locked || !city.cashier) return null; let best = null, bn = 0; for (const t of PROD_LIST) { if (CARRIERS().some(c => c !== self && (c.state === 'toOut' || c.state === 'load') && c.dest === 'city' && c.ptype === t)) continue; const src = srcOf(t), n = cityNeed(t); if (src && src.length > 0 && !srcRes(t) && n - load > 0 && n > bn) { bn = n; best = t; } } return best; }
 function updateCarrierW(h, dt, t) {
   workerPop(h, dt);
-  const spd = 4.4 * Math.pow(1.15, S.lv.carSpd), gp = h.group.position; let tx = null, tz = null;
+  const spd = 4.4 * Math.pow(1.15, S.lv.carSpd) * (h.tr ? 1.5 : 1), gp = h.group.position; let tx = null, tz = null;
   const load = h.stack.length + h.incoming;
   h.cd -= dt;
   const outSpot = ty => ty === 'bouquet' ? [POS.outPad.x, POS.outPad.z + 0.3] : ty === 'pot' ? [POS.potOut.x, POS.potOut.z + 0.3] : OUTSPOT[ty]();
@@ -2372,7 +2373,7 @@ function updateCarrierW(h, dt, t) {
   if (tx !== null) { dx = tx - gp.x; dz = tz - gp.z; const d = Math.hypot(dx, dz); if (d > 0.3) { const st = Math.min(d, spd * dt); gp.x += dx / d * st; gp.z += dz / d * st; h.vel.set(dx / d * spd, 0, dz / d * spd); mv = 1; faceChar(h, dx, dz, dt); } else h.vel.set(0, 0, 0); }
   else { h.vel.set(0, 0, 0); if (h.state === 'unload') faceChar(h, 1, -0.4, dt); }
   watchdog(h, dt, gp, h.dest + h.ptype, [5.0, 3.4], c => { c.state = 'idle'; c.waitT = 0; c.stuck = 0; c.cd = 0; }, q => (q.state === 'idle' && q.stack.length === 0) || (q.state === 'unload' && q.stack.length > 0 && !q.stack.items.some(i => shelfFree(i.type) > 0) && q.dest !== 'van') || (q.state === 'unload' && q.dest === 'van' && vanFree() <= 0));
-  updateSway(h, dt); animChar(h, dt, mv, t); h.stack.update(dt, t);
+  updateSway(h, dt); animChar(h, dt, mv, t); tractorFx(h, mv, spd, dt); h.stack.update(dt, t);
 }
 /* ---- customers ---- */
 const SHIRTS = [0xff3b30, 0xffd60a, 0x30d158, 0x0a84ff, 0xbf5af2, 0xff9f0a, 0x00c7be];
@@ -3223,7 +3224,7 @@ function bigLabel(x, y, z, text, col) {
 }
 function setTractor(h, instant) {
   if (h.tr) return; h.tr = true; const m = makeTractorModel(h.tcol || 0xffc21a); h.tmodel = m; h.group.add(m.g);
-  if (!instant) { const p = h.group.position; burst(p.x, 1.5, p.z, 0xffd23f, 26, 6); confetti(p.x, 2, p.z, 60); ring(p.x, p.z, 0xffc21a, 6); sparkles(p.x, 2, p.z, 14, 0xfff2a0, 0.9); bigLabel(p.x, 6.2, p.z, 'BALIKÇI TEKNESİ!', '#ffd400'); praise('BALIKÇI TEKNESİ! ' + (h.rname || ''), true); flash(); vib(30); m.g.scale.setScalar(0.01); h.tpop = 0; }
+  if (!instant) { const p = h.group.position; burst(p.x, 1.5, p.z, 0xffd23f, 26, 6); confetti(p.x, 2, p.z, 60); ring(p.x, p.z, 0xffc21a, 6); sparkles(p.x, 2, p.z, 14, 0xfff2a0, 0.9); bigLabel(p.x, 6.2, p.z, h.tlabel || 'TRAKTÖR!', '#ffd400'); praise((h.tlabel || 'TRAKTÖR!') + ' ' + (h.rname || ''), true); flash(); vib(30); m.g.scale.setScalar(0.01); h.tpop = 0; }
 }
 function tractorFx(h, mv, spd, dt) {
   if (!h.tr) return; h.body.visible = h.legL.visible = h.legR.visible = false; const m = h.tmodel; if (!m) return;
@@ -3237,12 +3238,12 @@ const roleWant = r => S.lv[r.hireKey] > 0 ? 1 + (S.lv[r.cntKey] || 0) : 0;
 const roleTr = r => !!r.baseTr || (r.evoKey && S.lv[r.evoKey] > 0);
 function spawnUnit(r, instant, idx) {
   const c = makeChar({ shirt: r.shirt, pants: 0x7a3dd6, hair: 0x2a1a10, hairStyle: 'short', hat: 'straw', outfit: 'overalls', skin: 0xe8b88a });
-  c.group.position.set(r.home[0] + (idx || 0) * 1.8, 0, r.home[1] + (idx || 0) * 0.8); c.role = r; c.rname = r.name; c.tcol = r.tcol; attachBackStack(c, () => gCapOf(c)); scene.add(c.group);
+  c.group.position.set(r.home[0] + (idx || 0) * 1.8, 0, r.home[1] + (idx || 0) * 0.8); c.role = r; c.rname = r.name; c.tcol = r.tcol; c.tlabel = r.tlabel; attachBackStack(c, () => gCapOf(c)); scene.add(c.group);
   c.state = 'seek'; c.target = null; c.cd = 0; c.idle = 0; c.idleT = 0; c.ctype = null; c.pickT = 0; c.kind = r.id; c.spec = { type: r.id }; popInWorker(c, instant); GARD.push(c); r.units.push(c);
   if (roleTr(r)) setTractor(c, true); if (r.id === 'sun' && !tractor) tractor = c; return c;
 }
 function roleSync(r, instant) { if (r.id === 'main' && !helper) return; while (r.units.length < (r.id === 'main' ? (S.lv.helperN || 0) : roleWant(r))) spawnUnit(r, instant, r.units.length + 1); }
-function roleEvolve(r, instant) { for (const u of r.units) setTractor(u, instant); if (r.id === 'main' && helper) { helper.tcol = r.tcol; helper.rname = r.name; setTractor(helper, instant); } }
+function roleEvolve(r, instant) { for (const u of r.units) { u.tlabel = r.tlabel; setTractor(u, instant); } if (r.id === 'main' && helper) { helper.tcol = r.tcol; helper.rname = r.name; helper.tlabel = r.tlabel; setTractor(helper, instant); } }
 function gPickType(h) {
   const r = h.role; for (const ty of r.types) if (gNeed(ty, 16) && gFlower(ty, h.group.position)) return [ty, false];
   if (h.idleT > 3) for (const ty of GHELP) if (!r.types.includes(ty) && gNeed(ty, 10) && gFlower(ty, h.group.position)) return [ty, true];
@@ -3984,6 +3985,30 @@ function buildFWPads() {
 function updateFWs(dt, t) { for (const w of FWU) updateFW(w, dt, t); }
 
 /* =====================================================================
+   OTOMASYON: yumurta/süt toplayıcı (+1 Eleman, Kapasite, Yumurta Arabası), kasiyer +1, taşıyıcı +1 ve Süt Traktörü
+   ===================================================================== */
+function buildAutoPads() {
+  const rMain = gRole({ id: 'main', name: 'Çiftçi', types: ['flower', 'orchid'], shirt: 0xffffff, tcol: 0xffc21a, home: [-9.2, 3.2], spdKey: 'helpSpd', hireKey: 'helper', capKey: 'helpCap', cntKey: 'helperN', evoKey: 'helperT', baseCap: 6 });
+  gRolePads(rMain, { cap: [-7.6, 9.4, 180], cnt: [-7.6, 5.4, 900], evo: [-0.6, 12.6, 3500] });
+  UPG.helpCap.name = 'Çiftçi Kapasite'; UPG.helperN.name = '+1 Çiftçi'; UPG.helperT.name = 'Yumurta Arabası'; UPG.helperT.sub = () => 'Çiftçi → Yumurta Arabası';
+  UPG.helperN.sub = () => 'Şu an ' + (1 + S.lv.helperN) + ' ' + (roleTr(rMain) ? 'araba' : 'çiftçi');
+  rMain.tlabel = 'YUMURTA ARABASI!';
+  const roleOld = roleEvolve; // etiket: gardiyan traktörü
+  const mkp = (key, name, costs, x, z, icon, vis, sub) => { UPG[key] = { name, costs, sub }; const u = new UpgradePad(key, x, z, icon); u.vis = vis; u.autoShow = true; upPads[key] = u; return u; };
+  mkp('carN', '+1 Taşıyıcı', geo(1200, 2), 13.6, 2.8, iconCarrier, () => S.lv.carrier > 0, () => 'Şu an ' + (1 + S.lv.carN) + (S.lv.carT > 0 ? ' süt traktörü' : ' taşıyıcı')); EXTAPPLY.carN = i => { while (CARX.length < S.lv.carN) { spawnCarrierX(i); if (S.lv.carT > 0) { const c = CARX[CARX.length - 1]; c.tcol = 0x2f9e5a; c.tlabel = 'SÜT TRAKTÖRÜ!'; setTractor(c, true); } } };
+  mkp('cashN', '+1 Kasiyer', geo(600, 2), 7.4, -7.9, iconCashier, () => S.lv.cashier > 0, () => 'Şu an ' + (1 + S.lv.cashN) + ' kasiyer'); EXTAPPLY.cashN = i => { while (CASHX.length < S.lv.cashN) spawnCashierX(i); };
+  mkp('carT', 'Süt Traktörü', [4200], 16.7, -7.9, iconTractor, () => S.lv.carrier > 0 && (S.lv.carSpd || 0) >= 2, () => 'Taşıyıcı → Süt Traktörü');
+  EXTAPPLY.carT = i => { for (const c of CARRIERS()) { c.tcol = 0x2f9e5a; c.tlabel = 'SÜT TRAKTÖRÜ!'; c.rname = 'Süt Taşıyıcı'; setTractor(c, i); } };
+  const orig = EXTAPPLY.carN; EXTAPPLY.carN = orig;
+  Object.assign(MAIN_UNLOCKS, { helperT: 1, carT: 1 });
+  const g1 = GOALS.findIndex(g => g.key === 'helpSpd' && g.lv === 2);
+  GOALS.splice(g1 + 1, 0, { key: 'helperN', lv: 1 }, { key: 'cashN', lv: 1 }, { key: 'carN', lv: 1 }, { key: 'helperT', lv: 1 }, { key: 'carT', lv: 1 }, { key: 'helpCap', lv: 1 }, { key: 'helperN', lv: 2 }, { key: 'cashN', lv: 2 }, { key: 'carN', lv: 2 }, { key: 'helpCap', lv: 2 });
+  for (const k in GFIRST) delete GFIRST[k]; GOALS.forEach((g, i) => { if (GFIRST[g.key] === undefined) GFIRST[g.key] = i; });
+  // yumurta arabası için yönlendirme: yeni birimler 'Yumurta Arabası' etiketi
+  const _spawn = spawnUnit; 
+}
+
+/* =====================================================================
    AT MODELİ: kutu/küre/silindirlerden; vertex-color; 14 mesh (gövde, boyun, kafa, 2 kulak, kuyruk, 8 bacak)
    Ön = +z. Bacak: kalça pivotu + diz pivotu.
    ===================================================================== */
@@ -4190,7 +4215,7 @@ woodFenceBox(-17.85, 0, 0.8, 23.2); woodFenceBox(-14, -11.35, 7.4, 0.8); woodFen
 woodFenceBox(13.6, 12.9, 4.2, 0.9); woodFenceBox(5.2, 12.9, 6.4, 0.9);
 buildDecorFlowers();
 for (let i = 0; i < 3; i++) buildBed(i);
-buildStations(); buildDecor(); buildSera(); buildVan(); buildZones(); buildPlayer(); LANES.bouquet = shelfB; LANES.pot = shelfP; buildRanch(); buildFarm(); buildFWPads(); finalizeWorld();
+buildStations(); buildDecor(); buildSera(); buildVan(); buildZones(); buildPlayer(); LANES.bouquet = shelfB; LANES.pot = shelfP; buildRanch(); buildFarm(); buildFWPads(); buildAutoPads(); finalizeWorld();
 /* ---- C6: pad alt yazıları (etkisi belli olmayan her pad) ---- */
 { const L = k => S.lv[k] || 0, T = x => () => x, N = (k, w) => () => 'Şu an ' + (1 + L(k)) + ' ' + w, PC = (k, v) => () => '%' + v * (L(k) + 1);
   const PADSUB = { sera: T('Süt şişesi yapar'), van: T('Sipariş teslim eder'), cashier: T('Satışı yapar'), carrier: T('Ürün taşır'), cashSpd: T('Daha hızlı satış'), carSpd: T('Daha hızlı taşır'), carCap: () => 'Taşıma ' + (6 + 4 * L('carCap')) + ' → ' + (10 + 4 * L('carCap')),
@@ -4246,7 +4271,7 @@ window.__game = {
   path(tx, tz) { return findPath(P.group.position.x, P.group.position.z, tx, tz); }, colliders,
   EXTZ, STN, GARD, GROLES, roleEvolve, give(type, n) { n = Math.min(n, Math.max(0, P.free())); for (let i = 0; i < n; i++) P.stack.add(['orchid', 'lav', 'sun', 'rosep', 'flower'].includes(type) ? makeFlowerItem(0, type === 'flower' ? 'tulip' : type) : makeItemOf(type), type); },
   bot(x, z) { BOT = (x || z) ? { x, z } : null; if (BOT) hideIntro(); }, hideIntro, objective() { objective(_obj); return Object.assign({}, _obj); }, get goal() { return curGoal; }, GOALS, UPG,
-  padHits, FWU, RH, RC, SHOW, ranchPile: () => ranchPile, RANCH, toggleRide, S, stats, P: () => P, queue, beds, machine, inputPile, outputPile, moneyPile, get shelf() { return shelfB; }, get shelfP() { return shelfP; }, get potInput() { return potInput; }, get potOutput() { return potOutput; }, get zone2() { return zone2; }, get zone3() { return zone3; }, VAN, get vanLoad() { return vanLoad; }, get vanPile() { return vanPile; }, get cashier() { return cashier; }, get carrier() { return carrier; }, upPads, zones, customers, CFG, POS,
+  CARX, CASHX, GARD, padHits, FWU, RH, RC, SHOW, ranchPile: () => ranchPile, RANCH, toggleRide, S, stats, P: () => P, queue, beds, machine, inputPile, outputPile, moneyPile, get shelf() { return shelfB; }, get shelfP() { return shelfP; }, get potInput() { return potInput; }, get potOutput() { return potOutput; }, get zone2() { return zone2; }, get zone3() { return zone3; }, VAN, get vanLoad() { return vanLoad; }, get vanPile() { return vanPile; }, get cashier() { return cashier; }, get carrier() { return carrier; }, upPads, zones, customers, CFG, POS,
   helper: () => helper,
   carry(n) { while (P.stack.length) P.stack.items.pop(); n = Math.min(n, P.capFn()); for (let i = 0; i < n; i++) P.stack.add(makeFlowerItem(0, "tulip"), "flower"); },
   tp(x, z) { P.group.position.set(x, 0, z); P.vel.set(0, 0, 0); camInit = false; },

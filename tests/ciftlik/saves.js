@@ -10,6 +10,6 @@ const dir=path.join(__dirname,'saves'),files=fs.readdirSync(dir).filter(f=>f.end
  ok(!sv.lv.ranch||r.rh===1+(sv.lv.horse||0),'at sayısı '+r.rh);
  await page.evaluate(()=>{__game.sim(60);dispatchEvent(new Event('pagehide'))});
  const a=await page.evaluate(()=>JSON.parse(localStorage.getItem('bolum3_ciftlik')));
- ok(a.ver===9,'ver '+a.ver);ok(a.money>=sv.money,'yazılan para');for(const k in sv.lv)ok(a.lv[k]>=sv.lv[k],'yazılan seviye '+k);
+ ok(a.ver===10,'ver '+a.ver);ok(a.money>=sv.money,'yazılan para');for(const k in sv.lv)ok(a.lv[k]>=sv.lv[k],'yazılan seviye '+k);
  ok(errs.length===0,'konsol hatası '+errs.slice(0,2));await b.close()}
  console.log(fails?'FAIL '+fails:'PASS');process.exit(fails?1:0)})();
