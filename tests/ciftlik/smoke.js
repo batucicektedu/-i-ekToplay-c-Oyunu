@@ -7,7 +7,7 @@ for(let i=0;i<18;i++)await page.evaluate(()=>window.__chunk(10));
 const st=await page.evaluate(()=>{dispatchEvent(new Event('pagehide'));const lv=__game.S.lv;return {money:__game.S.money,up:Object.keys(lv).filter(k=>lv[k]>0),stats:__game.stats,raw:!!localStorage.getItem('bolum3_ciftlik'),old:!!localStorage.getItem('cicek_bahcesi_v1')}});
 console.log(JSON.stringify(st));if(!st.raw)bad.push('save missing');if(st.old)bad.push('ch1 key used');if(!st.up.length)bad.push('no upgrades in 3 min');if(!st.stats.sold)bad.push('nothing sold');
 // gate
-await page.evaluate(()=>{__game.tp(-1.5,15.1);__game.sim(1)});const card=await page.evaluate(()=>document.getElementById('chapCard').style.display+'|'+document.querySelector('#chapCard .ct').textContent);console.log('gate card',card);if(!card.includes('flex')||!card.includes('Sahil'))bad.push('gate card');
+await page.evaluate(()=>{__game.tp(-8.2,15.4);__game.sim(1)});const card=await page.evaluate(()=>document.getElementById('chapCard').style.display+'|'+document.querySelector('#chapCard .ct').textContent);console.log('gate card',card);if(!card.includes('flex')||!card.includes('Sahil'))bad.push('gate card');
 // reload with save
 await page.waitForTimeout(1500);await page.reload();await page.waitForTimeout(1500);const m2=await page.evaluate(()=>({m:__game.S.money,lv:Object.keys(__game.S.lv).filter(k=>__game.S.lv[k]>0).length}));console.log('reload',JSON.stringify(m2));if(m2.m<st.money*0.9||m2.lv<st.up.length)bad.push('reload lost progress');
 console.log(errs.slice(0,5));if(errs.length)bad.push('errors');console.log(bad.length?'FAIL '+bad:'PASS');await b.close();process.exit(bad.length?1:0)})();

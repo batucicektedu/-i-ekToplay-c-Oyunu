@@ -3502,7 +3502,7 @@ function buildRanchStatic() {
   // gölet + ağaçlar
   { const pm = new THREE.Mesh(new THREE.CircleGeometry(1, 28), new THREE.MeshStandardMaterial({ color: lc(0x3fa6e8), roughness: 0.2, transparent: true, opacity: 0.92, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -3 })); pm.rotation.x = -Math.PI / 2; pm.scale.set(7, 4.5, 1); pm.position.set(33, 0.04, -80); world.add(pm);
     for (let i = 0; i < 12; i++) { const a = i / 12 * TAU; world.add(mk(G.cyl, mat(0x7a5a3a), 0.5, 0.12, 0.5, 33 + Math.cos(a) * 7.3, 0.06, -80 + Math.sin(a) * 4.8)); } treeAt('oak', 27, -84, 1.5); treeAt('oak', 39, -83, 1.4); treeAt('pop', 25, -77, 1.2); }
-  for (const [k, x, z, s] of [['oak', -19, -64, 1.5], ['oak', -17, -78, 1.4], ['pop', -12, -60, 1.1], ['oak', 26, -62, 1.4], ['oak', 24, -72, 1.3], ['oak', 38, -58, 1.5], ['pop', 40, -66, 1.2], ['oak', -3, -84, 1.5], ['oak', 12, -85, 1.4], ['pop', 20, -84, 1.1], ['oak', -21, -50, 1.2], ['pop', 22.5, -32, 1.1], ['oak', -10, -30, 1.2]]) treeAt(k, x, z, s);
+  for (const [k, x, z, s] of [['oak', -19, -64, 1.5], ['oak', -17, -78, 1.4], ['pop', -12, -60, 1.1], ['oak', 26, -62, 1.4], ['oak', 24, -72, 1.3], ['oak', 38, -58, 1.5], ['pop', 40, -66, 1.2], ['oak', -3, -84, 1.5], ['oak', 12, -85, 1.4], ['pop', 20, -84, 1.1], ['oak', -21, -50, 1.2], ['pop', 22.5, -32, 1.1]]) treeAt(k, x, z, s);
   hayBale(T.cx - 15.5, T.cz + 3, 0.2); hayBale(T.cx + 16, T.cz - 3, 1.2); hayBale(T.cx + 16.1, T.cz - 3, 0.1, 0.9);
   // ana kapı + kilitli kapak
   const gt = new THREE.Group(), gx = P_.gate[0], gz = P_.gate[1]; gt.position.set(gx, 0, gz);
@@ -3523,14 +3523,14 @@ function buildRanchZones() {
   ranchPile = new Stack(scene, (i, out) => { const per = 12, l = Math.floor(i / per), r = i % per; out.set(RANCH.cash[0] + ((r % 3) - 1) * 0.98, 0.14 + l * 0.14, RANCH.cash[1] + (Math.floor(r / 3) - 1.5) * 0.6); }, 60); ranchPile.extra = 0; ranchPile.jitter = 0.07;
   const mkp = (key, x, z, icon, vis, sub) => { const u = new UpgradePad(key, x, z, icon); u.vis = vis; if (sub) UPG[key].sub = sub; upPads[key] = u; return u; };
   const on = () => R_();
-  mkp('ranch', 9.6, -23, iconHorseR, null, () => 'Atlar, biniş, gösteri');
-  mkp('horse', -1.2, -38.8, iconHorseR, on, () => (nHorses()) + ' → ' + (nHorses() + 1) + ' at');
-  mkp('ata', RANCH.ata[0] - 5.2, RANCH.ata[1] - 0.2, iconHorseR, on, () => 'Kendi atına bin');
-  mkp('rideSpd', 12.2, -36, iconBolt, on, () => 'Atlar daha hızlı');
+  mkp('ranch', 9.7, -23.0, iconHorseR, null, () => 'Atlar, biniş, gösteri');
+  mkp('horse', -2.0, -39.0, iconHorseR, on, () => (nHorses()) + ' → ' + (nHorses() + 1) + ' at');
+  mkp('ata', -5.2, -32.8, iconHorseR, on, () => 'Kendi atına bin');
+  mkp('rideSpd', 12.0, -36.0, iconBolt, on, () => 'Atlar daha hızlı');
   mkp('ticket', 16.4, -36, iconTicket, on, () => 'Bilet +%18');
-  mkp('instr', 12.4, -40.6, iconHelper, on, () => 'Binişi otomatik başlatır');
-  mkp('foal', -7.6, -31.2, iconHorseR, on, () => 'Anneyi izleyen tay');
-  mkp('show', 24.4, -38, iconStar, on, () => 'Parkur gösterisi, büyük ödül');
+  mkp('instr', 12.0, -40.6, iconHelper, on, () => 'Binişi otomatik başlatır');
+  mkp('foal', -9.0, -31.2, iconHorseR, on, () => 'Anneyi izleyen tay');
+  mkp('show', 23.4, -37.8, iconStar, on, () => 'Parkur gösterisi, büyük ödül');
   Object.assign(LABELS, { ride: 'Biniş başlat', feed: 'Atı besle', hay: 'Saman al', show: 'Gösteriyi başlat', carrot: 'Havuç topla' });
   HIREK.add('instr'); Object.assign(MAIN_UNLOCKS, { ranch: 1, instr: 1, show: 1, horse: 1, ata: 1, foal: 1 });
   const gi = GOALS.findIndex(g => g.key === 'cap' && g.lv === 3);
@@ -3763,8 +3763,8 @@ function ranchObjective(set, hold) {
    KOYUN ÇAYIRI (yün -> Örgü Atölyesi kazak, Peynirhane), SEVİMLİ HAYVANLAR, MEYVE BAHÇESİ, FİNAL
    ===================================================================== */
 const SHP = { x0: -22, x1: 5, z0: 18.5, z1: 40, gate: [5, 27.5], knitIn: [-18.6, 25.6], knitOut: [-15.2, 25.6], cheeseIn: [-9.6, 25.6], cheeseOut: [-6.2, 25.6], sell: [0.2, 24.6] };
-const ZOO = { x0: 27, x1: 43.5, z0: 15, z1: 28, gate: [27, 22.5] };
-const ORC = { cx: 35, cz: 39 };
+const ZOO = { x0: 27, x1: 43.5, z0: 19, z1: 32, gate: [27, 25.5] };
+const ORC = { cx: 35, cz: 42.5 };
 const SHEEP = [], ZANI = [], APPLES = [], ZV = []; const WS = {}; let farmBuilt = false, shGate = null, zooGate = null;
 const L_ = k => S.lv[k] > 0;
 ITEMF.wool = () => { const g = new THREE.Group(); g.add(new THREE.Mesh(woolGeo(), vcMat)); g.userData.prod = 'wool'; return g; };
@@ -3814,14 +3814,14 @@ function buildFarmStatic() {
   { const g = new THREE.Group(); g.position.set(SHP.sell[0], 0, SHP.sell[1] - 2.6); g.add(rbox(3.2, 1.0, 1.4, 0.06, woodM())).children[0].position.y = 0.5; const aw = mk(G.box, mat(0x2f9e5a), 3.8, 0.14, 1.8, 0, 2.5, 0.2); aw.rotation.x = 0.3; g.add(aw); for (const sx of [-1.7, 1.7]) g.add(mk(G.cyl, mat(0xffffff), 0.07, 2.5, 0.07, sx, 1.25, 0.8)); const sg = makeBoard('PAZAR', 2.2, 0.7, 'wood'); sg.position.set(0, 3.2, 0.5); g.add(sg); shadowAll(g, true, false); world.add(g); addCollider(SHP.sell[0] - 1.7, SHP.sell[0] + 1.7, SHP.sell[1] - 3.3, SHP.sell[1] - 1.9); }
   // hayvanat bahçesi
   fencePath([[ZOO.x0, ZOO.z0], [ZOO.x1, ZOO.z0], [ZOO.x1, ZOO.z1], [ZOO.x0, ZOO.z1], [ZOO.x0, ZOO.gate[1] + 2.4]], { white: true }); fencePath([[ZOO.x0, ZOO.gate[1] - 2.4], [ZOO.x0, ZOO.z0]], { white: true });
-  laneRibbon([[10.2, 34], [20, 34.6], [25, 30], [26.6, 24.5], [28.5, 22.5]], 3.2, 0.016); yardBlob(ZOO.x0 + 8, ZOO.z0 + 7.5, 17, 15, [[0.5, 0.5, 0.46, 0.46]], '#5aa844', ['rgba(255,255,255,.1)', 'rgba(30,110,40,.18)', 'rgba(40,120,50,.4)', 'rgba(200,240,130,.4)'], 0.021);
+  laneRibbon([[10.2, 34], [20, 34.6], [25, 30.5], [26.6, 27.5], [28.5, 25.5]], 3.2, 0.016); yardBlob(ZOO.x0 + 8, ZOO.z0 + 7.5, 17, 15, [[0.5, 0.5, 0.46, 0.46]], '#5aa844', ['rgba(255,255,255,.1)', 'rgba(30,110,40,.18)', 'rgba(40,120,50,.4)', 'rgba(200,240,130,.4)'], 0.021);
   { const sg = makeBoard('SEVİMLİ HAYVANLAR', 5.6, 1.0, 'wood'); sg.position.set(ZOO.x0 - 0.2, 4.4, ZOO.gate[1]); sg.rotation.y = Math.PI / 2; world.add(sg); for (const sz of [-1, 1]) world.add(mk(G.cyl, mat(0x8a5a2a), 0.28, 3.8, 0.28, ZOO.x0, 1.9, ZOO.gate[1] + sz * 2.6)); world.add(mk(G.box, mat(0x8a5a2a), 0.3, 0.3, 5.7, ZOO.x0, 3.7, ZOO.gate[1]));
     zooGate = new THREE.Group(); zooGate.position.set(ZOO.x0, 0, ZOO.gate[1]); zooGate.userData.dyn = true; for (const y of [0.4, 0.9]) zooGate.add(mk(G.box, mat(0xf6f1e4), 0.12, 0.14, 4.6, 0, y, 0)); scene.add(zooGate); addCollider(ZOO.x0 - 0.3, ZOO.x0 + 0.3, ZOO.gate[1] - 2.4, ZOO.gate[1] + 2.4, () => !L_('zoo')); }
   for (const [x, z] of [[32, 18], [38, 25]]) { world.add(mk(G.box, woodM(), 2.4, 0.5, 1.0, x, 0.25, z)); world.add(mk(G.box, mat(0x5aa8d8), 2.2, 0.05, 0.8, x, 0.52, z)); }
   hayStack(40.5, 18.5, 2);
   // meyve bahçesi
   for (let r = 0; r < 2; r++) for (let c = 0; c < 4; c++) { const x = ORC.cx - 7.5 + c * 5, z = ORC.cz - 2.5 + r * 5.5; treeAt('apple', x, z, 1.05); APPLES.push({ x, z: z + 1.6, t: 1, m: null, ox: x, oz: z }); }
-  laneRibbon([[25, 30], [26, 36], [28.5, 39]], 3.0, 0.016); fencePath([[ORC.cx - 10, ORC.cz - 5.5], [ORC.cx + 10, ORC.cz - 5.5]], {}); fencePath([[ORC.cx - 10, ORC.cz + 5.8], [ORC.cx + 10, ORC.cz + 5.8]], {});
+  laneRibbon([[25, 30.5], [26, 38], [28.5, 42]], 3.0, 0.016);
   const og = makeBoard('MEYVE BAHÇESİ', 4.6, 0.9, 'wood'); og.position.set(ORC.cx - 10.2, 3.6, ORC.cz + 0.2); og.rotation.y = Math.PI / 2; world.add(og); world.add(mk(G.cyl, mat(0x8a5a2a), 0.2, 3.0, 0.2, ORC.cx - 10.2, 1.5, ORC.cz - 2.4)); world.add(mk(G.cyl, mat(0x8a5a2a), 0.2, 3.0, 0.2, ORC.cx - 10.2, 1.5, ORC.cz + 2.8));
 }
 function buildFarmZones() {
@@ -3830,13 +3830,13 @@ function buildFarmZones() {
   Object.assign(UPG, { sheep: { name: 'Koyun Çayırı', costs: [6500] }, sheep2: { name: 'Yeni Koyun', costs: [2500, 5500, 10000] }, knit: { name: 'Örgü Atölyesi', costs: [5000] }, cheese: { name: 'Peynirhane', costs: [14000] }, zoo: { name: 'Sevimli Hayvanlar', costs: [18000] }, zoo2: { name: 'Yeni Hayvan', costs: [3500, 7000, 12000] }, orchard: { name: 'Meyve Bahçesi', costs: [4000] } });
   for (const k of ['sheep', 'sheep2', 'knit', 'cheese', 'zoo', 'zoo2', 'orchard']) if (S.lv[k] === undefined) S.lv[k] = 0;
   const sOn = () => L_('sheep');
-  mkp('sheep', 6.3, 16.6, iconSheep, null, () => 'Yün topla, kazak yap');
+  mkp('sheep', 1.6, 15.9, iconSheep, null, () => 'Yün topla, kazak yap');
   mkp('sheep2', -3.4, 33.5, iconSheep, sOn, () => (6 + S.lv.sheep2 * 2) + ' → ' + (8 + S.lv.sheep2 * 2) + ' koyun');
-  mkp('knit', -17, 29.5, iconKnit, sOn, () => 'Yünden kazak');
-  mkp('cheese', -8, 29.5, iconCheese, sOn, () => 'Süt şişesinden peynir');
-  mkp('zoo', 24.3, 17.6, iconSheep, () => L_('van'), () => 'Ziyaretçi bileti');
-  mkp('zoo2', 37.5, 32.6, iconSheep, () => L_('zoo'), () => 'Zoo hayvanı ekle');
-  mkp('orchard', 31.4, 31.4, iconApple, () => L_('van'), () => 'Elma: atlara yem');
+  mkp('knit', -17.0, 30.4, iconKnit, sOn, () => 'Yünden kazak');
+  mkp('cheese', -8.0, 30.4, iconCheese, sOn, () => 'Süt şişesinden peynir');
+  mkp('zoo', 31.2, 15.0, iconSheep, () => L_('van'), () => 'Ziyaretçi bileti');
+  mkp('zoo2', 37.2, 35.4, iconSheep, () => L_('zoo'), () => 'Zoo hayvanı ekle');
+  mkp('orchard', 38.4, 15.4, iconApple, () => L_('van'), () => 'Elma: atlara yem');
   { const g0 = GOALS.findIndex(g => g.key === 'cap' && g.lv === 3); GOALS.splice(g0 + 1, 0, { key: 'orchard', lv: 1 }, { key: 'sheep', lv: 1 }, { key: 'knit', lv: 1 }); }
   { const gi = GOALS.findIndex(g => g.key === 'horse' && g.lv === 2); GOALS.splice(gi + 1, 0, { key: 'sheep2', lv: 1 }, { key: 'cheese', lv: 1 }, { key: 'zoo', lv: 1 }, { key: 'sheep2', lv: 2 }, { key: 'zoo2', lv: 1 }, { key: 'zoo2', lv: 2 }, { key: 'sheep2', lv: 3 }, { key: 'zoo2', lv: 3 }); }
   for (const k in GFIRST) delete GFIRST[k]; GOALS.forEach((g, i) => { if (GFIRST[g.key] === undefined) GFIRST[g.key] = i; });
@@ -3870,8 +3870,8 @@ function updateFarm(dt, t) {
   // elma
   for (const a of APPLES) { if (!a.on) continue; a.t = Math.min(1, a.t + dt / 18); if (!a.m) { a.m = new THREE.Mesh(appleGeo(), vcMat); a.m.userData.dyn = true; a.m.position.set(a.x, 0.5, a.z); scene.add(a.m); } a.m.scale.setScalar(Math.max(0.001, a.t >= 1 ? 2.4 : a.t * 1.2)); if (a.t >= 1 && P.free() > 0 && (a.x - gp.x) ** 2 + (a.z - gp.z) ** 2 < 1.6) { a.t = 0; const it = ITEMF.apple(); it.position.set(a.x, 0.7, a.z); scene.add(it); sendToBack(P, it, 'apple', 1.2); sfx('pick'); } }
   // ziyaretçiler
-  if (L_('zoo')) { ZV.t = (ZV.t === undefined ? 4 : ZV.t) - dt; if (ZV.t <= 0) { ZV.t = Math.max(4, 12 - 2.5 * ZANI.length); if (ZV.length < 3 + ZANI.length) { const c = newRider(); c.x = 10.2; c.z = 36; c.group.position.set(c.x, 0, c.z); ZV.push({ c, st: 'in', wp: [[10.2, 34.5], [20, 34.6], [25, 30], [26.6, 24.5], [29, 22.5], [32 + rand(-2, 2), 20 + rand(0, 6)]], t: 0 }); } }
-    for (let i = ZV.length - 1; i >= 0; i--) { const v = ZV[i], c = v.c; let mv = 0; if (v.st === 'in' || v.st === 'out') { const w = v.wp[0], d = stepTo(c, w[0], w[1], 4.5, dt); mv = 1; if (d < 0.4) { v.wp.shift(); if (!v.wp.length) { if (v.st === 'in') { v.st = 'look'; v.t = 5; } else { rm(c.group); ZV.splice(i, 1); continue; } } } } else if (v.st === 'look') { mv = 0; v.t -= dt; if (Math.random() < dt * 0.8) hearts(c.x, 3.4, c.z, 1); const an = ZANI[0]; if (an) faceChar(c, an.x - c.x, an.z - c.z, dt); if (v.t <= 0) { const val = Math.round((60 + 25 * ZANI.length) * (1 + 0.18 * S.lv.ticket)); payDirect(c.x, c.z, val, ''); v.st = 'out'; v.wp = [[29, 22.5], [26.6, 24.5], [25, 30], [20, 34.6], [10.2, 34.5], [10.2, 40]]; } } animChar(c, dt, mv, t); } }
+  if (L_('zoo')) { ZV.t = (ZV.t === undefined ? 4 : ZV.t) - dt; if (ZV.t <= 0) { ZV.t = Math.max(4, 12 - 2.5 * ZANI.length); if (ZV.length < 3 + ZANI.length) { const c = newRider(); c.x = 10.2; c.z = 36; c.group.position.set(c.x, 0, c.z); ZV.push({ c, st: 'in', wp: [[10.2, 34.5], [20, 34.6], [25, 30.5], [26.6, 27.5], [29, 25.5], [32 + rand(-2, 2), 22 + rand(0, 6)]], t: 0 }); } }
+    for (let i = ZV.length - 1; i >= 0; i--) { const v = ZV[i], c = v.c; let mv = 0; if (v.st === 'in' || v.st === 'out') { const w = v.wp[0], d = stepTo(c, w[0], w[1], 4.5, dt); mv = 1; if (d < 0.4) { v.wp.shift(); if (!v.wp.length) { if (v.st === 'in') { v.st = 'look'; v.t = 5; } else { rm(c.group); ZV.splice(i, 1); continue; } } } } else if (v.st === 'look') { mv = 0; v.t -= dt; if (Math.random() < dt * 0.8) hearts(c.x, 3.4, c.z, 1); const an = ZANI[0]; if (an) faceChar(c, an.x - c.x, an.z - c.z, dt); if (v.t <= 0) { const val = Math.round((60 + 25 * ZANI.length) * (1 + 0.18 * S.lv.ticket)); payDirect(c.x, c.z, val, ''); v.st = 'out'; v.wp = [[29, 25.5], [26.6, 27.5], [25, 30.5], [20, 34.6], [10.2, 34.5], [10.2, 40]]; } } animChar(c, dt, mv, t); } }
   if (introDone && !chapOpen) { const st_ = (k, tx) => { if (!S.seen[k]) { S.seen[k] = 1; saveDirty = true; toast(tx); return true; } return false; };
     if (S.lv.ranch && st_('st_ranch', 'Ayşe Teyze: Atlar artık senin, binicilere iyi bak!')) { } else if ((stats.rides || 0) >= 1 && st_('st_ride', 'Ayşe Teyze: İlk bileti kestin, aferin!')) { } else if (S.lv.sheep && st_('st_sheep', 'Ayşe Teyze: Koyunları kırk, yünden kazak ör!')) { } else if ((stats.shows || 0) >= 1 && st_('st_show', 'Ayşe Teyze: Harika bir gösteri oldu!')) { } else if (S.lv.zoo && st_('st_zoo', 'Ayşe Teyze: Çocuklar minik hayvanlara bayılıyor!')) { } }
   // final kutlama
@@ -3969,10 +3969,10 @@ function buildFWPads() {
   for (const k of ['groomN', 'shep', 'shepN', 'seller', 'sellerN', 'fwSpd', 'fwCap']) if (S.lv[k] === undefined) S.lv[k] = 0;
   const mkp = (key, x, z, icon, vis, sub) => { const u = new UpgradePad(key, x, z, icon); u.vis = vis; UPG[key].sub = sub; upPads[key] = u; return u; };
   const hire = k => () => S.lv[k] > 0, nohire = k => () => S.lv[k] === 0, nTxt = r => () => (1 + (S.lv[r.cnt] || 0)) + ' → ' + (2 + (S.lv[r.cnt] || 0)) + ' çalışan';
-  mkp('groom', -2.2, -29.4, iconHelper, () => R_(), () => 'Atlara yem taşır'); mkp('groomN', -2.2, -29.4, iconHelper, () => S.lv.groom > 0, nTxt(FWR.groom));
+  mkp('groom', -3.4, -29.6, iconHelper, () => R_(), () => 'Atlara yem taşır'); mkp('groomN', -3.4, -29.6, iconHelper, () => S.lv.groom > 0, nTxt(FWR.groom));
   mkp('shep', -4.6, 36.8, iconHelper, () => L_('sheep') && L_('knit'), () => 'Yün toplar, atölyeye taşır'); mkp('shepN', -4.6, 36.8, iconHelper, () => S.lv.shep > 0, nTxt(FWR.shep));
-  mkp('seller', 3.4, 31.6, iconHelper, () => L_('knit') || L_('cheese'), () => 'Ürünleri pazarda satar'); mkp('sellerN', 3.4, 31.6, iconHelper, () => S.lv.seller > 0, nTxt(FWR.seller));
-  mkp('fwSpd', 14.6, -33.2, iconBolt, () => S.lv.groom > 0 || S.lv.shep > 0 || S.lv.seller > 0, () => 'Çalışanlar daha hızlı'); mkp('fwCap', 18.6, -33.2, iconBackpack, () => S.lv.groom > 0 || S.lv.shep > 0 || S.lv.seller > 0, () => 'Çalışan taşıma ' + fwCap() + ' → ' + (fwCap() + 3));
+  mkp('seller', -0.4, 34.8, iconHelper, () => L_('knit') || L_('cheese'), () => 'Ürünleri pazarda satar'); mkp('sellerN', -0.4, 34.8, iconHelper, () => S.lv.seller > 0, nTxt(FWR.seller));
+  mkp('fwSpd', 14.4, -33.0, iconBolt, () => S.lv.groom > 0 || S.lv.shep > 0 || S.lv.seller > 0, () => 'Çalışanlar daha hızlı'); mkp('fwCap', 19.4, -35.8, iconBackpack, () => S.lv.groom > 0 || S.lv.shep > 0 || S.lv.seller > 0, () => 'Çalışan taşıma ' + fwCap() + ' → ' + (fwCap() + 3));
   for (const k of ['groom', 'shep', 'seller']) HIREK.add(k);
   Object.assign(MAIN_UNLOCKS, { groom: 1, shep: 1, seller: 1 });
   EXTAPPLY.groom = i => fwSync('groom', i); EXTAPPLY.groomN = i => fwSync('groom', i); EXTAPPLY.shep = i => fwSync('shep', i); EXTAPPLY.shepN = i => fwSync('shep', i); EXTAPPLY.seller = i => fwSync('seller', i); EXTAPPLY.sellerN = i => fwSync('seller', i);
@@ -4168,7 +4168,7 @@ function updateGates(dt, t) {
 }
 let gateNext = null;
 function initChapters() {
-  buildGate({ x: -1.5, z: 13.7, hw: 3.4, col: '#4aa8ff', hex: 0x2f9be8, t1: '◀ ÖNCEKİ BÖLÜM', t2: 'Sahil Balıkçısı', dir: 'w', go: () => chapConfirm2(CHAPS[1], true) });
+  buildGate({ x: -8.2, z: 14.0, hw: 3.4, col: '#4aa8ff', hex: 0x2f9be8, t1: '◀ ÖNCEKİ BÖLÜM', t2: 'Sahil Balıkçısı', dir: 'w', go: () => chapConfirm2(CHAPS[1], true) });
   // son bölüm: sonraki kapı yok (final: Çiftlik Şenliği)
   // ayar menüsüne "Bölümler"
   const box = menuEl.querySelector('.mbox'), b = document.createElement('button'); b.id = 'mChap'; b.textContent = 'Bölümler'; b.style.cssText = 'background:linear-gradient(#ffb04a,#ff8a1f);box-shadow:0 4px 0 #b85a00'; box.insertBefore(b, document.getElementById('mQ')); b.addEventListener('click', () => { menuEl.style.display = 'none'; chapMenu(); });
@@ -4246,7 +4246,7 @@ window.__game = {
   path(tx, tz) { return findPath(P.group.position.x, P.group.position.z, tx, tz); }, colliders,
   EXTZ, STN, GARD, GROLES, roleEvolve, give(type, n) { n = Math.min(n, Math.max(0, P.free())); for (let i = 0; i < n; i++) P.stack.add(['orchid', 'lav', 'sun', 'rosep', 'flower'].includes(type) ? makeFlowerItem(0, type === 'flower' ? 'tulip' : type) : makeItemOf(type), type); },
   bot(x, z) { BOT = (x || z) ? { x, z } : null; if (BOT) hideIntro(); }, hideIntro, objective() { objective(_obj); return Object.assign({}, _obj); }, get goal() { return curGoal; }, GOALS, UPG,
-  FWU, RH, RC, SHOW, ranchPile: () => ranchPile, RANCH, toggleRide, S, stats, P: () => P, queue, beds, machine, inputPile, outputPile, moneyPile, get shelf() { return shelfB; }, get shelfP() { return shelfP; }, get potInput() { return potInput; }, get potOutput() { return potOutput; }, get zone2() { return zone2; }, get zone3() { return zone3; }, VAN, get vanLoad() { return vanLoad; }, get vanPile() { return vanPile; }, get cashier() { return cashier; }, get carrier() { return carrier; }, upPads, zones, customers, CFG, POS,
+  padHits, FWU, RH, RC, SHOW, ranchPile: () => ranchPile, RANCH, toggleRide, S, stats, P: () => P, queue, beds, machine, inputPile, outputPile, moneyPile, get shelf() { return shelfB; }, get shelfP() { return shelfP; }, get potInput() { return potInput; }, get potOutput() { return potOutput; }, get zone2() { return zone2; }, get zone3() { return zone3; }, VAN, get vanLoad() { return vanLoad; }, get vanPile() { return vanPile; }, get cashier() { return cashier; }, get carrier() { return carrier; }, upPads, zones, customers, CFG, POS,
   helper: () => helper,
   carry(n) { while (P.stack.length) P.stack.items.pop(); n = Math.min(n, P.capFn()); for (let i = 0; i < n; i++) P.stack.add(makeFlowerItem(0, "tulip"), "flower"); },
   tp(x, z) { P.group.position.set(x, 0, z); P.vel.set(0, 0, 0); camInit = false; },
