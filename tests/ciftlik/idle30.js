@@ -1,17 +1,12 @@
-// 30 sim dakika, tüm çalışanlar alınmış + max yükseltme. TR=1: tüm toplayıcılar traktöre evrilmiş. NOHELP=1: sadece temel (yeni) çalışanlar.
+// Çiftlik 30 dk boşta (oyuncu hareketsiz, yalnız çalışanlar): para artar, at sevgisi >0, salınım/duraksama yok.
+// FX=workers.json SEC=1800 GAME=http://localhost:8765/ciftlik/index.html node tests/ciftlik/idle30.js
 const h=require('./h.js');
-(async()=>{const TR=process.env.TR==='1';
-const {b,page,errs}=await h.open({q:'low',fixture:__dirname+'/../max.json',wait:1500,patch:sv=>{Object.assign(sv.lv,{wedW:1,portSpd:1,portCap:1,beeW:1,bonW:1,portW:1,cityW:1,cafeW:1,sunW:1,parfW:1,lavW:1,cafeG:1,
- helpCap:4,helperN:2,lavCap:4,lavN:2,parfCap:4,parfN:2,cafeGCap:4,cafeGN:2,sunCap:4,sunN:2,bonCap:4,bonN:2,carN:2,cashN:2,wedSpd:5,potSpd:5,bus:1,busSpd:5,busCap:4,busN:2,wedN:2,waitN:2,cityN:2,portN:2,beeN:2});
- if(TR)Object.assign(sv.lv,{helperT:1,lavT:1,parfT:1,cafeGT:1,bonT:1});sv.money=1000;}});
-await page.evaluate(()=>{window.__resetting=false;__game.hideIntro();__game.tp(8,2);window.__m0=__game.S.money;window.__s0=Object.assign({},__game.stats)});
-for(let m=0;m<30;m+=10){await page.evaluate(()=>{for(let i=0;i<600;i++)__game.sim(1)});}
-const r=await page.evaluate(()=>{const g=__game,st=g.stats,o={};for(const k in st)if(k.startsWith('s_'))o[k]=st[k]-(window.__s0[k]||0);
- const c=g.city(),cf=g.cafe();
- return {money:Math.round(g.S.money-window.__m0),stalls:st.stalls||0,sold:o,wed:st.weddings||0,wedItems:st.wedItems||0,vanRuns:st.vanRuns||0,exports:st.exportsDone||0,citySold:st.citySold||0,cityQueue:c?c.queue.length:-1,cafeServed:st.cafeServed||0,carry:g.P().stack.length,
-  gard:g.GARD.map(x=>x.kind+(x.tr?'T':'')).join(','),tr:g.GARD.filter(x=>x.tr).length,busTrips:st.busTrips||0,busItems:st.busItems||0,cityBy:Object.fromEntries(Object.keys(st).filter(k=>k.startsWith('c_')).map(k=>[k,st[k]])),wd:(window.__wdLog||[]).slice(0,5)}});
-console.log(JSON.stringify(r));console.log(errs);
-const bad=[];if(r.stalls)bad.push('stalls');if(!r.citySold)bad.push('city');if(!r.cafeServed)bad.push('tea');for(const k of ['s_bouquet','s_pot','s_sachet','s_perfume','s_sbq','s_honey','s_bonsai'])if(!r.sold[k])bad.push(k);if(errs.length)bad.push('errors');
-if(!r.cityBy.c_perfume)bad.push('city perfume');if(!r.busItems)bad.push('bus');if(TR&&r.tr<5)bad.push('tractors '+r.tr);
-await b.close();{const o=require('child_process').spawnSync('node',[__dirname+'/osc.js'],{env:Object.assign({},process.env,{SEC:'120'}),encoding:'utf8'});console.log(o.stdout.split('\n').slice(-2).join(' '));if(o.status)bad.push('oscillation');}
-console.log(bad.length?'FAIL '+bad:'PASS');process.exit(bad.length?1:0)})();
+(async()=>{const {b,page,errs}=await h.open({q:'low',w:300,h:500,wait:1200,fixture:__dirname+'/'+(process.env.FX||'workers.json'),patch:sv=>{sv.ts=Date.now()+1e6;sv.op=0;sv.money=1000}});
+await page.evaluate(()=>{window.__resetting=false;__game.hideIntro();__game.tp(7,-8);window.__m0=__game.S.money;window.__s0=Object.assign({},__game.stats);window.__minLove=100;window.__chg={};window.__last={}});
+const SEC=+process.env.SEC||1800;
+for(let m=0;m<SEC/60;m++){await page.evaluate(()=>{const g=__game;for(let i=0;i<60;i++){g.sim(1);const p=g.P().group.position;p.x=7;p.z=-8;for(const r of g.RH)window.__minLove=Math.min(window.__minLove,r.love);g.FWU.forEach((w,k)=>{const key=k;if(window.__last[key]!==w.state){window.__chg[key]=(window.__chg[key]||0)+1;window.__last[key]=w.state}})}})}
+const r=await page.evaluate(()=>{const g=__game,st=g.stats,o={};for(const k in st)if(/^s_|^made|^sheared|^rides|^fed|^fwReset|^shows/.test(k))o[k]=st[k]-(window.__s0[k]||0);return{money:Math.round(g.S.money-window.__m0),minLove:Math.round(window.__minLove),o,chg:window.__chg,rh:g.RH.map(x=>Math.round(x.love)),wk:g.FWU.map(w=>w.role+':'+w.state)}});
+console.log(JSON.stringify(r));console.log(errs.slice(0,3));
+const bad=[];if(r.money<=0)bad.push('money');if(r.minLove<=0)bad.push('love hit 0');if(r.o.fwReset)bad.push('watchdog resets '+r.o.fwReset);if(!r.o.sheared)bad.push('no shearing');if(!(r.o.s_sweater))bad.push('no sweater sales');if(!r.o.s_cheese)bad.push('no cheese sales');if(!r.o.fed)bad.push('no feeding');
+for(const k in r.chg)if(r.chg[k]>SEC/60*40)bad.push('oscillation worker '+k+': '+r.chg[k]);if(errs.length)bad.push('errors');
+console.log(bad.length?'FAIL '+bad:'PASS');await b.close();process.exit(bad.length?1:0)})();

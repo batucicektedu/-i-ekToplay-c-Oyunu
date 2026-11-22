@@ -224,11 +224,11 @@ function rm(o) { if (o && o.parent) o.parent.remove(o); }
 let fountainWater = null, clouds = [], butterflies = [];
 let LOADED_X = null, carpet1 = null, carpet2 = null;
 const MAIN_UNLOCKS = { bed: 1, helper: 1, cashier: 1, carrier: 1, sera: 1, van: 1 };
-const S = { money: 0, lv: { sheep: 0, sheep2: 0, knit: 0, cheese: 0, zoo: 0, zoo2: 0, orchard: 0, ranch: 0, horse: 0, rideSpd: 0, ticket: 0, instr: 0, foal: 0, show: 0, ata: 0, groom: 0, cap: 0, speed: 0, pack: 0, bed: 0, helper: 0, cashier: 0, carrier: 0, cashSpd: 0, carSpd: 0, carCap: 0, helpSpd: 0, sera: 0, van: 0, lav: 0, lavW: 0, keseSpd: 0, parf: 0, parfW: 0, parfSpd: 0, cafe: 0, cafeW: 0, teaSpd: 0, wed: 0, wedBonus: 0, sunf: 0, sunW: 0, sbqSpd: 0, city: 0, cityW: 0, citySpd: 0, stars: 0, bee: 0, beeW: 0, hiveN: 0, hiveSpd: 0, honSpd: 0, jap: 0, bonW: 0, bonSpd: 0, coll: 0, port: 0, portW: 0, portBonus: 0, fest: 0, festBonus: 0, mus: 0, musTkt: 0, wedW: 0, portSpd: 0, portCap: 0, helpCap: 0, helperN: 0, helperT: 0, lavCap: 0, lavN: 0, lavT: 0, parfCap: 0, parfN: 0, parfT: 0, cafeG: 0, cafeGCap: 0, cafeGN: 0, cafeGT: 0, sunCap: 0, sunN: 0, bonCap: 0, bonN: 0, bonT: 0, carN: 0, cashN: 0, wedSpd: 0, potSpd: 0, bus: 0, busSpd: 0, busCap: 0, busN: 0, wedN: 0, waitN: 0, cityN: 0, portN: 0, beeN: 0, gate: 0 }, ic: 0, tut: 0, tier: { pack: 0, flo: 0, pot: 0, van: 0, kese: 0, parf: 0, tea: 0, wed: 0, city: 0, hon: 0, bon: 0 }, decor: {}, cos: { hat: 'straw', fit: 0, uni: 0, floor: 0, own: [] }, dn: 0,
+const S = { money: 0, lv: { groomN: 0, shep: 0, shepN: 0, seller: 0, sellerN: 0, fwSpd: 0, fwCap: 0, sheep: 0, sheep2: 0, knit: 0, cheese: 0, zoo: 0, zoo2: 0, orchard: 0, ranch: 0, horse: 0, rideSpd: 0, ticket: 0, instr: 0, foal: 0, show: 0, ata: 0, groom: 0, cap: 0, speed: 0, pack: 0, bed: 0, helper: 0, cashier: 0, carrier: 0, cashSpd: 0, carSpd: 0, carCap: 0, helpSpd: 0, sera: 0, van: 0, lav: 0, lavW: 0, keseSpd: 0, parf: 0, parfW: 0, parfSpd: 0, cafe: 0, cafeW: 0, teaSpd: 0, wed: 0, wedBonus: 0, sunf: 0, sunW: 0, sbqSpd: 0, city: 0, cityW: 0, citySpd: 0, stars: 0, bee: 0, beeW: 0, hiveN: 0, hiveSpd: 0, honSpd: 0, jap: 0, bonW: 0, bonSpd: 0, coll: 0, port: 0, portW: 0, portBonus: 0, fest: 0, festBonus: 0, mus: 0, musTkt: 0, wedW: 0, portSpd: 0, portCap: 0, helpCap: 0, helperN: 0, helperT: 0, lavCap: 0, lavN: 0, lavT: 0, parfCap: 0, parfN: 0, parfT: 0, cafeG: 0, cafeGCap: 0, cafeGN: 0, cafeGT: 0, sunCap: 0, sunN: 0, bonCap: 0, bonN: 0, bonT: 0, carN: 0, cashN: 0, wedSpd: 0, potSpd: 0, bus: 0, busSpd: 0, busCap: 0, busN: 0, wedN: 0, waitN: 0, cityN: 0, portN: 0, beeN: 0, gate: 0 }, ic: 0, tut: 0, tier: { pack: 0, flo: 0, pot: 0, van: 0, kese: 0, parf: 0, tea: 0, wed: 0, city: 0, hon: 0, bon: 0 }, decor: {}, cos: { hat: 'straw', fit: 0, uni: 0, floor: 0, own: [] }, dn: 0,
   cb: {}, cs: [], pt: { n: 0, cur: null }, fe: { n: 0, t: 420 }, q: { a: [], n: 0 }, bx: 0, ts: 0, op: 0, mv: 0, seen: {} };
 let saveDirty = false, saveTimer = 0;
 let introDone = false, curGoal = null, curGoalIdx = -1, lastGoalIdx = -2;
-const SAVE_VER = 8, BAK_KEY = SAVE_KEY + '_bak', TMP_KEY = SAVE_KEY + '_tmp';
+const SAVE_VER = 9, BAK_KEY = SAVE_KEY + '_bak', TMP_KEY = SAVE_KEY + '_tmp';
 let SAVE_BLOCKED = false; // okuma bozuk/başarısızsa eski kaydın üzerine yazma
 function readSaveKey(k) { try { const r = localStorage.getItem(k); if (r === null) return { none: true }; const o = JSON.parse(r); return o && typeof o === 'object' && !Array.isArray(o) ? { o, raw: r } : { bad: true, raw: r }; } catch (e) { return { bad: true }; } }
 const hasProgress = o => !!o && (+o.money > 0 || (o.lv && Object.keys(o.lv).some(k => +o.lv[k] > 0)) || +o.tut > 0);
@@ -238,6 +238,7 @@ function migrateSave(s) { // ver alanı yoksa 1 sayılır; sadece alan ekler, hi
   if (v < 3) { /* v2 -> v3: tier, decor, cos, dn alanları eklendi; eksikse yüklemede varsayılanla dolar */ }
   if (v < 4) { /* v3 -> v4 (C3): cb, cs, pt, fe, q, bx, ts, op, mv ve yeni lv/tier anahtarları eklendi; eksikse varsayılan */ }
   if (v < 5) { /* v4 -> v5 (C5): toplayıcı kapasite/eleman/traktör, otobüs, hız anahtarları eklendi (hepsi varsayılan 0); sunW>0 traktör sahibi kalır */ }
+  if (v < 9) { /* v8 -> v9: lv.groom/groomN/shep/shepN/seller/sellerN/fwSpd/fwCap (çiftlik işçileri) eklendi; varsayılan 0 */ }
   if (v < 8) { /* v7 -> v8 (Bölüm 3 at çiftliği): lv.ranch/horse/rideSpd/ticket/instr/foal/show/ata/groom ve x.rl (at sevgisi) eklendi; varsayılan 0, eski kayıtlar aynen korunur */ }
   if (v < 7) { /* v6 -> v7 (Bölüm 2): ic (giriş kartı görüldü), lv.gate (bölüm kapısı) eklendi; varsayılan 0 */ }
   if (v < 6) { /* v5 -> v6 (C6): +1 Eleman anahtarları eklendi (wedN, waitN, cityN, portN, beeN; varsayılan 0) */ }
@@ -3858,7 +3859,7 @@ function addSheep(instant) { const m = makeSheep(), r = SHP; m.group = m.g; m.x 
 function unlockSheep(instant) { if (shGate) shGate.visible = false; while (SHEEP.length < 6 + 2 * S.lv.sheep2) addSheep(instant); if (!instant) { confetti(SHP.gate[0], 3, SHP.gate[1], 50); panReq('sheep1', -8, 30, 'KOYUN ÇAYIRI!'); } if (sellZone) { sellZone.group.visible = true; sellZone.hidden = false; } }
 function addZoo(i, instant) { const kind = ['lamb', 'goat', 'rabbit'][i % 3], g = makeSmall(kind); g.position.set(rand(ZOO.x0 + 3, ZOO.x1 - 3), 0, rand(ZOO.z0 + 3, ZOO.z1 - 3)); const o = { g, x: g.position.x, z: g.position.z, yaw: rand(0, TAU), tx: g.position.x, tz: g.position.z, t: rand(0, 3), kind, ph: rand(0, 6), group: g }; scene.add(g); ZANI.push(o); if (!instant) hearts(o.x, 2, o.z, 5); }
 function updateFarm(dt, t) {
-  if (!farmBuilt) return; const gp = P.group.position;
+  if (!farmBuilt) return; updateFWs(dt, t); const gp = P.group.position;
   for (const s of SHEEP) { s.wool = Math.min(1, s.wool + dt / 26); s.w.scale.setScalar(Math.max(0.01, 0.3 + 0.7 * s.wool)); s.w.visible = s.wool > 0.08; s.t -= dt; let mv = 0;
     if (s.t <= 0) { if (Math.random() < 0.5) { s.tx = rand(SHP.x0 + 2, SHP.x1 - 2); s.tz = rand(SHP.z0 + 7, SHP.z1 - 2); s.t = 8; } else { s.tx = s.x; s.tz = s.z; s.t = rand(2, 5); } }
     const d = Math.hypot(s.tx - s.x, s.tz - s.z); if (d > 0.2) { stepTo(s, s.tx, s.tz, 1.0, dt); mv = 1; } s.g.position.y = mv ? Math.abs(Math.sin(t * 9 + s.ph)) * 0.08 : 0; s.g.rotation.z = Math.sin(t * 2 + s.ph) * 0.02 * (1 - mv);
@@ -3898,6 +3899,89 @@ function farmObjective(set) {
 }
 
 function buildFarm() { buildFarmStatic(); buildFarmZones(); farmBuilt = true; }
+
+/* =====================================================================
+   ÇİFTLİK İŞÇİLERİ (yönetici evresi): Seyis (at bakımı), Çoban (yün), Pazarcı (kazak/peynir satışı)
+   Her rol: işe alma + "+1 Eleman" (en çok 3) pad'i; ortak: Çalışan Hızı, Çalışan Kapasitesi.
+   Talep sistemi: hedefler (havuç/elma/koyun/at) tek işçiye 'claim' edilir; zaman aşımı + watchdog ile salınım önlenir.
+   ===================================================================== */
+const FWR = {
+  groom:  { hire: 'groom', cnt: 'groomN', name: 'Seyis', shirt: 0x2f9e5a, hat: 0x2f9e5a, home: [-8, -35.5] },
+  shep:   { hire: 'shep', cnt: 'shepN', name: 'Çoban', shirt: 0xb07a40, hat: 0xb07a40, home: [-2, 32] },
+  seller: { hire: 'seller', cnt: 'sellerN', name: 'Pazarcı', shirt: 0xe8445a, hat: 0xe8445a, home: [3.5, 24] }
+};
+const FWU = []; // tüm birimler
+const fwN = r => S.lv[r.hire] > 0 ? 1 + Math.min(2, S.lv[r.cnt] || 0) : 0;
+const fwCap = () => 6 + 3 * (S.lv.fwCap || 0), fwSpeed = () => 4.4 * (1 + 0.14 * (S.lv.fwSpd || 0));
+function spawnFW(key, instant) {
+  const r = FWR[key]; const c = makeChar({ shirt: r.shirt, pants: 0x2f3542, hair: 0x2a1a10, hairStyle: Math.random() < 0.5 ? 'short' : 'ponytail', hat: 'cap', hatColor: r.hat, skin: pick(SKINS), shoe: 0xffffff, outfit: 'overalls' });
+  c.group.position.set(r.home[0] + rand(-1, 1), 0, r.home[1] + rand(-1, 1)); scene.add(c.group); attachBackStack(c, fwCap); c.role = key; c.state = 'idle'; c.cd = 0; c.x = c.group.position.x; c.z = c.group.position.z; c.tgt = null; c.age = 0; c.idleT = 0; FWU.push(c); popInWorker(c, instant); return c;
+}
+function fwSync(key, instant) { const r = FWR[key]; while (FWU.filter(u => u.role === key).length < fwN(r)) spawnFW(key, instant); }
+function fwRelease(w) { if (w.tgt && w.tgt.claim === w) w.tgt.claim = null; w.tgt = null; }
+function fwGo(w, tx, tz, dt) { const dx = tx - w.group.position.x, dz = tz - w.group.position.z, d = Math.hypot(dx, dz); if (d > 0.3) { const st = Math.min(d, fwSpeed() * dt); w.group.position.x += dx / d * st; w.group.position.z += dz / d * st; w.vel.set(dx / d * fwSpeed(), 0, dz / d * fwSpeed()); faceChar(w, dx, dz, dt); } else w.vel.set(0, 0, 0); return d; }
+const fwLoad = w => w.stack.length + w.incoming, fwFull = w => fwLoad(w) >= fwCap();
+function fwPickStack(w, stack, type, n) { const it = stack.takeLast(); if (!it) return false; it.mesh.getWorldPosition(_w); scene.add(it.mesh); it.mesh.position.copy(_w); sendToBack(w, it.mesh, type, 1.3); return true; }
+function feedHorse(hh, ty, mesh) { fly(mesh, out => { out.set(hh.x, 2.8, hh.z); return 0; }, 0.35, 1.4, () => { rm(mesh); hh.love = Math.min(100, hh.love + (ty === 'apple' ? 32 : ty === 'carrot' ? 24 : 13)); hh.eatT = 1.4; hearts(hh.x, 3.7, hh.z, 3); sfx('happy'); stats.fed = (stats.fed || 0) + 1; }); }
+function updateFW(w, dt, t) {
+  workerPop(w, dt); w.cd -= dt; const gp = w.group.position; let mv = 0; w.age += dt;
+  const key = w.role; let tx = null, tz = null;
+  if (key === 'groom') {
+    const needy = RH.filter(h => h.love < 80).sort((a, b) => a.love - b.love)[0], lowAny = RH.some(h => h.love < 92);
+    if (w.state === 'idle') { if (w.stack.length > 0 && (needy || w.stack.length >= fwCap())) w.state = 'deliver'; else if (needy && !fwFull(w)) { w.state = 'fetch'; w.tgt = null; } else { tx = FWR.groom.home[0]; tz = FWR.groom.home[1]; if (w.stack.length > 0 && !needy) w.state = 'deliver'; } }
+    if (w.state === 'fetch') {
+      if (!w.tgt || w.tgt.t < 1 && w.tgt.m) { /* kaynak yeniden seç */ }
+      if (!w.tgt) { let best = null, bd = 1e9; const cand = []; for (const c of CARROTS) if (c.t >= 1 && !c.claim) cand.push(c); if (L_('orchard')) for (const a of APPLES) if (a.on && a.t >= 1 && !a.claim) cand.push(a); for (const c of cand) { const d = (c.x - gp.x) ** 2 + (c.z - gp.z) ** 2; if (d < bd) { bd = d; best = c; } } w.tgt = best || { hay: 1, x: RANCH.hay[0], z: RANCH.hay[1] }; if (best) best.claim = w; w.age = 0; }
+      const T_ = w.tgt; tx = T_.x; tz = T_.z; const d = Math.hypot(tx - gp.x, tz - gp.z);
+      if (d < 1.0) { if (T_.hay) { if (w.cd <= 0 && !fwFull(w)) { const it = ITEMF.hay(); it.position.set(RANCH.hay[0], 0.8, RANCH.hay[1] - 1.5); scene.add(it); sendToBack(w, it, 'hay', 1.2); w.cd = 0.2; } if (fwFull(w)) { w.state = 'deliver'; w.tgt = null; } else if (w.stack.count('hay') >= 4) { w.state = 'deliver'; w.tgt = null; } } else { const isA = !!T_.ox; T_.t = 0; const it = isA ? ITEMF.apple() : ITEMF.carrot(); it.position.set(T_.x, 0.5, T_.z); scene.add(it); sendToBack(w, it, isA ? 'apple' : 'carrot', 1.2); T_.claim = null; w.tgt = null; if (fwFull(w)) w.state = 'deliver'; } }
+      else if (w.age > 14) { fwRelease(w); w.state = 'idle'; }
+    } else if (w.state === 'deliver') {
+      tx = RANCH.feed[0]; tz = RANCH.feed[1] + 0.6; const d = Math.hypot(tx - gp.x, tz - gp.z);
+      if (d < 1.6 && w.cd <= 0) { const ty = w.stack.count('apple') > 0 ? 'apple' : w.stack.count('carrot') > 0 ? 'carrot' : w.stack.count('hay') > 0 ? 'hay' : null; let best = null; for (const h of RH) if (h.love < 96 && (!best || h.love < best.love)) best = h; if (ty && best) { const it = takeFromBack(w, ty); if (it) feedHorse(best, ty, it.mesh); w.cd = 0.3; } else if (!ty || !best) { w.state = 'idle'; } }
+      if (w.stack.length === 0 && w.incoming === 0) w.state = 'idle';
+    }
+  } else if (key === 'shep') {
+    if (w.state === 'idle') { if (w.stack.length >= fwCap() || (w.stack.length > 0 && !SHEEP.some(s => s.wool >= 1 && !s.claim))) w.state = 'deliver'; else if (SHEEP.some(s => s.wool >= 1 && !s.claim) && !fwFull(w)) w.state = 'fetch'; else { tx = FWR.shep.home[0]; tz = FWR.shep.home[1]; } }
+    if (w.state === 'fetch') {
+      if (!w.tgt) { let best = null, bd = 1e9; for (const s of SHEEP) if (s.wool >= 1 && !s.claim) { const d = (s.x - gp.x) ** 2 + (s.z - gp.z) ** 2; if (d < bd) { bd = d; best = s; } } if (best) { best.claim = w; w.tgt = best; w.age = 0; } else w.state = 'idle'; }
+      if (w.tgt) { const s = w.tgt; tx = s.x; tz = s.z; if (s.wool < 1) { fwRelease(w); w.state = 'idle'; } else if (Math.hypot(s.x - gp.x, s.z - gp.z) < 1.3) { s.wool = 0.02; const it = ITEMF.wool(); it.position.set(s.x, 1.2, s.z); scene.add(it); sendToBack(w, it, 'wool', 1.2); sparkles(s.x, 1.2, s.z, 5, 0xffffff, 0.4); stats.sheared = (stats.sheared || 0) + 1; fwRelease(w); w.state = 'idle'; } else if (w.age > 12) { fwRelease(w); w.state = 'idle'; } }
+    } else if (w.state === 'deliver') {
+      const k = WS.knit; tx = k.inXY[0]; tz = k.inXY[1]; if (Math.hypot(tx - gp.x, tz - gp.z) < 1.4) { if (w.cd <= 0 && w.stack.count('wool') > 0 && k.inStack.length + k.inStack.pend < 16) { dropTo(k.inStack, w, 'wool'); w.cd = 0.12; } else if (w.stack.count('wool') === 0 || k.inStack.length + k.inStack.pend >= 16) w.state = 'idle'; }
+      if (w.stack.length === 0 && w.incoming === 0) w.state = 'idle';
+    }
+  } else if (key === 'seller') {
+    const srcs = [WS.knit, WS.cheese].filter(q => q && q.on && q.outStack.length > 0);
+    const needMilk = WS.cheese.on && potOutput && potOutput.length >= 6 && WS.cheese.inStack.length + WS.cheese.inStack.pend < 6;
+    if (w.state === 'idle' && needMilk && w.stack.length === 0) w.state = 'milkFetch';
+    if (w.state === 'milkFetch') { tx = potOutZone.x; tz = potOutZone.z; if (Math.hypot(tx - gp.x, tz - gp.z) < 1.5) { if (w.cd <= 0 && w.stack.count('pot') < 4 && potOutput.length > 4) { const it = potOutput.takeLast('pot'); if (it) { bouquetPose(it.mesh, false); it.mesh.getWorldPosition(_w); scene.add(it.mesh); it.mesh.position.copy(_w); sendToBack(w, it.mesh, 'pot', 1.4); } w.cd = 0.12; } else if (w.cd <= 0 && w.incoming === 0) w.state = w.stack.count('pot') ? 'milkDrop' : 'idle'; } }
+    else if (w.state === 'milkDrop') { const k = WS.cheese; tx = k.inXY[0]; tz = k.inXY[1]; if (Math.hypot(tx - gp.x, tz - gp.z) < 1.4) { if (w.cd <= 0 && w.stack.count('pot') > 0 && k.inStack.length + k.inStack.pend < 16) { dropTo(k.inStack, w, 'pot'); w.cd = 0.12; } else if (w.stack.count('pot') === 0 || k.inStack.length + k.inStack.pend >= 16) w.state = 'idle'; } }
+    else if (w.state === 'idle') { if (w.stack.length > 0 && (w.stack.length >= fwCap() || !srcs.length)) w.state = 'deliver'; else if (srcs.length && !fwFull(w)) w.state = 'fetch'; else { tx = FWR.seller.home[0]; tz = FWR.seller.home[1]; } }
+    if (w.state === 'fetch') { const q = w.tgt && w.tgt.outStack ? w.tgt : null; const s = q && q.outStack.length > 0 ? q : srcs.sort((a, b) => b.outStack.length - a.outStack.length)[0]; if (!s) w.state = w.stack.length ? 'deliver' : 'idle'; else { w.tgt = s; tx = s.outXY[0]; tz = s.outXY[1]; if (Math.hypot(tx - gp.x, tz - gp.z) < 1.4) { if (w.cd <= 0 && !fwFull(w) && s.outStack.length > 0) { fwPickStack(w, s.outStack, s.outType); w.cd = 0.12; } if (fwFull(w) || s.outStack.length === 0) { w.state = 'deliver'; w.tgt = null; } } } }
+    else if (w.state === 'deliver') { tx = SHP.sell[0]; tz = SHP.sell[1]; if (Math.hypot(tx - gp.x, tz - gp.z) < 1.5) { if (w.cd <= 0) { const ty = w.stack.count('sweater') > 0 ? 'sweater' : w.stack.count('cheese') > 0 ? 'cheese' : null; if (ty) { const it = takeFromBack(w, ty), v = Math.round((ty === 'sweater' ? WS.knit.price : WS.cheese.price) * (1 + 0.1 * S.lv.ticket)); fly(it.mesh, out => { out.set(SHP.sell[0], 2, SHP.sell[1] - 2.6); return 0; }, 0.3, 1.2, () => { rm(it.mesh); payDirect(SHP.sell[0], SHP.sell[1] - 2, v, ''); stats['s_' + ty] = (stats['s_' + ty] || 0) + 1; }); w.cd = 0.15; } else if (w.incoming === 0) w.state = 'idle'; } } if (w.stack.length === 0 && w.incoming === 0) w.state = 'idle'; }
+  }
+  if (tx !== null) { const d = fwGo(w, tx, tz, dt); mv = d > 0.3 ? 1 : 0; } else w.vel.set(0, 0, 0);
+  // salınım koruması: aynı durumda uzun süre ilerleyemiyorsa serbest bırak
+  w.wd = (w.wd || 0) + dt; const ld = w.stack.length + w.incoming; if (w.wst !== w.state || w.wld !== ld || w.state === 'idle') { w.wst = w.state; w.wld = ld; w.wd = 0; } if (w.wd > 40) { fwRelease(w); w.state = w.stack.length ? 'deliver' : 'idle'; w.wd = 0; stats.fwReset = (stats.fwReset || 0) + 1; }
+  updateSway(w, dt); animChar(w, dt, mv, t); w.stack.update(dt, t);
+}
+function buildFWPads() {
+  Object.assign(UPG, { groom: { name: 'Seyis', costs: [5000] }, groomN: { name: '+1 Seyis', costs: [6000, 14000] }, shep: { name: 'Çoban', costs: [4500] }, shepN: { name: '+1 Çoban', costs: [5500, 13000] }, seller: { name: 'Pazarcı', costs: [4000] }, sellerN: { name: '+1 Pazarcı', costs: [5000, 12000] }, fwSpd: { name: 'Çalışan Hızı', costs: geo(300, 5) }, fwCap: { name: 'Çalışan Kapasite', costs: geo(340, 5) } });
+  for (const k of ['groomN', 'shep', 'shepN', 'seller', 'sellerN', 'fwSpd', 'fwCap']) if (S.lv[k] === undefined) S.lv[k] = 0;
+  const mkp = (key, x, z, icon, vis, sub) => { const u = new UpgradePad(key, x, z, icon); u.vis = vis; UPG[key].sub = sub; upPads[key] = u; return u; };
+  const hire = k => () => S.lv[k] > 0, nohire = k => () => S.lv[k] === 0, nTxt = r => () => (1 + (S.lv[r.cnt] || 0)) + ' → ' + (2 + (S.lv[r.cnt] || 0)) + ' çalışan';
+  mkp('groom', -2.2, -29.4, iconHelper, () => R_(), () => 'Atlara yem taşır'); mkp('groomN', -2.2, -29.4, iconHelper, () => S.lv.groom > 0, nTxt(FWR.groom));
+  mkp('shep', -4.6, 36.8, iconHelper, () => L_('sheep') && L_('knit'), () => 'Yün toplar, atölyeye taşır'); mkp('shepN', -4.6, 36.8, iconHelper, () => S.lv.shep > 0, nTxt(FWR.shep));
+  mkp('seller', 3.4, 31.6, iconHelper, () => L_('knit') || L_('cheese'), () => 'Ürünleri pazarda satar'); mkp('sellerN', 3.4, 31.6, iconHelper, () => S.lv.seller > 0, nTxt(FWR.seller));
+  mkp('fwSpd', 14.6, -33.2, iconBolt, () => S.lv.groom > 0 || S.lv.shep > 0 || S.lv.seller > 0, () => 'Çalışanlar daha hızlı'); mkp('fwCap', 18.6, -33.2, iconBackpack, () => S.lv.groom > 0 || S.lv.shep > 0 || S.lv.seller > 0, () => 'Çalışan taşıma ' + fwCap() + ' → ' + (fwCap() + 3));
+  for (const k of ['groom', 'shep', 'seller']) HIREK.add(k);
+  Object.assign(MAIN_UNLOCKS, { groom: 1, shep: 1, seller: 1 });
+  EXTAPPLY.groom = i => fwSync('groom', i); EXTAPPLY.groomN = i => fwSync('groom', i); EXTAPPLY.shep = i => fwSync('shep', i); EXTAPPLY.shepN = i => fwSync('shep', i); EXTAPPLY.seller = i => fwSync('seller', i); EXTAPPLY.sellerN = i => fwSync('seller', i);
+  const ga = GOALS.findIndex(g => g.key === 'ata'); GOALS.splice(ga + 1, 0, { key: 'groom', lv: 1 });
+  const gk = GOALS.findIndex(g => g.key === 'knit'); GOALS.splice(gk + 1, 0, { key: 'shep', lv: 1 }, { key: 'seller', lv: 1 });
+  const gs = GOALS.findIndex(g => g.key === 'show'); GOALS.splice(gs + 1, 0, { key: 'groomN', lv: 1 }, { key: 'fwSpd', lv: 1 }, { key: 'fwCap', lv: 1 }, { key: 'shepN', lv: 1 }, { key: 'sellerN', lv: 1 }, { key: 'fwSpd', lv: 2 }, { key: 'fwCap', lv: 2 }, { key: 'groomN', lv: 2 }, { key: 'shepN', lv: 2 }, { key: 'sellerN', lv: 2 }, { key: 'fwSpd', lv: 3 }, { key: 'fwCap', lv: 3 }, { key: 'fwSpd', lv: 4 }, { key: 'fwCap', lv: 4 }, { key: 'fwSpd', lv: 5 }, { key: 'fwCap', lv: 5 });
+  for (const k in GFIRST) delete GFIRST[k]; GOALS.forEach((g, i) => { if (GFIRST[g.key] === undefined) GFIRST[g.key] = i; });
+}
+function updateFWs(dt, t) { for (const w of FWU) updateFW(w, dt, t); }
 
 /* =====================================================================
    AT MODELİ: kutu/küre/silindirlerden; vertex-color; 14 mesh (gövde, boyun, kafa, 2 kulak, kuyruk, 8 bacak)
@@ -4106,7 +4190,7 @@ woodFenceBox(-17.85, 0, 0.8, 23.2); woodFenceBox(-14, -11.35, 7.4, 0.8); woodFen
 woodFenceBox(13.6, 12.9, 4.2, 0.9); woodFenceBox(5.2, 12.9, 6.4, 0.9);
 buildDecorFlowers();
 for (let i = 0; i < 3; i++) buildBed(i);
-buildStations(); buildDecor(); buildSera(); buildVan(); buildZones(); buildPlayer(); LANES.bouquet = shelfB; LANES.pot = shelfP; buildRanch(); buildFarm(); finalizeWorld();
+buildStations(); buildDecor(); buildSera(); buildVan(); buildZones(); buildPlayer(); LANES.bouquet = shelfB; LANES.pot = shelfP; buildRanch(); buildFarm(); buildFWPads(); finalizeWorld();
 /* ---- C6: pad alt yazıları (etkisi belli olmayan her pad) ---- */
 { const L = k => S.lv[k] || 0, T = x => () => x, N = (k, w) => () => 'Şu an ' + (1 + L(k)) + ' ' + w, PC = (k, v) => () => '%' + v * (L(k) + 1);
   const PADSUB = { sera: T('Süt şişesi yapar'), van: T('Sipariş teslim eder'), cashier: T('Satışı yapar'), carrier: T('Ürün taşır'), cashSpd: T('Daha hızlı satış'), carSpd: T('Daha hızlı taşır'), carCap: () => 'Taşıma ' + (6 + 4 * L('carCap')) + ' → ' + (10 + 4 * L('carCap')),
@@ -4162,7 +4246,7 @@ window.__game = {
   path(tx, tz) { return findPath(P.group.position.x, P.group.position.z, tx, tz); }, colliders,
   EXTZ, STN, GARD, GROLES, roleEvolve, give(type, n) { n = Math.min(n, Math.max(0, P.free())); for (let i = 0; i < n; i++) P.stack.add(['orchid', 'lav', 'sun', 'rosep', 'flower'].includes(type) ? makeFlowerItem(0, type === 'flower' ? 'tulip' : type) : makeItemOf(type), type); },
   bot(x, z) { BOT = (x || z) ? { x, z } : null; if (BOT) hideIntro(); }, hideIntro, objective() { objective(_obj); return Object.assign({}, _obj); }, get goal() { return curGoal; }, GOALS, UPG,
-  RH, RC, SHOW, ranchPile: () => ranchPile, RANCH, toggleRide, S, stats, P: () => P, queue, beds, machine, inputPile, outputPile, moneyPile, get shelf() { return shelfB; }, get shelfP() { return shelfP; }, get potInput() { return potInput; }, get potOutput() { return potOutput; }, get zone2() { return zone2; }, get zone3() { return zone3; }, VAN, get vanLoad() { return vanLoad; }, get vanPile() { return vanPile; }, get cashier() { return cashier; }, get carrier() { return carrier; }, upPads, zones, customers, CFG, POS,
+  FWU, RH, RC, SHOW, ranchPile: () => ranchPile, RANCH, toggleRide, S, stats, P: () => P, queue, beds, machine, inputPile, outputPile, moneyPile, get shelf() { return shelfB; }, get shelfP() { return shelfP; }, get potInput() { return potInput; }, get potOutput() { return potOutput; }, get zone2() { return zone2; }, get zone3() { return zone3; }, VAN, get vanLoad() { return vanLoad; }, get vanPile() { return vanPile; }, get cashier() { return cashier; }, get carrier() { return carrier; }, upPads, zones, customers, CFG, POS,
   helper: () => helper,
   carry(n) { while (P.stack.length) P.stack.items.pop(); n = Math.min(n, P.capFn()); for (let i = 0; i < n; i++) P.stack.add(makeFlowerItem(0, "tulip"), "flower"); },
   tp(x, z) { P.group.position.set(x, 0, z); P.vel.set(0, 0, 0); camInit = false; },
