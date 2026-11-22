@@ -1931,7 +1931,7 @@ let zone3 = null, vanLoad, vanPile, vanZone, vanMoneyZone;
 const VZ = { x0: 12.6, x1: 24.4, z0: 16.6, z1: 32 };
 const VAN = { state: 'parked', group: null, wheels: [], hud: null, sum: 0, trip: 0, path: [], seg: 0, speed: 0, yaw: -Math.PI / 2, sig: '', doors: [], x: 16.2, z: 24 };
 /* C4: her sefer farklı bir istek; araç türü isteğin büyüklüğüne göre (Bisiklet / Araba / Kamyonet / Kamyon) */
-const VKINDS = [{ id: 'bike', n: 'Bisiklet', cap: 3, nt: 1, mult: 2.0, sc: 0.45 }, { id: 'car', n: 'Araba', cap: 5, nt: 2, mult: 2.3, sc: 0.75 }, { id: 'pick', n: 'Kamyonet', cap: 8, nt: 2, mult: 2.6, sc: 1.0 }, { id: 'truck', n: 'Kamyon', cap: 12, nt: 3, mult: 3.0, sc: 1.3 }];
+const VKINDS = [{ id: 'bike', n: 'Küçük Sipariş', cap: 3, nt: 1, mult: 2.0, sc: 0.45 }, { id: 'car', n: 'Orta Sipariş', cap: 5, nt: 2, mult: 2.3, sc: 0.75 }, { id: 'pick', n: 'Büyük Sipariş', cap: 8, nt: 2, mult: 2.6, sc: 1.0 }, { id: 'truck', n: 'Dev Sipariş', cap: 12, nt: 3, mult: 3.0, sc: 1.3 }];
 VAN.req = null;
 const vanCap = () => VAN.req ? VAN.req.cap : 8;
 const vanNeed = t => VAN.req ? (VAN.req.need[t] || 0) - (VAN.req.got[t] || 0) : 0;
@@ -1985,7 +1985,7 @@ function buildVan() {
   VAN.wheels = [];
   for (const wx of [-1.2, 1.2]) for (const wz of [-1.4, 1.7]) { const wh = new THREE.Mesh(new THREE.CylinderGeometry(0.46, 0.46, 0.32, 14), dk); wh.rotation.z = Math.PI / 2; wh.position.set(wx, 0.46, wz); const hub = mk(G.cyl, mat(0xb8bec8), 0.2, 0.34, 0.2, 0, 0, 0); wh.add(hub); vg.add(wh); VAN.wheels.push(wh); }
   shadowAll(vg, true, false);
-  VAN.hud = makeSprite(512, 200, () => {}, 7.4, 3.0, false); VAN.hud.position.set(0, 5.2, 0); vg.add(VAN.hud);
+  VAN.hud = makeSprite(512, 200, () => {}, 5.2, 2.03, false); VAN.hud.position.set(0, 5.2, 0); vg.add(VAN.hud);
   vanLoad = new Stack(scene, (i, out) => { out.set(19.55 + (i % 2) * 0.8, 0.5, 24 + (Math.floor(i / 2) - 1.5) * 0.85); }, 12); vanLoad.pend = 0;
   vanPile = new Stack(scene, (i, out) => { const per = 12, l = Math.floor(i / per), r = i % per; out.set(16.2 + ((r % 3) - 1) * 0.98, 0.14 + l * 0.14, 19.6 + (Math.floor(r / 3) - 1.5) * 0.6); }, 60); vanPile.extra = 0; vanPile.jitter = 0.07;
   const plate = rbox(3.1, 0.08, 2.5, 0.04, mat(0x9ee59a)); ad(rd, plate, 16.2, 0.06, 19.6);
@@ -3867,7 +3867,7 @@ function updateFarm(dt, t) {
   if (L_('zoo')) { ZV.t = (ZV.t === undefined ? 4 : ZV.t) - dt; if (ZV.t <= 0) { ZV.t = Math.max(4, 12 - 2.5 * ZANI.length); if (ZV.length < 3 + ZANI.length) { const c = newRider(); c.x = 10.2; c.z = 36; c.group.position.set(c.x, 0, c.z); ZV.push({ c, st: 'in', wp: [[10.2, 34.5], [20, 34.6], [25, 30], [26.6, 24.5], [29, 22.5], [32 + rand(-2, 2), 20 + rand(0, 6)]], t: 0 }); } }
     for (let i = ZV.length - 1; i >= 0; i--) { const v = ZV[i], c = v.c; let mv = 0; if (v.st === 'in' || v.st === 'out') { const w = v.wp[0], d = stepTo(c, w[0], w[1], 4.5, dt); mv = 1; if (d < 0.4) { v.wp.shift(); if (!v.wp.length) { if (v.st === 'in') { v.st = 'look'; v.t = 5; } else { rm(c.group); ZV.splice(i, 1); continue; } } } } else if (v.st === 'look') { mv = 0; v.t -= dt; if (Math.random() < dt * 0.8) hearts(c.x, 3.4, c.z, 1); const an = ZANI[0]; if (an) faceChar(c, an.x - c.x, an.z - c.z, dt); if (v.t <= 0) { const val = Math.round((60 + 25 * ZANI.length) * (1 + 0.18 * S.lv.ticket)); payDirect(c.x, c.z, val, ''); v.st = 'out'; v.wp = [[29, 22.5], [26.6, 24.5], [25, 30], [20, 34.6], [10.2, 34.5], [10.2, 40]]; } } animChar(c, dt, mv, t); } }
   // final kutlama
-  if (!S.seen.fin && S.lv.ranch && S.lv.show && S.lv.sheep && S.lv.knit && S.lv.cheese && S.lv.zoo && S.lv.orchard && S.lv.foal && S.lv.ata && S.lv.horse >= 4) { S.seen.fin = 1; saveDirty = true; praise('ÇİFTLİK TAMAMLANDI!', true); flash(); for (let k = 0; k < 10; k++) later(k * 0.4, () => fireworks(gp.x + rand(-8, 8), gp.z + rand(-6, 6))); confetti(gp.x, 4, gp.z, 120); }
+  if (!S.seen.fin && S.lv.ranch && S.lv.show && S.lv.sheep && S.lv.knit && S.lv.cheese && S.lv.zoo && S.lv.orchard && S.lv.foal && S.lv.ata && S.lv.horse >= 4) { S.seen.fin = 1; saveDirty = true; praise('ÇİFTLİK TAMAMLANDI!', true); flash(); for (let k = 0; k < 10; k++) later(k * 0.4, () => fireworks(gp.x + rand(-8, 8), gp.z + rand(-6, 6))); confetti(gp.x, 4, gp.z, 120); later(2.5, () => chapShow('<div class="big">Tebrikler!</div><div class="ct">Çiftlik tamamlandı</div><div class="cs">Yeni bölümler yakında!</div>', [{ t: 'Devam' }])); }
 }
 function updateWorkshop(w, dt, t) {
   if (!w.on) return; const o = w;
@@ -4092,10 +4092,6 @@ function iconGate(ctx, cx, cy, s) {
   rrect(ctx, cx - s * 0.42, cy - s * 0.3, s * 0.16, s * 0.74, s * 0.04); ctx.fill(); ctx.stroke(); rrect(ctx, cx + s * 0.26, cy - s * 0.3, s * 0.16, s * 0.74, s * 0.04); ctx.fill(); ctx.stroke(); rrect(ctx, cx - s * 0.5, cy - s * 0.44, s, s * 0.2, s * 0.05); ctx.fill(); ctx.stroke();
   ctx.fillStyle = '#ffd23f'; ctx.beginPath(); ctx.moveTo(cx - s * 0.16, cy - s * 0.06); ctx.lineTo(cx + s * 0.04, cy - s * 0.06); ctx.lineTo(cx + s * 0.04, cy - s * 0.18); ctx.lineTo(cx + s * 0.24, cy + s * 0.06); ctx.lineTo(cx + s * 0.04, cy + s * 0.3); ctx.lineTo(cx + s * 0.04, cy + s * 0.18); ctx.lineTo(cx - s * 0.16, cy + s * 0.18); ctx.closePath(); ctx.fill(); ctx.stroke();
 }
-function initGatePad() {
-  extPad('gate', 'Hayvan Çiftliği', [750000], 5.4, -160.5, iconGate, () => unlockedZ('mus')).autoShow = true; UPG.gate.sub = () => 'Sonraki bölüm';
-  EXTAPPLY.gate = i => { bolWrite(o => { o.open.push(3); }); if (!i) { praise('SIRADAKİ BÖLÜM AÇILDI!', true); flash(); confetti(5.4, 3, -164, 90); for (let k = 0; k < 6; k++) later(k * 0.25, () => fireworks(5.4 + rand(-6, 6), -166 + rand(-3, 3))); } };
-}
 
 buildFarmGround(); buildBeach(); buildFences();
 // koop çevresi: ahşap çit (çarpışma kutuları eski çalılarla aynı)
@@ -4104,7 +4100,6 @@ woodFenceBox(13.6, 12.9, 4.2, 0.9); woodFenceBox(5.2, 12.9, 6.4, 0.9);
 buildDecorFlowers();
 for (let i = 0; i < 3; i++) buildBed(i);
 buildStations(); buildDecor(); buildSera(); buildVan(); buildZones(); buildPlayer(); LANES.bouquet = shelfB; LANES.pot = shelfP; buildRanch(); buildFarm(); finalizeWorld();
-initGatePad();
 /* ---- C6: pad alt yazıları (etkisi belli olmayan her pad) ---- */
 { const L = k => S.lv[k] || 0, T = x => () => x, N = (k, w) => () => 'Şu an ' + (1 + L(k)) + ' ' + w, PC = (k, v) => () => '%' + v * (L(k) + 1);
   const PADSUB = { sera: T('Süt şişesi yapar'), van: T('Sipariş teslim eder'), cashier: T('Satışı yapar'), carrier: T('Ürün taşır'), cashSpd: T('Daha hızlı satış'), carSpd: T('Daha hızlı taşır'), carCap: () => 'Taşıma ' + (6 + 4 * L('carCap')) + ' → ' + (10 + 4 * L('carCap')),
