@@ -220,7 +220,7 @@ function rm(o) { if (o && o.parent) o.parent.remove(o); }
 let fountainWater = null, clouds = [], butterflies = [];
 let LOADED_X = null, carpet1 = null, carpet2 = null;
 const MAIN_UNLOCKS = { bed: 1, helper: 1, cashier: 1, carrier: 1, sera: 1, van: 1 };
-const S = { money: 0, lv: { cap: 0, speed: 0, pack: 0, bed: 0, helper: 0, cashier: 0, carrier: 0, cashSpd: 0, carSpd: 0, carCap: 0, helpSpd: 0, sera: 0, van: 0, lav: 0, lavW: 0, keseSpd: 0, parf: 0, parfW: 0, parfSpd: 0, cafe: 0, cafeW: 0, teaSpd: 0, wed: 0, wedBonus: 0, sunf: 0, sunW: 0, sbqSpd: 0, city: 0, cityW: 0, citySpd: 0, stars: 0, bee: 0, beeW: 0, hiveN: 0, hiveSpd: 0, honSpd: 0, jap: 0, bonW: 0, bonSpd: 0, coll: 0, port: 0, portW: 0, portBonus: 0, fest: 0, festBonus: 0, mus: 0, musTkt: 0, wedW: 0, portSpd: 0, portCap: 0, helpCap: 0, helperN: 0, helperT: 0, lavCap: 0, lavN: 0, lavT: 0, parfCap: 0, parfN: 0, parfT: 0, cafeG: 0, cafeGCap: 0, cafeGN: 0, cafeGT: 0, sunCap: 0, sunN: 0, bonCap: 0, bonN: 0, bonT: 0, carN: 0, cashN: 0, wedSpd: 0, potSpd: 0, bus: 0, busSpd: 0, busCap: 0, busN: 0, wedN: 0, waitN: 0, cityN: 0, portN: 0, beeN: 0, gate: 0 }, ic: 0, tut: 0, tier: { pack: 0, flo: 0, pot: 0, van: 0, kese: 0, parf: 0, tea: 0, wed: 0, city: 0, hon: 0, bon: 0 }, decor: {}, cos: { hat: 'straw', fit: 0, uni: 0, floor: 0, own: [] }, dn: 0,
+const S = { money: 0, lv: { cap: 0, speed: 0, pack: 0, bed: 0, helper: 0, cashier: 0, carrier: 0, cashSpd: 0, carSpd: 0, carCap: 0, helpSpd: 0, sera: 0, van: 0, lav: 0, lavW: 0, keseSpd: 0, parf: 0, parfW: 0, parfSpd: 0, cafe: 0, cafeW: 0, teaSpd: 0, wed: 0, wedBonus: 0, sunf: 0, sunW: 0, sbqSpd: 0, city: 0, cityW: 0, citySpd: 0, stars: 0, bee: 0, beeW: 0, hiveN: 0, hiveSpd: 0, honSpd: 0, jap: 0, bonW: 0, bonSpd: 0, coll: 0, port: 0, portW: 0, portBonus: 0, fest: 0, festBonus: 0, mus: 0, musTkt: 0, wedW: 0, portSpd: 0, portCap: 0, helpCap: 0, helperN: 0, helperT: 0, lavCap: 0, lavN: 0, lavT: 0, parfCap: 0, parfN: 0, parfT: 0, cafeG: 0, cafeGCap: 0, cafeGN: 0, cafeGT: 0, sunCap: 0, sunN: 0, bonCap: 0, bonN: 0, bonT: 0, carN: 0, cashN: 0, wedSpd: 0, potSpd: 0, boat: 0, boatN: 0, boatSpd: 0, boatCap: 0, bus: 0, busSpd: 0, busCap: 0, busN: 0, wedN: 0, waitN: 0, cityN: 0, portN: 0, beeN: 0, gate: 0 }, ic: 0, tut: 0, tier: { pack: 0, flo: 0, pot: 0, van: 0, kese: 0, parf: 0, tea: 0, wed: 0, city: 0, hon: 0, bon: 0 }, decor: {}, cos: { hat: 'straw', fit: 0, uni: 0, floor: 0, own: [] }, dn: 0,
   cb: {}, cs: [], pt: { n: 0, cur: null }, fe: { n: 0, t: 420 }, q: { a: [], n: 0 }, bx: 0, ts: 0, op: 0, mv: 0, seen: {} };
 let saveDirty = false, saveTimer = 0;
 let introDone = false, curGoal = null, curGoalIdx = -1, lastGoalIdx = -2;
@@ -789,10 +789,10 @@ function dust(x, y, z, n, size) { for (let i = 0; i < (n || 1); i++) emit({ x: x
 /* ground shock rings */
 const rings = [];
 const ringGeo = new THREE.RingGeometry(0.82, 1, 40);
-function ring(x, z, color, size) {
+function ring(x, z, color, size, y) {
   let r = rings.find(q => !q.on);
   if (!r) { const m = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, depthWrite: false })); m.rotation.x = -Math.PI / 2; m.renderOrder = 4; scene.add(m); r = { m, on: false }; rings.push(r); }
-  r.on = true; r.t = 0; r.size = size || 4; r.m.material.color.copy(lc(color)); r.m.position.set(x, 0.08, z); r.m.visible = true;
+  r.on = true; r.t = 0; r.size = size || 4; r.m.material.color.copy(lc(color)); r.m.position.set(x, y === undefined ? 0.08 : y, z); r.m.visible = true;
 }
 function vib(ms) { try { if (navigator.vibrate) navigator.vibrate(ms); } catch (e) {} }
 function updateParticles(dt) {
@@ -1211,7 +1211,7 @@ const decorFlowers = [];
 /* =====================================================================
    SAHİL: deniz, havuz (balık noktaları), palmiye, şemsiye, iskele, deniz feneri, martılar
    ===================================================================== */
-const SEAT = { value: 0 };
+const SEAT = { value: 0 }, WATER_Y = -0.3;
 function seaTex(base, line, rep, ln) {
   const c = cv(128, 128), x = c.getContext('2d'); x.fillStyle = base; x.fillRect(0, 0, 128, 128); x.strokeStyle = line; x.lineWidth = 3;
   for (let i = 0; i < (ln || 10); i++) { const y = i * 13 + 4; x.beginPath(); x.moveTo(0, y); x.bezierCurveTo(30, y - 6, 60, y + 6, 128, y); x.stroke(); }
@@ -1287,23 +1287,19 @@ function updateGulls(t) {
 }
 function buildBeach() {
   // deniz + köpük
-  const mk2 = (x0, x1, z0, z1, rx, ry) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(1, 1, Math.max(4, Math.round((x1 - x0) / 2)), Math.max(4, Math.round((z1 - z0) / 2))), seaMat('#2a8fc4', 'rgba(255,255,255,.38)', rx, ry, 1, 0.96)); m.rotation.x = -Math.PI / 2; m.scale.set(x1 - x0, z1 - z0, 1); m.position.set((x0 + x1) / 2, 0.045, (z0 + z1) / 2); m.userData.dyn = true; m.renderOrder = 1; world.add(m); return m; };
-  mk2(-110, -28.5, -128, 46, 14, 22); mk2(-28.6, -10.4, -12.6, 13.2, 5, 8); mk2(48, 130, -150, 46, 10, 22); mk2(-110, 130, 44, 120, 30, 8);
+  { const m = new THREE.Mesh(new THREE.PlaneGeometry(1, 1, 70, 70), seaMat('#2a8fc4', 'rgba(255,255,255,.38)', 110, 110, 1, 0.97)); m.rotation.x = -Math.PI / 2; m.scale.set(700, 700, 1); m.position.set(-30, WATER_Y, 0); m.userData.dyn = true; m.renderOrder = 1; world.add(m); }
   const foamT = (() => { const fc = cv(256, 32), fx = fc.getContext('2d'); fx.fillStyle = '#fff'; for (let i = 0; i < 9; i++) { fx.beginPath(); fx.ellipse(14 + i * 28 + (i % 2) * 5, 16 + Math.sin(i * 1.7) * 5, 13 + (i % 3) * 3, 4, 0, 0, TAU); fx.fill(); } return fc; })();
-  const foam = (x, z, w, d, rot) => { const t = canvasTex(foamT, [Math.max(1, w / 6), Math.max(1, d / 6)]); const f = new THREE.Mesh(G.plane, new THREE.MeshBasicMaterial({ map: t, transparent: true, opacity: 0.7, depthWrite: false, fog: false })); f.rotation.x = -Math.PI / 2; f.rotation.z = rot || 0; f.scale.set(w, d, 1); f.position.set(x, 0.06, z); f.userData.dyn = true; f.renderOrder = 2; world.add(f); BEACH.foam.push(f); };
-  foam(-28.2, -41, 1.8, 172); foam(-10.5, 0.3, 1.6, 25.8); foam(48.6, -52, 1.8, 196); foam(0, 44.6, 240, 1.8);
-  // ıslak kum şeritleri
-  const wet = (x, z, w, d) => { const m = new THREE.Mesh(G.plane, LM({ color: lc(0xd9bf84) })); m.rotation.x = -Math.PI / 2; m.scale.set(w, d, 1); m.position.set(x, 0.012, z); m.receiveShadow = true; world.add(m); };
-  wet(-26.6, -41, 3.4, 172); wet(-9.4, 0.3, 2.4, 25.8); wet(46.6, -52, 3.4, 196); wet(0, 42.6, 240, 3.4);
+  const foam = (x, z, w, d) => { const t = canvasTex(foamT, [Math.max(1, w / 6), Math.max(1, d / 6)]); const f = new THREE.Mesh(G.plane, new THREE.MeshBasicMaterial({ map: t, transparent: true, opacity: 0.75, depthWrite: false, fog: false })); f.rotation.x = -Math.PI / 2; f.scale.set(w, d, 1); f.position.set(x, WATER_Y + 0.012, z); f.userData.dyn = true; f.renderOrder = 2; world.add(f); BEACH.foam.push(f); };
+  foam(-29.3, -106, 1.7, 187); foam(-29.3, 28.6, 1.7, 30.8); foam(-19.4, -13.4, 18.2, 1.6); foam(-11.2, 0.3, 1.6, 25.8); foam(-19.4, 12.4, 18.2, 1.6); foam(48.9, -78, 1.7, 244); foam(10, 44.9, 77, 1.7);
   buildBayHub();
   // deniz feneri (batı açıkları) + kayalar
-  { const isl = [part(G.cyl, 0xe9d49a, 0, 0.1, 0, 9, 0.35, 7), part(G.cyl, 0xd9bf84, 0, 0.05, 0, 11, 0.2, 9)]; const im = new THREE.Mesh(mergeParts(isl), vcMat); im.position.set(-52, 0.02, -12.5); world.add(im); palm(world, -48.5, -10.5, 0.9); palm(world, -55, -9.8, 0.8); }
+  { const isl = [part(G.cyl, 0xe9d49a, 0, -0.05, 0, 9, 0.6, 7), part(G.cyl, 0xd9bf84, 0, -0.15, 0, 11, 0.5, 9)]; const im = new THREE.Mesh(mergeParts(isl), vcMat); im.position.set(-52, 0.02, -12.5); world.add(im); palm(world, -48.5, -10.5, 0.9); palm(world, -55, -9.8, 0.8); }
   lighthouse(world, -52, -13.5, 1.25);
-  for (const [x, z, s] of [[-30, -7, 1.2], [-31.5, 12, 1.5], [-29, 17, 1.0], [50, 14, 1.3], [52, -20, 1.5], [49.5, -33, 1.1]]) world.add(mk(G.sphT, mat(0x8a8a86), s * 1.4, s * 0.8, s * 1.1, x, 0.2, z));
+  for (const [x, z, s] of [[-30, -7, 1.2], [-29, 17, 1.0], [50, 14, 1.3], [52, -20, 1.5], [49.5, -33, 1.1]]) world.add(mk(G.sphT, mat(0x8a8a86), s * 1.4, s * 0.8, s * 1.1, x, 0.2, z));
   // şemsiyeler + havlular (güney kumsal)
-  for (const [x, z, a, b] of [[-6, 17.5, 0x1d6fb8, 0xffffff], [-12, 22, 0xff6f61, 0xffffff], [2, 23, 0x1d6fb8, 0xffffff], [-3, 28, 0xff6f61, 0xffffff], [-16, 17, 0x1d6fb8, 0xffffff], [4, 30, 0xff6f61, 0xffffff]]) umbrella(world, x, z, a, b);
+  for (const [x, z, a, b] of [[-6, 17.5, 0x1d6fb8, 0xffffff], [-12, 22, 0xff6f61, 0xffffff], [2, 23, 0x1d6fb8, 0xffffff], [-3, 28, 0xff6f61, 0xffffff], [4, 30, 0xff6f61, 0xffffff]]) umbrella(world, x, z, a, b);
   // palmiyeler
-  for (const [x, z, s] of [[-8, 15, 1.1], [-16, 16.5, 1.2], [-21.5, 24, 1.2], [-8, 26, 1.1], [1, 18, 1.0], [-16, 28, 1.2], [18, 14.5, 1.1], [18.5, -7.5, 1.2]]) palm(world, x, z, s);
+  for (const [x, z, s] of [[-8, 15, 1.1], [-8, 26, 1.1], [1, 18, 1.0], [-16, 28, 1.2], [18, 14.5, 1.1], [18.5, -7.5, 1.2]]) palm(world, x, z, s);
   initGulls();
 }
 
@@ -1325,23 +1321,23 @@ function buildBayHub() {
   // iskele: z=0 boyunca x -10.2 .. -27.6
   const P_ = [], wc = [0xb08550, 0xa07848, 0xbf9560];
   for (let i = 0; i < 18; i++) P_.push(part(G.box, wc[i % 3], -10.6 - i * 0.98, 0.02, 0, 0.94, 0.08, 3.1));
-  for (let i = 0; i < 9; i++) for (const sz of [-1.65, 1.65]) { P_.push(part(G.cyl, 0x5a3a1c, -11.2 - i * 2.0, 0.45, sz, 0.12, 1.1, 0.12), part(G.sph, 0x5a3a1c, -11.2 - i * 2.0, 1.0, sz, 0.15, 0.1, 0.15)); }
+  for (let i = 0; i < 9; i++) for (const sz of [-1.65, 1.65]) { P_.push(part(G.cyl, 0x5a3a1c, -11.2 - i * 2.0, 0.2, sz, 0.12, 1.7, 0.12), part(G.sph, 0x5a3a1c, -11.2 - i * 2.0, 1.0, sz, 0.15, 0.1, 0.15)); }
   for (const sz of [-1.65, 1.65]) P_.push(part(G.box, 0xf3ead8, -19.0, 0.82, sz, 17.4, 0.06, 0.06));
-  P_.push(part(G.cyl, 0x5a3a1c, -28.2, 0.5, 0, 0.2, 1.2, 0.2));
+  P_.push(part(G.cyl, 0x5a3a1c, -28.2, 0.2, 0, 0.2, 1.7, 0.2));
   const pier = new THREE.Mesh(mergeParts(P_), vcMat); pier.receiveShadow = true; pier.castShadow = true; world.add(pier);
   // sahil koyu (kıyıda deniz kolonu): denizdeki çarpışma
   addCollider(-28.4, -10.35, -13, -1.62); addCollider(-28.4, -10.35, 1.62, 13.4);
+  addCollider(-400, -28.4, -400, 400); addCollider(48.1, 400, -400, 400); addCollider(-400, 400, 44.1, 400); addCollider(-28.5, -10.35, -13.4, -12.5);
   // Ege evleri
   const H = [];
   aegeanHouse(H, -5.6, -9.4, 4.2, 2.8, 3.2, 0, 0x1d6fb8); aegeanHouse(H, 3.2, -9.4, 3.0, 2.4, 2.8, 0, 0xff6f61);
   aegeanHouse(H, -7.4, -14.8, 4.6, 3.2, 4.8, 0, 0x1d6fb8); aegeanHouse(H, 0.2, -14.8, 4.2, 3.2, 3.8, 0, 0x1d6fb8);
   aegeanHouse(H, 12.2, -14.8, 4.4, 3.2, 4.2, 0, 0x1d6fb8); aegeanHouse(H, 18.6, -14.8, 4.4, 3.2, 3.2, 0, 0xff6f61);
-  aegeanHouse(H, -11.2, -9.6, 3.0, 2.8, 2.6, 0, 0xff6f61);
   addCollider(-7.8, -3.4, -10.7, -7.7); addCollider(1.6, 4.8, -10.7, -8.1); addCollider(-9.2, -7.4, -11.2, -8.0);
   const hm = new THREE.Mesh(mergeParts(H), vcMat); hm.castShadow = true; hm.receiveShadow = true; world.add(hm);
   // yelkenliler (ufukta)
   const S_ = []; [[-62, 6, 0.6, 0xff6f61], [-75, -8, 2.3, 0x1d6fb8], [-84, 18, 1.2, 0x1d6fb8], [-68, 28, 0.2, 0xff6f61], [-96, -2, 0.9, 0xff6f61], [-58, -26, 1.9, 0x1d6fb8]].forEach(a => sailboatParts(S_, a[0], a[1], a[2], 0.9, a[3]));
-  const sb = new THREE.Mesh(mergeParts(S_), vcMat); sb.userData.dyn = false; world.add(sb);
+  const sb = new THREE.Mesh(mergeParts(S_), vcMat); sb.userData.dyn = false; sb.position.y = WATER_Y + 0.1; world.add(sb);
 }
 const BEACH = { foam: [] };
 function updateBeach(dt, t) { SEAT.value = t; for (const f of BEACH.foam) f.material.map.offset.x -= dt * 0.03; updateGulls(t); }
@@ -1388,8 +1384,11 @@ function decorTree(g, x, z, sc) { palm(g, x, z, sc * 0.95); }
 function buildTree(x, z, s) { palm(world, x, z, s * 0.95); }
 function makeTractorModel(col) { return makeBoatModel(col); }
 function buildGround() {
-  const ground = new THREE.Mesh(new THREE.PlaneGeometry(320, 320), LM({ map: grassTex() }));
-  ground.rotation.x = -Math.PI / 2; ground.receiveShadow = true; world.add(ground);
+  { const sh = new THREE.Shape(), L = [[-28.5, -200], [48, -200], [48, 44], [-28.5, 44], [-28.5, 13.2], [-10.4, 13.2], [-10.4, -12.6], [-28.5, -12.6]];
+    L.forEach((q, i) => i ? sh.lineTo(q[0], -q[1]) : sh.moveTo(q[0], -q[1])); sh.closePath();
+    const gt = grassTex(); gt.repeat.set(0.125, 0.125);
+    const eg = new THREE.ExtrudeGeometry(sh, { depth: 0.55, bevelEnabled: false }), ground = new THREE.Mesh(eg, LM({ map: gt }));
+    ground.rotation.x = -Math.PI / 2; ground.position.y = -0.55; ground.receiveShadow = true; world.add(ground); }
   // dirt strips
   const dm = LM({ map: dirtTex() });
   const strip = (x0, x1, z0, z1, y) => {
@@ -1503,7 +1502,7 @@ function growFlower(f) {
 let _dwT = null;
 function deepWater(cx, cz, w, d) { // açık deniz: koyu, yumuşak kenarlı derin su lekesi (balık sürüsü)
   if (!_dwT) { const c = cv(128, 128), x = c.getContext('2d'), g = x.createRadialGradient(64, 64, 8, 64, 64, 62); g.addColorStop(0, 'rgba(8,70,120,.62)'); g.addColorStop(0.6, 'rgba(10,90,140,.35)'); g.addColorStop(1, 'rgba(10,100,150,0)'); x.fillStyle = g; x.fillRect(0, 0, 128, 128); _dwT = canvasTex(c); }
-  const m = new THREE.Mesh(G.plane, new THREE.MeshBasicMaterial({ map: _dwT, transparent: true, depthWrite: false, fog: false })); m.rotation.x = -Math.PI / 2; m.scale.set(w, d, 1); m.position.set(cx, 0.06, cz); m.renderOrder = 1; world.add(m); return m;
+  const m = new THREE.Mesh(G.plane, new THREE.MeshBasicMaterial({ map: _dwT, transparent: true, depthWrite: false, fog: false })); m.rotation.x = -Math.PI / 2; m.scale.set(w, d, 1); m.position.set(cx, WATER_Y + 0.055, cz); m.renderOrder = 1; world.add(m); return m;
 }
 /* balık gölgeleri + dalga halkaları (suyun altında yüzen balıklar) */
 const FISHV = { sh: null, rp: null, list: [] };
@@ -1531,9 +1530,9 @@ function writeFish(f) {
   if (!ripe) { FISHV.sh.setMatrixAt(f.fi, _zero); FISHV.rp.setMatrixAt(f.fi, _zero); FISHV.rp.setColorAt(f.fi, FISHV.col.setRGB(0, 0, 0)); return; }
   const g = clamp(f.t / f.gt, 0, 1), k = smoothstep01(g) * f.sz * (f.type === 'rose' ? 0.85 : 1);
   _fe2.set(0, -Math.atan2(vz, vx) + Math.PI, 0); _fq2.setFromEuler(_fe2);
-  _fm2.compose(_fp2.set(f.x, 0.075, f.z), _fq2, _fs2.set(k, 1, k)); FISHV.sh.setMatrixAt(f.fi, _fm2);
+  _fm2.compose(_fp2.set(f.x, WATER_Y + 0.06, f.z), _fq2, _fs2.set(k, 1, k)); FISHV.sh.setMatrixAt(f.fi, _fm2);
   const ph = (T * 0.55 + f.ph * 0.37) % 1, r = (0.15 + ph * 0.6) * k * 1.1;
-  _fm2.compose(_fp2.set(f.x - Math.cos(a) * 0.0, 0.082, f.z), _fq2.identity(), _fs2.set(r, 1, r)); FISHV.rp.setMatrixAt(f.fi, _fm2);
+  _fm2.compose(_fp2.set(f.x, WATER_Y + 0.066, f.z), _fq2.identity(), _fs2.set(r, 1, r)); FISHV.rp.setMatrixAt(f.fi, _fm2);
   const v = (1 - ph) * (1 - ph) * 0.75 * g; FISHV.rp.setColorAt(f.fi, FISHV.col.setRGB(v, v, v));
 }
 /* ara sıra suyun dışına sıçrayan balıklar */
@@ -1549,11 +1548,11 @@ function updateJumps(dt) {
   }
   for (let i = JUMPS.length - 1; i >= 0; i--) {
     const j = JUMPS[i]; j.t += dt / j.dur; const k = Math.min(1, j.t), m = j.m;
-    m.position.set(j.x0 + j.dx * k, 0.1 + 4 * j.h * k * (1 - k), j.z0 + j.dz * k); m.rotation.set(0, Math.atan2(-j.dz, j.dx), 0); m.rotation.z = Math.PI * 0.5 - (k * 2 - 1) * 1.2; m.scale.setScalar(1.25);
+    m.position.set(j.x0 + j.dx * k, WATER_Y + 0.1 + 4 * j.h * k * (1 - k), j.z0 + j.dz * k); m.rotation.set(0, Math.atan2(-j.dz, j.dx), 0); m.rotation.z = Math.PI * 0.5 - (k * 2 - 1) * 1.2; m.scale.setScalar(1.25);
     if (k >= 1) { splashRing(m.position.x, m.position.z, 1.4); for (let n = 0; n < 7; n++) { const a = rand(0, TAU), s = rand(0.6, 1.8); emit({ x: m.position.x, y: 0.2, z: m.position.z, vx: Math.cos(a) * s, vy: rand(2, 3.6), vz: Math.sin(a) * s, life: rand(0.4, 0.6), size: rand(0.12, 0.2), c: n % 3 ? 0xdff6ff : 0x7fd3f0, grav: 11, drag: 0.8 }); } rm(m); JUMPS.splice(i, 1); sfx('drop'); }
   }
 }
-function splashRing(x, z, s) { ring(x, z, 0xdff6ff, s * 2.2); }
+function splashRing(x, z, s) { ring(x, z, 0xdff6ff, s * 2.2, WATER_Y + 0.07); }
 function buildBed(idx) {
   const p = POS.beds[idx], bed = { idx, x: p.x, z: p.z, locked: idx === 2, flowers: [], group: new THREE.Group() };
   deepWater(p.x, p.z, 9.6, 5.2);
@@ -1565,10 +1564,10 @@ function buildBed(idx) {
   if (idx === 2) {
     // locked overlay: grey tint, fence ring, lock sign
     const ov = new THREE.Mesh(G.plane, new THREE.MeshBasicMaterial({ color: lc(0x9c8556), transparent: true, opacity: 0.85, depthWrite: false }));
-    ov.rotation.x = -Math.PI / 2; ov.scale.set(8.6, 4.1, 1); ov.position.set(p.x, 0.12, p.z); ov.renderOrder = 3;
+    ov.rotation.x = -Math.PI / 2; ov.scale.set(8.6, 4.1, 1); ov.position.set(p.x, WATER_Y + 0.05, p.z); ov.renderOrder = 3;
     bed.group.add(ov);
     const bm1 = mat(0xff5a3a), bm2 = mat(0xffffff), hx = 4.3, hz = 2.0;
-    const buoy = (x, z, i) => { const bb = mk(G.sph, i % 2 ? bm1 : bm2, 0.3, 0.3, 0.3, x, 0.22, z); bed.group.add(bb); };
+    const buoy = (x, z, i) => { const bb = mk(G.sph, i % 2 ? bm1 : bm2, 0.3, 0.3, 0.3, x, WATER_Y + 0.15, z); bed.group.add(bb); };
     let bi = 0; for (let x = -hx; x <= hx + 0.01; x += 0.86) { buoy(p.x + x, p.z - hz, bi++); buoy(p.x + x, p.z + hz, bi++); } for (let z = -hz + 0.8; z < hz; z += 0.8) { buoy(p.x - hx, p.z + z, bi++); buoy(p.x + hx, p.z + z, bi++); }
     const sg = makeBoard('KİLİTLİ', 2.4, 0.8, 'wood'); sg.position.set(p.x, 1.4, p.z - 2.2); sg.rotation.y = Math.PI / 2 * 0.0; sg.scale.setScalar(0.9); bed.group.add(sg);
     const lk = makeSprite(128, 128, (ctx) => {
@@ -2424,7 +2423,7 @@ function watchdog(h, dt, pos, extra, home, reset, okWait) {
 }
 function resetWalker(h) { h.state = 'seek'; h.idle = 0; h.cd = 0; h.vel && h.vel.set(0, 0, 0); }
 function harvest(f, who) {
-  const fish = isFishT(f.type), item = makeFlowerItem(f.ci, f.type); item.position.set(f.x, fish ? 0.12 : 0.6, f.z); scene.add(item); if (f.rare) rareClaim(f, who);
+  const fish = isFishT(f.type), item = makeFlowerItem(f.ci, f.type); item.position.set(f.x, fish ? WATER_Y + 0.1 : 0.6, f.z); scene.add(item); if (f.rare) rareClaim(f, who);
   f.gt = GROW[f.type] || 10; f.t = 0; f.pop = 0.18; f.claimed = false; f.owner = null; f.full = false; f.ss = 0.001; f.bs = 0.001;
   if (fish) { splashRing(f.x, f.z, 0.9); item.rotation.z = 0.9; } else petals(f.x, 0.8, f.z, colsFor(f.type)[f.ci % colsFor(f.type).length]);
   sendToBack(who, item, ITYPE[f.type] || 'flower', fish ? 3.0 : 1.6);
@@ -2845,6 +2844,7 @@ function movePlayer(dt) {
         if (m === l) gp.x = c.x0 - r; else if (m === rr) gp.x = c.x1 + r; else if (m === tp) gp.z = c.z0 - r; else gp.z = c.z1 + r; }
     }
   }
+  gp.y = damp(gp.y, deckY(gp.x, gp.z), 16, dt);
   const sp = Math.hypot(P.vel.x, P.vel.z);
   stepT -= dt; if (sp > 2.5 && stepT <= 0) { stepT = 0.2; dust(gp.x - P.vel.x * 0.05, 0.12, gp.z - P.vel.z * 0.05, 1, 0.3); }
   if (sp > 0.3) faceChar(P, P.vel.x, P.vel.z, dt);
@@ -2901,14 +2901,15 @@ function updateBeds(dt) {
   if (fishing && P.cd <= 0 && P.rod && P.rod.k > 0.5 && P.rod.cast > 0.45) { harvest(tgt, P); fishSplash(tgt); P.rod.jerk = 1; P.cd = clamp(0.62 / (1 + CFG.speedStep * S.lv.speed), 0.3, 0.62); }
   else if (!fishing && P.cd < 0.1) P.cd = 0.1;
   rodUpdate(P, dt, fishing);
-  if (P.cd <= 0 && P.free() > 0) {
+  P.hcd = (P.hcd || 0) - dt;
+  if (P.hcd <= 0 && P.free() > 0) {
     for (const b of beds) {
       if (b.locked || Math.abs(gp.x - b.x) > 4.2 || Math.abs(gp.z - b.z) > 3.6) continue;
       for (const f of b.flowers) {
         if (isFishT(f.type)) continue;
-        if (f.t >= f.gt && f.pop <= 0 && tideOK(f) && (f.x - gp.x) ** 2 + (f.z - gp.z) ** 2 < 1.0) { harvest(f, P); P.cd = 0.04; if (P.free() <= 0) break; if (P.cd > 0) break; }
+        if (f.t >= f.gt && f.pop <= 0 && tideOK(f) && (f.x - gp.x) ** 2 + (f.z - gp.z) ** 2 < 1.0) { harvest(f, P); P.hcd = 0.04; if (P.free() <= 0) break; if (P.hcd > 0) break; }
       }
-      if (P.cd > 0) break;
+      if (P.hcd > 0) break;
     }
   }
 }
@@ -2949,7 +2950,7 @@ function update(dt) {
   updateZoneActions(dt);
   updateGoalState(); updateUpgrades(dt); updateExpansion(dt, T);
   updatePacking(dt, T);
-  updateHelper(dt, T); updateCashier(dt, T); updateCarrier(dt, T); updatePotting(dt, T); updateSera(dt); updateVan(dt, T); updateAmbient(dt, T); updateC2(dt, T); updateC3(dt, T);
+  updateHelper(dt, T); updateCashier(dt, T); updateCarrier(dt, T); updatePotting(dt, T); updateSera(dt); updateVan(dt, T); updateAmbient(dt, T); updateC2(dt, T); updateC3(dt, T); updateBoats(dt, T);
   // customers spawning
   spawnT -= dt;
   if (queue.length < 3 && spawnT > CFG.spawnShortEvery) spawnT = CFG.spawnShortEvery;
@@ -5096,6 +5097,100 @@ function updateC3(dt, t) {
 }
 /*C3-END*/
 /* =====================================================================
+   SAHİL v3: BALIKÇI TEKNELERİ (rıhtımdan denize açılır, kasalarla döner, temizleme girdisine boşaltır)
+   ===================================================================== */
+function deckY(x, z) { if (Math.abs(z) < 1.65 && x > -28.5 && x < -10.3) return 0.07; return 0; }
+const BOATS = [], QUAY = { x0: -29, x1: -9.5, z: 13.7 };
+function iconBoat(ctx, cx, cy, s) {
+  ctx.lineJoin = 'round'; ctx.lineWidth = s * 0.05; ctx.strokeStyle = '#0d3a5c';
+  ctx.fillStyle = '#ff6f61'; ctx.beginPath(); ctx.moveTo(cx - s * 0.5, cy + s * 0.05); ctx.lineTo(cx + s * 0.5, cy + s * 0.05); ctx.lineTo(cx + s * 0.32, cy + s * 0.36); ctx.lineTo(cx - s * 0.32, cy + s * 0.36); ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.moveTo(cx - s * 0.04, cy - s * 0.44); ctx.lineTo(cx + s * 0.34, cy - s * 0.02); ctx.lineTo(cx - s * 0.04, cy - s * 0.02); ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.strokeStyle = '#0d3a5c'; ctx.beginPath(); ctx.moveTo(cx - s * 0.06, cy - s * 0.46); ctx.lineTo(cx - s * 0.06, cy + s * 0.05); ctx.stroke();
+}
+let _boatG = {};
+function boatGeo(col) {
+  if (_boatG[col]) return _boatG[col];
+  const W = 0xfdfcf6, P_ = [
+    part(G.box, 0x1d3b66, -0.3, 0.3, 0, 3.2, 0.5, 1.7), part(G.box, col, -0.3, 0.72, 0, 3.2, 0.7, 1.8), part(G.box, 0x1d3b66, 1.3, 0.3, 0, 1.2, 0.5, 1.2, 0, Math.PI / 4, 0), part(G.box, col, 1.3, 0.72, 0, 1.27, 0.7, 1.27, 0, Math.PI / 4, 0),
+    part(G.box, W, -0.3, 1.1, 0, 3.24, 0.1, 1.84), part(G.box, W, 1.3, 1.1, 0, 1.31, 0.1, 1.31, 0, Math.PI / 4, 0),
+    part(G.box, W, -1.1, 1.7, 0, 1.0, 1.1, 1.3), part(G.box, 0xe8142e, -1.1, 2.32, 0, 1.3, 0.13, 1.6), part(G.box, 0x6ec6ff, -0.58, 1.8, 0, 0.04, 0.45, 1.0),
+    part(G.cyl, 0x8a98a8, 1.1, 2.0, 0, 0.05, 1.8, 0.05), part(G.box, 0xff6f61, 1.34, 2.7, 0, 0.5, 0.28, 0.04),
+    part(G.box, 0x7a4a22, -2.0, 1.2, 0.5, 0.5, 0.35, 0.5), part(G.box, 0x7a4a22, -2.0, 1.2, -0.5, 0.5, 0.35, 0.5)
+  ];
+  return (_boatG[col] = mergeParts(P_));
+}
+function makeBoat(i) {
+  const g = new THREE.Group(), cols = [0xff6f61, 0x1d6fb8, 0xffc21a];
+  const hull = new THREE.Mesh(boatGeo(cols[i % 3]), vcMat); hull.castShadow = true; g.add(hull);
+  const pile = new THREE.Mesh(G.box, LM({ color: lc(0x9fc8e8) })); pile.scale.set(1.5, 0.01, 1.5); pile.position.set(0.5, 1.22, 0); g.add(pile);
+  g.userData.dyn = true; world.add(g); g.visible = false;
+  return { g, hull, pile, i, state: 'away', load: 0, t: 0, path: null, pi: 0, yaw: Math.PI, ph: i * 1.7, wake: 0, tries: 0 };
+}
+function buildQuay() { // güney kıyıda tahta rıhtım + babalar + sandıklar
+  const P_ = [], wc = [0xb08550, 0xa07848, 0xbf9560];
+  for (let i = 0; i < 20; i++) P_.push(part(G.box, wc[i % 3], QUAY.x0 + 0.5 + i * 0.98, 0.18, QUAY.z, 0.94, 0.12, 2.0));
+  for (let i = 0; i < 11; i++) { P_.push(part(G.cyl, 0x5a3a1c, QUAY.x0 + 0.4 + i * 1.9, 0.12, QUAY.z - 1.05, 0.13, 0.6, 0.13), part(G.cyl, 0x2d3a45, QUAY.x0 + 0.4 + i * 1.9, 0.5, QUAY.z - 1.05, 0.14, 0.1, 0.14)); }
+  for (const [x, c] of [[-26.5, 0xc99a5a], [-26.5, 0xb98040], [-12, 0xc99a5a]]) P_.push(part(G.box, c, x, 0.6, QUAY.z + 0.3, 0.7, 0.55, 0.7), part(G.box, shade(c, -0.15), x + 0.1, 1.1, QUAY.z + 0.3, 0.6, 0.45, 0.6));
+  P_.push(part(G.cyl, 0xd8d4c8, -28.2, 0.15, QUAY.z, 0.5, 0.2, 1.8), part(G.cyl, 0xe8d49a, QUAY.x1 - 0.2, 0.18, QUAY.z, 0.5, 0.25, 0.5));
+  const m = new THREE.Mesh(mergeParts(P_), vcMat); m.castShadow = m.receiveShadow = true; world.add(m);
+  const sg = makeBoard('BALIKÇI TEKNELERİ', 5.6, 1.0, 'wood'); sg.position.set(-19, 3.4, QUAY.z + 1.5); sg.rotation.y = CFG.yaw * 0.2; world.add(sg);
+  for (const x of [-28.3, -9.9]) world.add(mk(G.cyl, mat(0x5a3a1c), 0.18, 3.2, 0.18, x, 1.6, QUAY.z + 1.4));
+}
+const boatSlot = i => [-14.5 - i * 5, QUAY.z - 2.6];
+const boatSpeed = () => 3.6 * (1 + 0.22 * (S.lv.boatSpd || 0));
+const boatCap = () => 8 + 4 * (S.lv.boatCap || 0);
+function boatPath(b) { // iskele (rıhtım) -> açık deniz
+  const [sx, sz] = boatSlot(b.i), fx = -46 - b.i * 5, fz = 17 + b.i * 6;
+  return [[sx, sz], [sx, sz - 2.4], [-30, sz - 2.6], [-38, 12 + b.i * 2], [fx, fz]];
+}
+function spawnBoat(i, instant) {
+  const b = BOATS[i] || (BOATS[i] = makeBoat(i)); if (b.on) return b; b.on = true; b.g.visible = true; b.load = 0;
+  const sl = boatSlot(i); b.g.position.set(sl[0], WATER_Y + 0.14, sl[1]); b.yaw = Math.PI; b.g.rotation.y = Math.PI; b.state = 'moored'; b.t = instant ? 0 : 0; b.arrive = !instant;
+  if (!instant) { b.g.position.set(-60, WATER_Y + 0.14, sl[1] - 2.4); b.state = 'in'; b.path = boatPath(b).reverse(); b.path.unshift([-62, b.path[0][1]]); b.pi = 1; panReq('b_boat', sl[0], sl[1], 'BALIKÇI TEKNESİ!'); confetti(sl[0], 2, sl[1], 40); ring(sl[0], sl[1], 0x4dc3ff, 8); }
+  return b;
+}
+function moveAlong(b, dt, spd) {
+  const gp = b.g.position, w = b.path[b.pi]; if (!w) return true;
+  const dx = w[0] - gp.x, dz = w[1] - gp.z, d = Math.hypot(dx, dz), st = Math.min(d, spd * dt);
+  if (d > 1e-4) { gp.x += dx / d * st; gp.z += dz / d * st; const want = Math.atan2(-dz, dx); b.yaw += angDiff(b.yaw, want) * Math.min(1, dt * 3.2); }
+  if (d <= 0.15) { b.pi++; if (b.pi >= b.path.length) return true; }
+  return false;
+}
+function updateBoats(dt, t) {
+  const gpP = P.group.position;
+  for (const b of BOATS) {
+    if (!b.on) continue; const g = b.g, gp = g.position, spd = boatSpeed();
+    if (b.state === 'moored') {
+      b.t += dt; // yükü boşalt
+      if (b.load > 0) { b.cd = (b.cd || 0) - dt; if (b.cd <= 0 && inputPile.length + (inputPile.pend || 0) < CFG.inputCap) { b.cd = 0.13; b.load--; const it = makeFlowerItem(Math.floor(Math.random() * 4), Math.random() < 0.3 ? 'rose' : 'tulip'); it.position.set(gp.x + 0.5, 1.5, gp.z); scene.add(it); const idx = inputPile.length + (inputPile.pend || 0); inputPile.pend = (inputPile.pend || 0) + 1; fly(it, out => { inputPile.slotFn(Math.min(idx, CFG.inputCap - 1), out); return 0; }, 0.55, 4.2, () => { inputPile.pend--; inputPile.add(it, 'flower'); }); sfx('drop'); }
+      } else if (b.t > 1.2) { b.state = 'out'; b.path = boatPath(b); b.pi = 1; b.t = 0; }
+    } else if (b.state === 'out') { if (moveAlong(b, dt, spd)) { b.state = 'fish'; b.t = 0; b.fishT = 2.5 + boatCap() * 0.32; } }
+    else if (b.state === 'fish') {
+      b.t += dt; const prog = b.t / b.fishT; b.load = Math.min(boatCap(), Math.floor(prog * boatCap() + 0.0001));
+      if (Math.random() < dt * 3) { const a = rand(0, TAU); emit({ x: gp.x + Math.cos(a) * 1.6, y: 0.2, z: gp.z + Math.sin(a) * 1.6, vx: 0, vy: rand(2, 3.5), vz: 0, life: 0.5, size: 0.2, c: 0xdff6ff, grav: 9 }); }
+      if (Math.random() < dt * 0.9) ring(gp.x + rand(-2, 2), gp.z + rand(-2, 2), 0xdff6ff, 2.2, WATER_Y + 0.07);
+      if (b.t >= b.fishT) { b.load = boatCap(); b.state = 'back'; b.path = boatPath(b).reverse(); b.pi = 1; }
+    }
+    else if (b.state === 'back' || b.state === 'in') { if (moveAlong(b, dt, spd * (b.state === 'in' ? 1.3 : 1))) { b.state = 'moored'; b.t = 0; b.cd = 0.3; const sl = boatSlot(b.i); gp.x = sl[0]; gp.z = sl[1]; b.yaw = Math.PI; if (b.load > 0) popText(sl[0], 3.4, sl[1], b.load + ' balık', '#9be7ff'); } }
+    const mv = b.state === 'out' || b.state === 'back' || b.state === 'in';
+    if (mv && Math.random() < dt * 14) emit({ x: gp.x - Math.cos(b.yaw) * 1.8, y: 0.1, z: gp.z + Math.sin(b.yaw) * 1.8, vx: rand(-0.4, 0.4), vy: rand(0.3, 0.8), vz: rand(-0.4, 0.4), life: 0.6, size: 0.3, c: 0xe6fbff, grav: 0, a: 0.8 });
+    if (b.state === 'moored' && b.yaw !== Math.PI) b.yaw = Math.PI;
+    g.rotation.y = b.yaw; gp.y = WATER_Y + 0.14 + Math.sin(t * 1.6 + b.ph) * 0.04; g.rotation.z = Math.sin(t * 1.3 + b.ph) * 0.03 + (mv ? -0.04 : 0); g.rotation.x = Math.cos(t * 1.1 + b.ph) * 0.02;
+    const k = b.load / boatCap(); b.pile.scale.y = Math.max(0.01, 0.55 * k); b.pile.position.y = 1.15 + 0.275 * k;
+  }
+}
+function initBoats() {
+  buildQuay();
+  const vis0 = () => S.lv.sera > 0;
+  const u0 = extPad('boat', 'Balıkçı Teknesi', [3500], -19.5, 18.2, iconBoat, vis0); u0.autoShow = true; UPG.boat.sub = () => 'Denize açılır, balık getirir';
+  EXTAPPLY.boat = i => spawnBoat(0, i);
+  const vis = () => S.lv.boat > 0;
+  let u = extPad('boatN', '+1 Tekne', [7000, 14000], -24.5, 18.2, iconBoat, vis); u.autoShow = true; UPG.boatN.sub = () => 'Şu an ' + (1 + S.lv.boatN) + ' tekne'; EXTAPPLY.boatN = i => { for (let k = 0; k <= S.lv.boatN; k++) if (!(BOATS[k] && BOATS[k].on)) spawnBoat(k, i && true); };
+  u = extPad('boatSpd', 'Tekne Hızı', geo(900, 4), -14.5, 18.2, iconBolt, vis); u.autoShow = true; UPG.boatSpd.sub = () => 'Daha hızlı seyir';
+  u = extPad('boatCap', 'Tekne Kapasitesi', geo(1100, 4), -19.5, 22.4, iconBackpack, vis); u.autoShow = true; UPG.boatCap.sub = () => 'Kasa ' + boatCap() + ' → ' + (boatCap() + 4);
+  if (upPads.helperT && !S.lv.helperT) upPads.helperT.vis = () => false; // balıkçı "tekne yap" evrimi artık gerçek tekneler
+}
+/* =====================================================================
    15. INIT
    ===================================================================== */
 /* =====================================================================
@@ -5198,7 +5293,7 @@ buildGround(); buildBeach(); buildFences();
 for (const [x, z, s] of [[-9.5, -8.6, 1.1], [0.6, -8.6, 1.0], [13, -8.5, 1.2], [18.5, 13, 1.1], [6, 13.4, 0.9], [-9.4, 13.2, 1.0], [15.5, -7.2, 0.9]]) buildBush(x, z, s);
 for (const [x, z, s] of [[-9.2, 16, 1.3], [-12, 19, 1.6], [-26, 16.5, 1.4], [-24, -14.5, 1.6]]) buildTree(x, z, s);
 for (let i = 0; i < 3; i++) buildBed(i);
-buildStations(); buildDecor(); buildSera(); buildVan(); buildZones(); buildPlayer(); LANES.bouquet = shelfB; LANES.pot = shelfP; buildExpansion(); buildLanes(); buildC3(); finalizeWorld();
+buildStations(); buildDecor(); buildSera(); buildVan(); buildZones(); buildPlayer(); LANES.bouquet = shelfB; LANES.pot = shelfP; buildExpansion(); buildLanes(); buildC3(); initBoats(); finalizeWorld();
 initGatePad();
 /* ---- C6: pad alt yazıları (etkisi belli olmayan her pad) ---- */
 { const L = k => S.lv[k] || 0, T = x => () => x, N = (k, w) => () => 'Şu an ' + (1 + L(k)) + ' ' + w, PC = (k, v) => () => '%' + v * (L(k) + 1);
@@ -5259,7 +5354,7 @@ window.__game = {
   measure() { renderer.info.reset(); if (composer) composer.render(0); else renderer.render(scene, camera); return { calls: renderer.info.render.calls, tris: renderer.info.render.triangles }; },
   get c2() { return { TD, TDM, TK, applyTier, CPADS, S, cosGate, buyTier, DSL, DSLM, DECT, DEC, zonesAll: zones, buyDecor, beautyPts, BF, placeDecor, DN, NIGHT, DN_PERIOD }; },
   path(tx, tz) { return findPath(P.group.position.x, P.group.position.z, tx, tz); }, colliders,
-  EXTZ, STN, GARD, GROLES, roleEvolve, BUSES, cafe: () => cafe, wed: () => wed, city: () => city, tractor: () => tractor, give(type, n) { n = Math.min(n, Math.max(0, P.free())); for (let i = 0; i < n; i++) P.stack.add(['orchid', 'lav', 'sun', 'rosep', 'flower'].includes(type) ? makeFlowerItem(0, type === 'flower' ? 'tulip' : type) : makeItemOf(type), type); },
+  EXTZ, STN, GARD, GROLES, roleEvolve, tide: () => TIDE, BOATS, deckY: (x, z) => deckY(x, z), BUSES, cafe: () => cafe, wed: () => wed, city: () => city, tractor: () => tractor, give(type, n) { n = Math.min(n, Math.max(0, P.free())); for (let i = 0; i < n; i++) P.stack.add(['orchid', 'lav', 'sun', 'rosep', 'flower'].includes(type) ? makeFlowerItem(0, type === 'flower' ? 'tulip' : type) : makeItemOf(type), type); },
   hintOK: { canCity, canCounter, canWed, canTable, makeItemOf, lane, shelfFree },
   bot(x, z) { BOT = (x || z) ? { x, z } : null; if (BOT) hideIntro(); }, hideIntro, objective() { objective(_obj); return Object.assign({}, _obj); }, get goal() { return curGoal; }, GOALS, UPG,
   S, stats, P: () => P, queue, beds, machine, inputPile, outputPile, moneyPile, get shelf() { return shelfB; }, get shelfP() { return shelfP; }, get potInput() { return potInput; }, get potOutput() { return potOutput; }, get zone2() { return zone2; }, get zone3() { return zone3; }, VAN, get vanLoad() { return vanLoad; }, get vanPile() { return vanPile; }, get cashier() { return cashier; }, get carrier() { return carrier; }, upPads, zones, customers, CFG, POS,
