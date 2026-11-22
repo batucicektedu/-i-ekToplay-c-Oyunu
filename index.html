@@ -1547,7 +1547,7 @@ let zone3 = null, vanLoad, vanPile, vanZone, vanMoneyZone;
 const VZ = { x0: 12.6, x1: 24.4, z0: 16.6, z1: 32 };
 const VAN = { state: 'parked', group: null, wheels: [], hud: null, sum: 0, trip: 0, path: [], seg: 0, speed: 0, yaw: -Math.PI / 2, sig: '', doors: [], x: 16.2, z: 24 };
 /* C4: her sefer farklı bir istek; araç türü isteğin büyüklüğüne göre (Bisiklet / Araba / Kamyonet / Kamyon) */
-const VKINDS = [{ id: 'bike', n: 'Bisiklet', cap: 3, nt: 1, mult: 2.0, sc: 0.45 }, { id: 'car', n: 'Araba', cap: 5, nt: 2, mult: 2.3, sc: 0.75 }, { id: 'pick', n: 'Kamyonet', cap: 8, nt: 2, mult: 2.6, sc: 1.0 }, { id: 'truck', n: 'Kamyon', cap: 12, nt: 3, mult: 3.0, sc: 1.3 }];
+const VKINDS = [{ id: 'bike', n: 'Bisiklet', cap: 3, nt: 1, mult: 2.0, hy: 2.9 }, { id: 'car', n: 'Araba', cap: 5, nt: 2, mult: 2.3, hy: 3.3 }, { id: 'pick', n: 'Kamyonet', cap: 8, nt: 2, mult: 2.6, hy: 3.8 }, { id: 'truck', n: 'Kamyon', cap: 12, nt: 3, mult: 3.0, hy: 4.7 }];
 VAN.req = null;
 const vanCap = () => VAN.req ? VAN.req.cap : 8;
 const vanNeed = t => VAN.req ? (VAN.req.need[t] || 0) - (VAN.req.got[t] || 0) : 0;
@@ -1557,7 +1557,7 @@ function vanNewReq() {
   if (vanLoad.length > 0) { ki = VKINDS.findIndex(k => k.cap >= vanLoad.length); if (ki < 0) ki = 3; }
   const k = VKINDS[ki], nt = Math.min(k.nt, avail.length), types = avail.slice().sort(() => Math.random() - 0.5).slice(0, nt), need = {}, got = {};
   if (vanLoad.length > 0) { need.bouquet = k.cap; got.bouquet = vanLoad.length; } else { let left = k.cap; types.forEach((t, i) => { const n = i === types.length - 1 ? left : Math.max(1, Math.round(k.cap / nt + (Math.random() - 0.5))); need[t] = Math.min(n, left - (types.length - 1 - i)); left -= need[t]; }); }
-  VAN.req = { k, cap: k.cap, need, got }; VAN.group.scale.setScalar(k.sc); VAN.hud.scale.set(7.4 / k.sc, 3.0 / k.sc, 1); VAN.hud.position.set(0, 5.2 / k.sc, 0); VAN.sig = '';
+  VAN.req = { k, cap: k.cap, need, got }; for (const id in VAN.models) VAN.models[id].visible = id === k.id; VAN.hud.position.set(0, k.hy, 0); VAN.sig = '';
 }
 const vanFree = () => VAN.state === 'parked' && zone3 && !zone3.locked ? vanCap() - vanLoad.length - vanLoad.pend : 0;
 function iconVan(ctx, cx, cy, s) {
@@ -1593,21 +1593,42 @@ function buildVan() {
   for (const [cx2, cz2] of [[22.9, 21.5], [22.9, 26.6]]) { const co = new THREE.Group(); co.add(mk(G.cone, mat(0xff7a00), 0.28, 0.7, 0.28, 0, 0.4, 0)); co.add(mk(G.box, mat(0xffffff), 0.5, 0.1, 0.5, 0, 0.05, 0)); ad(rd, co, cx2, 0, cz2); }
   // van
   const vg = new THREE.Group(); VAN.group = vg; world.add(vg); vg.visible = false;
+  const vT = new THREE.Group(); vg.add(vT); vT.scale.setScalar(0.88); VAN.models = { truck: vT };
   const teal = mat(0x0aa89a), yel = mat(0xffc21a), dk = mat(0x23272f);
-  const chassis = rbox(2.3, 0.5, 4.8, 0.1, dk); chassis.position.y = 0.7; vg.add(chassis);
-  const cargo = rbox(2.4, 2.1, 3.2, 0.2, teal); cargo.position.set(0, 1.95, -0.7); vg.add(cargo);
-  const cab = rbox(2.3, 1.5, 1.6, 0.25, yel); cab.position.set(0, 1.45, 1.9); vg.add(cab);
-  vg.add(mk(G.box, LM({ color: lc(0x1f3a5a) }), 1.9, 0.65, 0.05, 0, 1.75, 2.72));
-  for (const sx of [-1, 1]) { vg.add(mk(G.box, LM({ color: lc(0x1f3a5a) }), 0.05, 0.6, 0.9, sx * 1.16, 1.75, 1.95)); vg.add(mk(G.sph, new THREE.MeshBasicMaterial({ color: lc(0xfff3b0) }), 0.18, 0.18, 0.08, sx * 0.8, 0.95, 2.72)); }
-  vg.add(mk(G.box, mat(0xdcdfe4), 2.4, 0.22, 0.3, 0, 0.55, 2.7));
+  const chassis = rbox(2.3, 0.5, 4.8, 0.1, dk); chassis.position.y = 0.7; vT.add(chassis);
+  const cargo = rbox(2.4, 2.1, 3.2, 0.2, teal); cargo.position.set(0, 1.95, -0.7); vT.add(cargo);
+  const cab = rbox(2.3, 1.5, 1.6, 0.25, yel); cab.position.set(0, 1.45, 1.9); vT.add(cab);
+  vT.add(mk(G.box, LM({ color: lc(0x1f3a5a) }), 1.9, 0.65, 0.05, 0, 1.75, 2.72));
+  for (const sx of [-1, 1]) { vT.add(mk(G.box, LM({ color: lc(0x1f3a5a) }), 0.05, 0.6, 0.9, sx * 1.16, 1.75, 1.95)); vT.add(mk(G.sph, new THREE.MeshBasicMaterial({ color: lc(0xfff3b0) }), 0.18, 0.18, 0.08, sx * 0.8, 0.95, 2.72)); }
+  vT.add(mk(G.box, mat(0xdcdfe4), 2.4, 0.22, 0.3, 0, 0.55, 2.7));
   const logo = LM({ map: vanLogoTex() });
-  for (const sx of [-1, 1]) { const lp = new THREE.Mesh(G.plane, logo); lp.scale.set(2.5, 1.5, 1); lp.position.set(sx * 1.215, 1.95, -0.7); lp.rotation.y = sx * Math.PI / 2; vg.add(lp); }
-  vg.add(mk(G.box, mat(0x0b3d38), 2.0, 1.8, 0.05, 0, 1.9, -2.31));
-  for (const sx of [-1, 1]) { const d = mk(G.box, teal, 1.0, 1.9, 0.07, sx * 1.6, 1.9, -2.7); d.rotation.y = sx * 1.25; vg.add(d); VAN.doors.push(d); }
+  for (const sx of [-1, 1]) { const lp = new THREE.Mesh(G.plane, logo); lp.scale.set(2.5, 1.5, 1); lp.position.set(sx * 1.215, 1.95, -0.7); lp.rotation.y = sx * Math.PI / 2; vT.add(lp); }
+  vT.add(mk(G.box, mat(0x0b3d38), 2.0, 1.8, 0.05, 0, 1.9, -2.31));
+  for (const sx of [-1, 1]) { const d = mk(G.box, teal, 1.0, 1.9, 0.07, sx * 1.6, 1.9, -2.7); d.rotation.y = sx * 1.25; vT.add(d); VAN.doors.push(d); }
   VAN.wheels = [];
-  for (const wx of [-1.2, 1.2]) for (const wz of [-1.4, 1.7]) { const wh = new THREE.Mesh(new THREE.CylinderGeometry(0.46, 0.46, 0.32, 14), dk); wh.rotation.z = Math.PI / 2; wh.position.set(wx, 0.46, wz); const hub = mk(G.cyl, mat(0xb8bec8), 0.2, 0.34, 0.2, 0, 0, 0); wh.add(hub); vg.add(wh); VAN.wheels.push(wh); }
+  for (const wx of [-1.2, 1.2]) for (const wz of [-1.4, 1.7]) { const wh = new THREE.Mesh(new THREE.CylinderGeometry(0.46, 0.46, 0.32, 14), dk); wh.rotation.z = Math.PI / 2; wh.position.set(wx, 0.46, wz); const hub = mk(G.cyl, mat(0xb8bec8), 0.2, 0.34, 0.2, 0, 0, 0); wh.add(hub); vT.add(wh); VAN.wheels.push(wh); }
+  // Bisiklet / Araba / Kamyonet için kendi modelleri (Kamyon = yukarıdaki kutu kamyon)
+  const wheel = (g, r, w, x, y, z) => { const wh = new THREE.Mesh(new THREE.CylinderGeometry(r, r, w, 12), dk); wh.rotation.z = Math.PI / 2; wh.position.set(x, y, z); wh.add(mk(G.cyl, mat(0xb8bec8), r * 0.45, w + 0.02, r * 0.45, 0, 0, 0)); g.add(wh); VAN.wheels.push(wh); };
+  const blooms = (g, x0, x1, z0, z1, y, n) => { for (let q = 0; q < n; q++) g.add(mk(G.sph, mat([0xff2f8f, 0xffd400, 0xff6a3a, 0xf4f0ff][q % 4]), 0.3, 0.3, 0.3, lerp(x0, x1, ((q * 37) % 10) / 9), y + (q % 3) * 0.05, lerp(z0, z1, ((q * 53) % 10) / 9))); };
+  const vB = new THREE.Group(); VAN.models.bike = vB; vg.add(vB); // yük bisikleti (3 tekerlekli, sepetli)
+  vB.add(mk(G.box, mat(0x9aa3ad), 0.12, 0.12, 1.5, 0, 0.75, 0.15)); vB.add(mk(G.box, mat(0x9aa3ad), 0.1, 0.55, 0.1, 0, 0.55, 0.9).rotateX(0.3));
+  vB.add(mk(G.box, mat(0x23272f), 0.9, 0.08, 0.08, 0, 1.15, 0.95)); vB.add(mk(G.box, mat(0x23272f), 0.28, 0.1, 0.5, 0, 1.0, -0.35));
+  const bsk = rbox(1.15, 0.5, 0.95, 0.08, mat(0x0aa89a)); bsk.position.set(0, 0.62, -0.95); vB.add(bsk); blooms(vB, -0.4, 0.4, -1.2, -0.7, 0.92, 6);
+  wheel(vB, 0.42, 0.12, 0, 0.42, 1.0); wheel(vB, 0.3, 0.12, -0.7, 0.3, -0.95); wheel(vB, 0.3, 0.12, 0.7, 0.3, -0.95); vB.add(mk(G.box, mat(0x9aa3ad), 1.5, 0.08, 0.08, 0, 0.3, -0.95));
+  const vC = new THREE.Group(); VAN.models.car = vC; vg.add(vC); // küçük araba
+  const body = rbox(1.8, 0.7, 3.4, 0.2, mat(0x0aa89a)); body.position.y = 0.72; vC.add(body); const roof = rbox(1.6, 0.6, 1.7, 0.25, mat(0xffc21a)); roof.position.set(0, 1.3, -0.15); vC.add(roof);
+  vC.add(mk(G.box, LM({ color: lc(0x1f3a5a) }), 1.45, 0.38, 0.05, 0, 1.32, 0.72)); vC.add(mk(G.box, LM({ color: lc(0x1f3a5a) }), 1.45, 0.38, 0.05, 0, 1.32, -1.03));
+  for (const sx of [-1, 1]) { vC.add(mk(G.box, LM({ color: lc(0x1f3a5a) }), 0.05, 0.38, 1.3, sx * 0.81, 1.32, -0.15)); vC.add(mk(G.sph, new THREE.MeshBasicMaterial({ color: lc(0xfff3b0) }), 0.2, 0.2, 0.08, sx * 0.6, 0.8, 1.72)); }
+  for (const wx of [-0.95, 0.95]) for (const wz of [-1.05, 1.05]) wheel(vC, 0.36, 0.26, wx, 0.36, wz); vC.add(mk(G.box, mat(0xdcdfe4), 1.8, 0.16, 0.2, 0, 0.45, 1.72));
+  const vP = new THREE.Group(); VAN.models.pick = vP; vg.add(vP); // kamyonet (açık kasalı)
+  const ch2 = rbox(2.0, 0.4, 4.4, 0.1, dk); ch2.position.y = 0.65; vP.add(ch2); const cab2 = rbox(2.0, 1.25, 1.5, 0.25, mat(0xffc21a)); cab2.position.set(0, 1.4, 1.2); vP.add(cab2);
+  vP.add(mk(G.box, LM({ color: lc(0x1f3a5a) }), 1.65, 0.5, 0.05, 0, 1.65, 1.96)); for (const sx of [-1, 1]) { vP.add(mk(G.box, LM({ color: lc(0x1f3a5a) }), 0.05, 0.5, 0.8, sx * 1.01, 1.65, 1.25)); vP.add(mk(G.sph, new THREE.MeshBasicMaterial({ color: lc(0xfff3b0) }), 0.2, 0.2, 0.08, sx * 0.7, 0.95, 2.2)); }
+  vP.add(mk(G.box, mat(0x0aa89a), 2.0, 0.12, 2.5, 0, 0.9, -1.15)); for (const sx of [-1, 1]) vP.add(mk(G.box, mat(0x0aa89a), 0.12, 0.7, 2.5, sx * 0.94, 1.25, -1.15)); vP.add(mk(G.box, mat(0x0aa89a), 2.0, 0.7, 0.12, 0, 1.25, -2.35)); vP.add(mk(G.box, mat(0x0aa89a), 2.0, 0.7, 0.12, 0, 1.25, 0.05));
+  blooms(vP, -0.6, 0.6, -2.0, -0.3, 1.05, 10); vP.add(mk(G.box, mat(0xdcdfe4), 2.0, 0.2, 0.25, 0, 0.55, 2.2));
+  for (const wx of [-1.05, 1.05]) for (const wz of [-1.2, 1.3]) wheel(vP, 0.42, 0.3, wx, 0.42, wz);
+  vB.visible = vC.visible = vP.visible = false;
   shadowAll(vg, true, false);
-  VAN.hud = makeSprite(512, 200, () => {}, 7.4, 3.0, false); VAN.hud.position.set(0, 5.2, 0); vg.add(VAN.hud);
+  VAN.hud = makeSprite(512, 200, () => {}, 5.2, 2.03, false); VAN.hud.position.set(0, 4.6, 0); vg.add(VAN.hud);
   vanLoad = new Stack(scene, (i, out) => { out.set(19.55 + (i % 2) * 0.8, 0.5, 24 + (Math.floor(i / 2) - 1.5) * 0.85); }, 12); vanLoad.pend = 0;
   vanPile = new Stack(scene, (i, out) => { const per = 12, l = Math.floor(i / per), r = i % per; out.set(16.2 + ((r % 3) - 1) * 0.98, 0.14 + l * 0.14, 19.6 + (Math.floor(r / 3) - 1.5) * 0.6); }, 60); vanPile.extra = 0; vanPile.jitter = 0.07;
   const plate = rbox(3.1, 0.08, 2.5, 0.04, mat(0x9ee59a)); ad(rd, plate, 16.2, 0.06, 19.6);
