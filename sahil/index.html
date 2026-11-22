@@ -1474,11 +1474,11 @@ function newFlower(bed, ci, type, x, y, z, t0, gt) {
   allFl.push(f); return f;
 }
 function buildFlowerInstances() {
-  const sl = {}, bl = {};
-  for (const f of allFl) { const nk = colsFor(f.type).length, ck = f.ci % nk; f.ck = ck; (sl[f.type] = sl[f.type] || []).push(f); (bl[f.type + '|' + ck] = bl[f.type + '|' + ck] || []).push(f); }
+  const sl = {}, bl = {}; buildFishInst(allFl.filter(f => isFishT(f.type)));
+  for (const f of allFl) { if (isFishT(f.type)) continue; const nk = colsFor(f.type).length, ck = f.ci % nk; f.ck = ck; (sl[f.type] = sl[f.type] || []).push(f); (bl[f.type + '|' + ck] = bl[f.type + '|' + ck] || []).push(f); }
   for (const t in sl) { const m = new THREE.InstancedMesh(stemGeo(t), vcMat, sl[t].length); m.frustumCulled = false; sl[t].forEach((f, i) => { f.sm = m; f.si = i; }); world.add(m); instMeshes.push(m); m.userData.dyn = true; }
   for (const k in bl) { const [t, ck] = k.split('|'), m = new THREE.InstancedMesh(bloomGeo(t, +ck), vcMat, bl[k].length); m.frustumCulled = false; bl[k].forEach((f, i) => { f.bm = m; f.bi = i; }); world.add(m); instMeshes.push(m); m.userData.dyn = true; }
-  for (const f of allFl) writeFlower(f);
+  for (const f of allFl) if (!isFishT(f.type)) writeFlower(f);
   const cull = (m, list) => { let x0 = 1e9, x1 = -1e9, z0 = 1e9, z1 = -1e9; for (const f of list) { x0 = Math.min(x0, f.x); x1 = Math.max(x1, f.x); z0 = Math.min(z0, f.z); z1 = Math.max(z1, f.z); } m.userData.cull = { cx: (x0 + x1) / 2, cz: (z0 + z1) / 2, r: Math.hypot(x1 - x0, z1 - z0) / 2 + 2 }; };
   for (const t in sl) cull(sl[t].length ? sl[t][0].sm : null, sl[t]); for (const k in bl) cull(bl[k][0].bm, bl[k]);
 }
@@ -1500,12 +1500,66 @@ function growFlower(f) {
   f.ss = Math.max(0.001, easeOutBack(Math.min(1, p / 0.5)));
   f.bs = p < 0.4 ? 0.001 : p < 0.75 ? 0.45 * easeOutBack((p - 0.4) / 0.35) + 0.001 : 0.45 + 0.55 * easeOutBack((p - 0.75) / 0.25);
 }
+let _dwT = null;
+function deepWater(cx, cz, w, d) { // açık deniz: koyu, yumuşak kenarlı derin su lekesi (balık sürüsü)
+  if (!_dwT) { const c = cv(128, 128), x = c.getContext('2d'), g = x.createRadialGradient(64, 64, 8, 64, 64, 62); g.addColorStop(0, 'rgba(8,70,120,.62)'); g.addColorStop(0.6, 'rgba(10,90,140,.35)'); g.addColorStop(1, 'rgba(10,100,150,0)'); x.fillStyle = g; x.fillRect(0, 0, 128, 128); _dwT = canvasTex(c); }
+  const m = new THREE.Mesh(G.plane, new THREE.MeshBasicMaterial({ map: _dwT, transparent: true, depthWrite: false, fog: false })); m.rotation.x = -Math.PI / 2; m.scale.set(w, d, 1); m.position.set(cx, 0.06, cz); m.renderOrder = 1; world.add(m); return m;
+}
+/* balık gölgeleri + dalga halkaları (suyun altında yüzen balıklar) */
+const FISHV = { sh: null, rp: null, list: [] };
+function fishShadowGeo() {
+  const P_ = [part(G.sph6, 0x07304a, 0, 0, 0, 0.34, 0.012, 0.13), part(G.sph6, 0x07304a, 0.3, 0, 0, 0.14, 0.012, 0.07), part(G.cone, 0x07304a, -0.4, 0, 0, 0.11, 0.012, 0.18, 0, 0, Math.PI / 2), part(G.sph6, 0x0b4666, -0.05, 0, 0.02, 0.18, 0.013, 0.05)];
+  for (const sz of [-1, 1]) P_.push(part(G.sph6, 0x07304a, 0.02, 0, sz * 0.14, 0.09, 0.012, 0.04, 0, sz * 0.5, 0));
+  return mergeParts(P_);
+}
+function buildFishInst(list) {
+  FISHV.list = list; const n = list.length; if (!n) return;
+  FISHV.sh = new THREE.InstancedMesh(fishShadowGeo(), new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.72, depthWrite: false }), n);
+  const rg = new THREE.RingGeometry(0.8, 1, 22); rg.rotateX(-Math.PI / 2);
+  FISHV.rp = new THREE.InstancedMesh(rg, new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, fog: false }), n);
+  for (const m of [FISHV.sh, FISHV.rp]) { m.frustumCulled = false; m.renderOrder = 2; m.userData.dyn = true; world.add(m); }
+  FISHV.sh.userData.keep = FISHV.rp.userData.keep = true;
+  list.forEach((f, i) => { f.fi = i; }); FISHV.col = new THREE.Color();
+  FISHV.sh.renderOrder = 2; FISHV.rp.renderOrder = 3;
+  const z = new THREE.Matrix4().makeScale(0, 0, 0); for (let i = 0; i < n; i++) { FISHV.sh.setMatrixAt(i, z); FISHV.rp.setMatrixAt(i, z); FISHV.rp.setColorAt(i, FISHV.col.setRGB(0, 0, 0)); }
+}
+const _fq2 = new THREE.Quaternion(), _fe2 = new THREE.Euler(), _fp2 = new THREE.Vector3(), _fs2 = new THREE.Vector3(), _fm2 = new THREE.Matrix4(), _zero = new THREE.Matrix4().makeScale(0, 0, 0);
+function writeFish(f) {
+  const a = T * f.sp + f.ph, ripe = f.vis && f.pop <= 0 && f.t >= 0;
+  const vx = -Math.sin(a) * f.sr, vz = Math.cos(a * 0.8) * f.sr * 0.56;
+  f.x = f.bx + Math.cos(a) * f.sr; f.z = f.bz + Math.sin(a * 0.8) * f.sr * 0.7;
+  if (!ripe) { FISHV.sh.setMatrixAt(f.fi, _zero); FISHV.rp.setMatrixAt(f.fi, _zero); FISHV.rp.setColorAt(f.fi, FISHV.col.setRGB(0, 0, 0)); return; }
+  const g = clamp(f.t / f.gt, 0, 1), k = smoothstep01(g) * f.sz * (f.type === 'rose' ? 0.85 : 1);
+  _fe2.set(0, -Math.atan2(vz, vx) + Math.PI, 0); _fq2.setFromEuler(_fe2);
+  _fm2.compose(_fp2.set(f.x, 0.075, f.z), _fq2, _fs2.set(k, 1, k)); FISHV.sh.setMatrixAt(f.fi, _fm2);
+  const ph = (T * 0.55 + f.ph * 0.37) % 1, r = (0.15 + ph * 0.6) * k * 1.1;
+  _fm2.compose(_fp2.set(f.x - Math.cos(a) * 0.0, 0.082, f.z), _fq2.identity(), _fs2.set(r, 1, r)); FISHV.rp.setMatrixAt(f.fi, _fm2);
+  const v = (1 - ph) * (1 - ph) * 0.75 * g; FISHV.rp.setColorAt(f.fi, FISHV.col.setRGB(v, v, v));
+}
+/* ara sıra suyun dışına sıçrayan balıklar */
+const JUMPS = []; let jumpT = 3;
+function updateJumps(dt) {
+  jumpT -= dt;
+  if (jumpT <= 0) {
+    jumpT = rand(1.6, 3.4); const cand = []; for (const b of beds) { if (b.locked || b.nohelp) continue; for (const f of b.flowers) if (isFishT(f.type) && f.vis && f.t >= f.gt && f.pop <= 0) cand.push(f); }
+    const gp = P.group.position; const f = cand.length ? cand[Math.floor(Math.random() * cand.length)] : null;
+    if (f && Math.hypot(f.x - gp.x, f.z - gp.z) < 38 && JUMPS.length < 4) {
+      const m = makeFlowerItem(f.ci, f.type); scene.add(m); const a = rand(0, TAU); JUMPS.push({ m, x0: f.x, z0: f.z, dx: Math.cos(a) * rand(1.4, 2.4), dz: Math.sin(a) * rand(1.4, 2.4), t: 0, dur: rand(0.8, 1.1), h: rand(1.3, 2.0), rot: rand(5, 8) }); f.ban = T + 1.2; splashRing(f.x, f.z, 0.9);
+    }
+  }
+  for (let i = JUMPS.length - 1; i >= 0; i--) {
+    const j = JUMPS[i]; j.t += dt / j.dur; const k = Math.min(1, j.t), m = j.m;
+    m.position.set(j.x0 + j.dx * k, 0.1 + 4 * j.h * k * (1 - k), j.z0 + j.dz * k); m.rotation.set(0, Math.atan2(-j.dz, j.dx), 0); m.rotation.z = Math.PI * 0.5 - (k * 2 - 1) * 1.2; m.scale.setScalar(1.25);
+    if (k >= 1) { splashRing(m.position.x, m.position.z, 1.4); for (let n = 0; n < 7; n++) { const a = rand(0, TAU), s = rand(0.6, 1.8); emit({ x: m.position.x, y: 0.2, z: m.position.z, vx: Math.cos(a) * s, vy: rand(2, 3.6), vz: Math.sin(a) * s, life: rand(0.4, 0.6), size: rand(0.12, 0.2), c: n % 3 ? 0xdff6ff : 0x7fd3f0, grav: 11, drag: 0.8 }); } rm(m); JUMPS.splice(i, 1); sfx('drop'); }
+  }
+}
+function splashRing(x, z, s) { ring(x, z, 0xdff6ff, s * 2.2); }
 function buildBed(idx) {
   const p = POS.beds[idx], bed = { idx, x: p.x, z: p.z, locked: idx === 2, flowers: [], group: new THREE.Group() };
-  poolWater(world, p.x, p.z, 8.4, 3.9, 0.07);
+  deepWater(p.x, p.z, 9.6, 5.2);
   for (let r = 0; r < 3; r++) for (let c = 0; c < 8; c++) {
     const ty = idx === 0 ? 'tulip' : idx === 1 ? 'rose' : ((r + c) % 2 ? 'rose' : 'tulip');
-    const fx = p.x + (c - 3.5) * 0.95, fz = p.z + (r - 1) * 1.0; const f = newFlower(bed, r + c + idx, ty, fx, 0.2, fz, rand(0, CFG.growTime), CFG.growTime); f.vis = idx !== 2;
+    const hs = Math.sin((r * 8 + c + idx * 31) * 12.9898) * 43758.5453, h1 = hs - Math.floor(hs), h2 = (hs * 7.13) - Math.floor(hs * 7.13); const fx = p.x + (c - 3.5) * 1.02 + (h1 - 0.5) * 0.9, fz = p.z + (r - 1) * 1.05 + (h2 - 0.5) * 0.7; const f = newFlower(bed, r + c + idx, ty, fx, 0.2, fz, rand(0, CFG.growTime), CFG.growTime); f.vis = idx !== 2; f.bx = fx; f.bz = fz; f.sp = 0.22 + h1 * 0.3; f.sr = 0.35 + h2 * 0.4; f.sz = 0.8 + h2 * 0.5;
     bed.flowers.push(f);
   }
   if (idx === 2) {
@@ -1558,12 +1612,12 @@ function makeBoard(text, w, h, style, sub) {
     x.fillStyle = '#26382f'; x.fillRect(0, 0, px, py);
     x.fillStyle = 'rgba(255,255,255,.06)'; for (let i = 0; i < 40; i++) x.fillRect(rand(0, px), rand(0, py), rand(20, 90), 3);
     x.strokeStyle = '#ffd7e8'; x.lineWidth = 5; x.strokeRect(14, 14, px - 28, py - 28);
-    otext(x, text, px / 2, py / 2 + 2, py * 0.48, '#fff8e6', 'rgba(0,0,0,.25)', 3);
+    otext(x, text, px / 2, py / 2 + 2, fitT(x, text, py * 0.48, px - 190), '#fff8e6', 'rgba(0,0,0,.25)', 3);
     iconFlower(x, 62, py / 2 + 4, py * 0.45, '#ff9ec4'); iconFlower(x, px - 62, py / 2 + 4, py * 0.45, '#ffd23f');
   } else {
     x.fillStyle = '#8a5a30'; x.fillRect(0, 0, px, py);
     x.strokeStyle = 'rgba(40,20,5,.35)'; x.lineWidth = 2; for (let i = 0; i < 12; i++) { const yy = rand(0, py); x.beginPath(); x.moveTo(0, yy); x.lineTo(px, yy + rand(-6, 6)); x.stroke(); }
-    otext(x, text, px / 2, py / 2 + 2, py * 0.52, '#fff0cf', '#4a2810', py * 0.1);
+    { const fs_ = fitT(x, text, py * 0.52, px - 44); otext(x, text, px / 2, py / 2 + 2, fs_, '#fff0cf', '#4a2810', fs_ * 0.18); }
   }
   const face = new THREE.Mesh(G.plane, LM({ map: canvasTex(c) })); face.scale.set(w, h, 1); face.position.z = 0.09; g.add(face);
   return g;
@@ -1609,7 +1663,7 @@ function buildStations() {
   const roof = new THREE.Mesh(new THREE.BoxGeometry(bw + 0.8, 0.14, 2.4), LM({ map: awningTex('#1d6fb8', '#ffffff') }));
   roof.material.map.repeat.set(2, 1); roof.material.map.wrapS = THREE.RepeatWrapping;
   roof.position.set(bcx, 4.15, -3.95); roof.rotation.x = -0.1; roof.castShadow = true; world.add(roof);
-  const sgn = makeBoard('TEMİZLEME', 4.6, 1.0, 'wood'); sgn.position.set(bcx, 5.05, -2.95); sgn.rotation.x = -0.25; world.add(sgn); roof.userData.dyn = sgn.userData.dyn = true; STREF.pack = [roof, sgn];
+  const sgn = makeBoard('TEMİZLEME TEZGAHI', 5.6, 1.0, 'wood'); sgn.position.set(bcx, 5.05, -2.95); sgn.rotation.x = -0.25; world.add(sgn); roof.userData.dyn = sgn.userData.dyn = true; STREF.pack = [roof, sgn];
   // ---- machine / wrapping area
   const mg = new THREE.Group(); mg.position.set(machine.x, TABLE_Y, machine.z); world.add(mg); machine.group = mg;
   mg.add(mk(G.box, mat(0xe0a868), 1.5, 0.03, 1.0, 0, 0.02, 0.15));
@@ -2370,10 +2424,10 @@ function watchdog(h, dt, pos, extra, home, reset, okWait) {
 }
 function resetWalker(h) { h.state = 'seek'; h.idle = 0; h.cd = 0; h.vel && h.vel.set(0, 0, 0); }
 function harvest(f, who) {
-  const item = makeFlowerItem(f.ci, f.type); item.position.set(f.x, 0.6, f.z); scene.add(item); if (f.rare) rareClaim(f, who);
+  const fish = isFishT(f.type), item = makeFlowerItem(f.ci, f.type); item.position.set(f.x, fish ? 0.12 : 0.6, f.z); scene.add(item); if (f.rare) rareClaim(f, who);
   f.gt = GROW[f.type] || 10; f.t = 0; f.pop = 0.18; f.claimed = false; f.owner = null; f.full = false; f.ss = 0.001; f.bs = 0.001;
-  petals(f.x, 0.8, f.z, colsFor(f.type)[f.ci % colsFor(f.type).length]);
-  sendToBack(who, item, ITYPE[f.type] || 'flower', 1.6);
+  if (fish) { splashRing(f.x, f.z, 0.9); item.rotation.z = 0.9; } else petals(f.x, 0.8, f.z, colsFor(f.type)[f.ci % colsFor(f.type).length]);
+  sendToBack(who, item, ITYPE[f.type] || 'flower', fish ? 3.0 : 1.6);
   if (who === P) { stats.harvested++; sfx('pick'); }
 }
 function transferToInput(who) {
@@ -2830,6 +2884,7 @@ function updateBeds(dt) {
     if (b.dropping !== undefined) { b.dropping += dt; const k = Math.min(1, b.dropping / 0.9); b.group.position.y = -3.2 * k * k; if (k >= 1) { b.group.visible = false; b.group.position.y = 0; b.dropping = undefined; for (let i = 0; i < 10; i++) dust(b.x + rand(-3.4, 3.4), 0.3, b.z + rand(-2.8, 2.8), 1, 0.7); } }
     if (b.locked) continue;
     for (const f of b.flowers) {
+      if (isFishT(f.type)) { if (f.pop > 0) f.pop -= dt; if (f.t < f.gt) f.t += dt; else if (!f.full) { f.full = true; rollRare(f); } writeFish(f); continue; }
       if (f.pop > 0) { f.pop -= dt; f.gs = Math.max(0.001, f.pop / 0.18) * 1.15; writeFlower(f); continue; }
       f.gs = 1;
       if (f.t < f.gt) { f.t += dt; growFlower(f); } else if (!f.full) { growFlower(f); f.full = true; rollRare(f); }
@@ -2837,6 +2892,7 @@ function updateBeds(dt) {
     }
   }
   for (const m of instMeshes) m.instanceMatrix.needsUpdate = true;
+  if (FISHV.sh) { FISHV.sh.instanceMatrix.needsUpdate = FISHV.rp.instanceMatrix.needsUpdate = true; FISHV.rp.instanceColor.needsUpdate = true; } updateJumps(dt);
   // oyuncu: balık noktasında durunca olta atar (yürürken balık toplanmaz); kabuklular yürüyerek toplanır
   P.cd -= dt;
   const gp = P.group.position, psp = Math.hypot(P.vel.x, P.vel.z);
