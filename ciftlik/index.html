@@ -4193,7 +4193,6 @@ function updateGates(dt, t) {
 }
 let gateNext = null;
 function initChapters() {
-  buildGate({ x: -8.2, z: 14.0, hw: 3.4, col: '#4aa8ff', hex: 0x2f9be8, t1: '◀ ÖNCEKİ BÖLÜM', t2: 'Sahil Balıkçısı', dir: 'w', go: () => chapConfirm2(CHAPS[1], true) });
   // son bölüm: sonraki kapı yok (final: Çiftlik Şenliği)
   // ayar menüsüne "Bölümler"
   const box = menuEl.querySelector('.mbox'), b = document.createElement('button'); b.id = 'mChap'; b.textContent = 'Bölümler'; b.style.cssText = 'background:linear-gradient(#ffb04a,#ff8a1f);box-shadow:0 4px 0 #b85a00'; box.insertBefore(b, document.getElementById('mQ')); b.addEventListener('click', () => { menuEl.style.display = 'none'; chapMenu(); });

@@ -3937,7 +3937,6 @@ function updateGates(dt, t) {
 }
 let gateNext = null;
 function initChapters() {
-  buildGate({ x: -6, z: 13.4, hw: 3.4, col: '#4aa8ff', hex: 0x2f9be8, t1: '◀ ÖNCEKİ BÖLÜM', t2: 'Çiçek Bahçesi', dir: 'w', go: () => chapConfirm2(CHAPS[0], true) });
   gateNext = buildGate({ x: -60, z: -7.2, hw: 3.0, col: '#ffd23f', hex: 0xff8a1f, t1: 'SIRADAKİ BÖLÜME GEÇ', t2: 'Hayvan Çiftliği', dir: 'n', pc: 0xfff4d6, vis: () => (S.lv.gate || 0) > 0 || S.lv.fener > 0, active: () => (S.lv.gate || 0) > 0, go: () => chapConfirm2(CHAPS[2], false) });
   // ayar menüsüne "Bölümler"
   const box = menuEl.querySelector('.mbox'), b = document.createElement('button'); b.id = 'mChap'; b.textContent = 'Bölümler'; b.style.cssText = 'background:linear-gradient(#ffb04a,#ff8a1f);box-shadow:0 4px 0 #b85a00'; box.insertBefore(b, document.getElementById('mQ')); b.addEventListener('click', () => { menuEl.style.display = 'none'; chapMenu(); });
