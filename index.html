@@ -5098,8 +5098,14 @@ function allPads() { const l = []; for (const k in upPads) l.push(upPads[k]); fo
 function roadsList() { return [[3.45, 7.35, -172, -11.5], [8.3, 11.7, 12, 47], [-11.1, -8.9, -11, 11], [-17.5, -10.5, -5.5, -2.5], [-17.5, -10.5, 2.5, 5.5], [-17.5, -10.5, -13.2, -10.5]]; } // sokak, minibüs yolu, toprak patikalar
 function bedRect(b) { return b.rc || (b.rc = (() => { let x0 = 1e9, x1 = -1e9, z0 = 1e9, z1 = -1e9; for (const f of b.flowers) { x0 = Math.min(x0, f.x); x1 = Math.max(x1, f.x); z0 = Math.min(z0, f.z); z1 = Math.max(z1, f.z); } return [x0 - 0.8, x1 + 0.8, z0 - 0.8, z1 + 0.8]; })()); }
 function padOnRoadOK(p) { return !!(p.key && (EXTZ[p.key] || p.key === 'sera' || p.key === 'van' || p.key === 'coll' || p.key === 'gate')); } // bölge açma pad'leri sokak üstünde durur
+/* etkileşim bölgeleri: pad olmayan her Zone (bırakma/alma/para/müşteri/düğün/minibüs/gemi...) + müşteri kuyruğu. Pad kenarı ile bölge kenarı arası >= PADGAP */
+
+function zoneRects() { const l = []; for (const z of zones) { if (z instanceof UpgradePad || z instanceof CPad) continue; l.push([z.x - z.w / 2, z.x + z.w / 2, z.z - z.d / 2, z.z + z.d / 2, z]); } l.push([CFG.queueX - 1, CFG.queueX + 1, CFG.queueZ0 - 0.8, CFG.queueZ0 + (CFG.queueMax - 1) * CFG.queueGap + 0.8, null]); return l; }
+function padZoneHit(p, x, z) { const hw = p.w / 2 + 0.8, hd = p.d / 2 + 0.8; for (const r of zoneRects()) if (r[0] < x + hw && r[1] > x - hw && r[2] < z + hd && r[3] > z - hd) return r; return null; }
+function padBlocked(p) { const px = P.group.position.x, pz = P.group.position.z, hw = p.w / 2, hd = p.d / 2; for (const z of zones) { if (z instanceof UpgradePad || z instanceof CPad || !z.group.visible || z.locked || !z.contains(px, pz)) continue; if (Math.abs(z.x - p.x) < hw + z.w / 2 && Math.abs(z.z - p.z) < hd + z.d / 2) return true; } return false; } // oyuncu bir bırakma/alma bölgesinde duruyorsa, onunla çakışan pad para almaz
 function padHits(p, x, z, others) {
   const hw = p.w / 2 + 0.2, hd = p.d / 2 + 0.2, x0 = x - hw, x1 = x + hw, z0 = z - hd, z1 = z + hd;
+  if (padZoneHit(p, x, z)) return 'zone';
   for (const b of PROPBOX) if (b[0] < x1 && b[1] > x0 && b[2] < z1 && b[3] > z0) return 'prop';
   for (const c of colliders) { if (c.active) continue; if (c.x0 < x1 && c.x1 > x0 && c.z0 < z1 && c.z1 > z0) return 'collider'; }
   if (!padOnRoadOK(p)) for (const r of roadsList()) if (r[0] < x1 && r[1] > x0 && r[2] < z1 && r[3] > z0) return 'road';
@@ -5119,14 +5125,8 @@ function fixPads() {
 window.__game = {
   padCheck() { const pads = allPads(); const hits = []; for (const p of pads) { const h = padHits(p, p.x, p.z, pads); if (h) hits.push([p.key || (p.o && p.o.id) || '?', h, +p.x.toFixed(1), +p.z.toFixed(1)]); } return hits; }, fixPads, allPads, PROPBOX, padOK: () => PADOK,
   get camera() { return camera; },
-/* etkileşim bölgeleri: pad olmayan her Zone (bırakma/alma/para/müşteri/düğün/minibüs/gemi...) + müşteri kuyruğu. Pad kenarı ile bölge kenarı arası >= PADGAP */
-
-function zoneRects() { const l = []; for (const z of zones) { if (z instanceof UpgradePad || z instanceof CPad) continue; l.push([z.x - z.w / 2, z.x + z.w / 2, z.z - z.d / 2, z.z + z.d / 2, z]); } l.push([CFG.queueX - 1, CFG.queueX + 1, CFG.queueZ0 - 0.8, CFG.queueZ0 + (CFG.queueMax - 1) * CFG.queueGap + 0.8, null]); return l; }
-function padZoneHit(p, x, z) { const hw = p.w / 2 + 0.8, hd = p.d / 2 + 0.8; for (const r of zoneRects()) if (r[0] < x + hw && r[1] > x - hw && r[2] < z + hd && r[3] > z - hd) return r; return null; }
-function padBlocked(p) { const px = P.group.position.x, pz = P.group.position.z, hw = p.w / 2, hd = p.d / 2; for (const z of zones) { if (z instanceof UpgradePad || z instanceof CPad || !z.group.visible || z.locked || !z.contains(px, pz)) continue; if (Math.abs(z.x - p.x) < hw + z.w / 2 && Math.abs(z.z - p.z) < hd + z.d / 2) return true; } return false; } // oyuncu bir bırakma/alma bölgesinde duruyorsa, onunla çakışan pad para almaz
   measure() { renderer.info.reset(); if (composer) composer.render(0); else renderer.render(scene, camera); return { calls: renderer.info.render.calls, tris: renderer.info.render.triangles }; },
   get c2() { return { TD, TDM, TK, applyTier, CPADS, S, cosGate, buyTier, DSL, DSLM, DECT, DEC, zonesAll: zones, buyDecor, beautyPts, BF, placeDecor, DN, NIGHT, DN_PERIOD }; },
-  if (padZoneHit(p, x, z)) return 'zone';
   path(tx, tz) { return findPath(P.group.position.x, P.group.position.z, tx, tz); }, colliders,
   EXTZ, STN, GARD, GROLES, roleEvolve, BUSES, cafe: () => cafe, wed: () => wed, city: () => city, tractor: () => tractor, give(type, n) { n = Math.min(n, Math.max(0, P.free())); for (let i = 0; i < n; i++) P.stack.add(['orchid', 'lav', 'sun', 'rosep', 'flower'].includes(type) ? makeFlowerItem(0, type === 'flower' ? 'tulip' : type) : makeItemOf(type), type); },
   hintOK: { canCity, canCounter, canWed, canTable, makeItemOf, lane, shelfFree },
