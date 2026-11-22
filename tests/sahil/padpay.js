@@ -1,5 +1,5 @@
 const h=require('./h.js');
-(async()=>{const {b,page,errs}=await h.open({q:'low',fixture:process.env.FIX||__dirname+'/../max.json',wait:1500});
+(async()=>{const {b,page,errs}=await h.open({q:'low',fixture:process.env.FIX||__dirname+'/saves/sahil-end-v8.json',wait:1500});
 await page.evaluate(()=>{window.__resetting=false;__game.hideIntro()});
 const r=await page.evaluate(()=>{const g=__game,out={fail:[],ok:0,skipped:[]};
 for(const k in g.upPads){const u=g.upPads[k];if(u.done)continue;
