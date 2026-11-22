@@ -64,6 +64,7 @@
   #fsBtn{position:absolute;right:calc(max(12px,env(safe-area-inset-right)) + 52px);top:max(12px,env(safe-area-inset-top));pointer-events:auto;width:44px;height:44px;border:0;border-radius:50%;background:rgba(18,48,74,.55);padding:0;opacity:.8;display:none}
   #fsBtn svg{width:24px;height:24px;display:block;margin:auto}
   #reset svg{width:24px;height:24px;display:block;margin:auto}
+  #storyCard{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(6,24,48,.62);z-index:23;pointer-events:auto}
   #gateCard{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(6,24,48,.62);z-index:22;pointer-events:auto}
   .gbox{width:min(340px,90vw);background:linear-gradient(#fff,#e3f4ff);border-radius:26px;padding:24px 20px 20px;text-align:center;box-shadow:0 10px 0 rgba(0,0,0,.18),0 24px 48px rgba(0,0,0,.4),inset 0 0 0 4px #7fe9ff}
   .gt{font-weight:900;font-size:26px;line-height:1.15;color:#0f3a63}
@@ -138,6 +139,7 @@
     <button id="fsBtn" aria-label="Tam ekran"><svg viewBox="0 0 24 24"><path fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
   </div>
   <div id="gateCard"><div class="gbox"><div class="gt">Sahil Balıkçısı'na geç?</div><div class="gs">İlerlemen burada kayıtlı kalır.</div><div class="gb"><button id="gateGo">Geç</button><button id="gateStay">Kal</button></div></div></div>
+  <div id="storyCard"><div class="gbox"><div class="gt">Nine Gül'den bir hediye</div><div class="gs">"Bu bahçe yıllarca benimdi, bugünden sonra senin. Çiçekleri topla, buket yap, ilk müşteri seni bekliyor. Gerisi kendiliğinden gelir, hadi bakalım!"<br><i style="font-size:14px">- Nine Gül</i></div><div class="gb"><button id="storyGo">Başla</button></div></div></div>
   <div id="menu"><div class="mbox"><div class="mt">Ayarlar</div><button id="mWard" style="background:linear-gradient(#ff8fc4,#ff4f93);box-shadow:0 4px 0 #b81f64">Gardırop &amp; Kozmetik</button><button id="mNight">Gece: Açık</button><button id="mQ"></button><button id="mFs" style="display:none">Tam Ekran</button><button id="mReset">İlerlemeyi sıfırla</button><button id="mClose">Kapat</button></div></div>
   <div id="ward"><div class="wbox"><div class="wh"><div class="wt">Gardırop</div><div class="wm" id="wMoney">0</div></div><div class="wtabs" id="wTabs"><button data-t="player" class="on">Oyuncu</button><button data-t="work">Çalışanlar</button><button data-t="floor">Meydan</button></div><div id="wgrid"></div><button id="wClose">Kapat</button></div></div>
   <div id="fx"></div><div id="flash"></div><div id="praise" class="txt"></div>
@@ -5003,6 +5005,18 @@ function gateApply(instant) {
   praise('YENİ BÖLÜM AÇILDI!', true); toast('Sahil Balıkçısı açıldı — kapıdan geçebilirsin');
   panReq('gate', X, Z + 5, 'SAHİL BALIKÇISI AÇILDI!');
 }
+const MSTONES = [
+  ['ms_zone', () => !!(zone2 && !zone2.locked), 'Nine Gül: "Bahçe büyüyor, aferin sana!"'],
+  ['ms_work', () => S.lv.helper > 0 || S.lv.cashier > 0 || S.lv.carrier > 0, 'Artık yalnız değilsin, ilk işçin göreve başladı!'],
+  ['ms_tractor', () => !!tractor, 'İlk traktörün! Tarlalar senin için çalışıyor'],
+  ['ms_gate', () => gatePaid(), 'Sahile giden kapı açıldı: Nine Gül\'ün kulübesi seni bekliyor']
+];
+let msInit = false, msT = 0;
+function milestones(dt) { // ilk kez gerçekleşen olaylarda bir kerelik toast; yüklemede zaten gerçekleşmişler sessizce işaretlenir
+  if (!introDone) return; msT -= dt; if (msT > 0) return; msT = 0.5;
+  for (const [k, c, tx] of MSTONES) { if (S.seen[k]) continue; let ok = false; try { ok = c(); } catch (e) {} if (!ok) continue; S.seen[k] = 1; saveDirty = true; if (msInit) toast(tx); }
+  msInit = true;
+}
 function updateGate(dt, t) {
   const g = GATE.g; if (!g) return; gateSync(); if (!g.visible) return;
   const paid = gatePaid(), gp = P.group.position;
@@ -5043,7 +5057,7 @@ function buildC3() {
 }
 function initC3() { hivesRefresh(true); initColl(); initQuests(); initOffline(); }
 function updateC3(dt, t) {
-  updateBees(dt, t); updateBeek(dt, t); beeZoneActions(dt); updateJapan(dt, t); rareUpdate(dt, t); updatePort(dt, t); updateFest(dt, t); updateMuseum(dt, t); updateGate(dt, t); c3Frame(dt);
+  updateBees(dt, t); updateBeek(dt, t); beeZoneActions(dt); updateJapan(dt, t); rareUpdate(dt, t); updatePort(dt, t); updateFest(dt, t); updateMuseum(dt, t); updateGate(dt, t); c3Frame(dt); milestones(dt);
 }
 /*C3-END*/
 /* =====================================================================
@@ -5090,6 +5104,10 @@ for (let i = 0; i < 3; i++) { spawnCustomer(CFG.queueZ0 + i * CFG.queueGap); con
 initC2(); initC3(); try { window.__padFix = fixPads(); } catch (e) { window.__padFixErr = String(e.stack); } buildAmbient(); setupPost(); onResize();
 introDone = !(S.tut === 0 && S.money === 0 && !Object.keys(S.lv).some(k => S.lv[k] > 0));
 if (!introDone) introEl.style.display = 'block';
+if (!introDone && !S.seen.story) { // ilk açılış hikâye kartı (sadece başlangıçtaki kayıtlarda, bir kez)
+  const sc = document.getElementById('storyCard'); sc.style.display = 'flex'; introEl.style.display = 'none';
+  document.getElementById('storyGo').addEventListener('click', () => { sc.style.display = 'none'; S.seen.story = 1; saveDirty = true; if (!introDone) introEl.style.display = 'block'; sfx('up'); });
+}
 curGoalIdx = goalIndex(); curGoal = curGoalIdx >= 0 ? GOALS[curGoalIdx] : null; lastGoalIdx = curGoalIdx; drawGoalIcon();
 for (const k in upPads) { const u = upPads[k]; if (!u.done) { u.group.visible = padVisible(u); } }
 
