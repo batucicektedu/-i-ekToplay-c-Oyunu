@@ -220,7 +220,7 @@ function rm(o) { if (o && o.parent) o.parent.remove(o); }
 let fountainWater = null, clouds = [], butterflies = [];
 let LOADED_X = null, carpet1 = null, carpet2 = null;
 const MAIN_UNLOCKS = { bed: 1, helper: 1, cashier: 1, carrier: 1, sera: 1, van: 1 };
-const S = { money: 0, lv: { cap: 0, speed: 0, pack: 0, bed: 0, helper: 0, cashier: 0, carrier: 0, cashSpd: 0, carSpd: 0, carCap: 0, helpSpd: 0, sera: 0, van: 0, lav: 0, lavW: 0, keseSpd: 0, parf: 0, parfW: 0, parfSpd: 0, cafe: 0, cafeW: 0, teaSpd: 0, wed: 0, wedBonus: 0, sunf: 0, sunW: 0, sbqSpd: 0, city: 0, cityW: 0, citySpd: 0, stars: 0, bee: 0, beeW: 0, hiveN: 0, hiveSpd: 0, honSpd: 0, jap: 0, bonW: 0, bonSpd: 0, coll: 0, port: 0, portW: 0, portBonus: 0, fest: 0, festBonus: 0, mus: 0, musTkt: 0, wedW: 0, portSpd: 0, portCap: 0, helpCap: 0, helperN: 0, helperT: 0, lavCap: 0, lavN: 0, lavT: 0, parfCap: 0, parfN: 0, parfT: 0, cafeG: 0, cafeGCap: 0, cafeGN: 0, cafeGT: 0, sunCap: 0, sunN: 0, bonCap: 0, bonN: 0, bonT: 0, carN: 0, cashN: 0, wedSpd: 0, potSpd: 0, boat: 0, boatN: 0, boatSpd: 0, boatCap: 0, hamal: 0, hamalN: 0, hamalSpd: 0, hamalCap: 0, bus: 0, busSpd: 0, busCap: 0, busN: 0, wedN: 0, waitN: 0, cityN: 0, portN: 0, beeN: 0, gate: 0 }, ic: 0, tut: 0, tier: { pack: 0, flo: 0, pot: 0, van: 0, kese: 0, parf: 0, tea: 0, wed: 0, city: 0, hon: 0, bon: 0 }, decor: {}, cos: { hat: 'straw', fit: 0, uni: 0, floor: 0, own: [] }, dn: 0,
+const S = { money: 0, lv: { cap: 0, speed: 0, pack: 0, bed: 0, helper: 0, cashier: 0, carrier: 0, cashSpd: 0, carSpd: 0, carCap: 0, helpSpd: 0, sera: 0, van: 0, lav: 0, lavW: 0, keseSpd: 0, parf: 0, parfW: 0, parfSpd: 0, cafe: 0, cafeW: 0, teaSpd: 0, wed: 0, wedBonus: 0, sunf: 0, sunW: 0, sbqSpd: 0, city: 0, cityW: 0, citySpd: 0, stars: 0, bee: 0, beeW: 0, hiveN: 0, hiveSpd: 0, honSpd: 0, jap: 0, bonW: 0, bonSpd: 0, coll: 0, port: 0, portW: 0, portBonus: 0, fest: 0, festBonus: 0, mus: 0, musTkt: 0, wedW: 0, portSpd: 0, portCap: 0, helpCap: 0, helperN: 0, helperT: 0, lavCap: 0, lavN: 0, lavT: 0, parfCap: 0, parfN: 0, parfT: 0, cafeG: 0, cafeGCap: 0, cafeGN: 0, cafeGT: 0, sunCap: 0, sunN: 0, bonCap: 0, bonN: 0, bonT: 0, carN: 0, cashN: 0, wedSpd: 0, potSpd: 0, boat: 0, gboat: 0, gboatSpd: 0, gboatQ: 0, boatN: 0, boatSpd: 0, boatCap: 0, hamal: 0, hamalN: 0, hamalSpd: 0, hamalCap: 0, bus: 0, busSpd: 0, busCap: 0, busN: 0, wedN: 0, waitN: 0, cityN: 0, portN: 0, beeN: 0, gate: 0 }, ic: 0, tut: 0, tier: { pack: 0, flo: 0, pot: 0, van: 0, kese: 0, parf: 0, tea: 0, wed: 0, city: 0, hon: 0, bon: 0 }, decor: {}, cos: { hat: 'straw', fit: 0, uni: 0, floor: 0, own: [] }, dn: 0,
   cb: {}, cs: [], pt: { n: 0, cur: null }, fe: { n: 0, t: 420 }, q: { a: [], n: 0 }, bx: 0, ts: 0, op: 0, mv: 0, seen: {} };
 let saveDirty = false, saveTimer = 0;
 let introDone = false, curGoal = null, curGoalIdx = -1, lastGoalIdx = -2;
@@ -2538,6 +2538,7 @@ function updateUpgrades(dt) {
       if (u.off && u.pause <= 0 && u.inside) { u.locked = false; u.hold = 0; u.redraw(); } else continue;
     }
     if (u.inside && S.money <= 0 && !u.locked) { u.warn = (u.warn || 0) - dt; if (u.warn <= 0) { u.warn = 1.4; u.pop = 0.4; popText(u.x, 2.4, u.z, 'Yetersiz para: ' + fmt(Math.max(0, u.cost() - u.paid)), '#ff6b6b'); sfx('drop'); } }
+    if (u.inside && zones.some(q => !(q instanceof UpgradePad) && q.inside && Math.abs(q.x - u.x) < (q.w + u.w) / 2 && Math.abs(q.z - u.z) < (q.d + u.d) / 2)) { u.hold = 0; continue; }
     if (!u.inside || S.money <= 0) { u.hold = 0; continue; }
     u.hold += dt;
     u.tick -= dt; if (u.tick > 0) continue; u.tick = 0.03;
@@ -2832,7 +2833,7 @@ function movePlayer(dt) {
   P.vel.x = damp(P.vel.x, tvx, 14, dt); P.vel.z = damp(P.vel.z, tvz, 14, dt);
   const gp = P.group.position; gp.x += P.vel.x * dt; gp.z += P.vel.z * dt;
   const B = CFG.bounds, north = gp.z < -11.5, anyExt = EXTLIST.some(q => !q.locked);
-  gp.x = clamp(gp.x, north ? -25 : B.x0, Math.max(north ? 34 : 0, zone2 && !zone2.locked ? 44.5 : B.x1, zone3 && !zone3.locked ? 24.2 : 0)); if (zone3 && !zone3.locked) B.z1 = 31.5; else B.z1 = cosOn() ? 21 : 16;
+  gp.x = clamp(gp.x, north ? -25 : B.x0, Math.max(north ? 34 : 0, zone2 && !zone2.locked ? 44.5 : B.x1, zone3 && !zone3.locked ? 24.2 : 0, S.lv.boat > 0 ? 46.8 : 0)); if (zone3 && !zone3.locked) B.z1 = 31.5; else B.z1 = cosOn() ? 21 : 16; if (S.lv.boat > 0) B.z1 = Math.max(B.z1, 40.5);
   gp.z = clamp(gp.z, (anyExt || (gp.x > 1.5 && gp.x < 9.3)) ? -172 : B.z0, B.z1);
   const r = 0.45;
   for (const c of colliders) {
@@ -2987,6 +2988,7 @@ function snapshot() {
   const paid = {}, shown = {}; for (const k in upPads) { if (upPads[k].paid > 0) paid[k] = upPads[k].paid; if (upPads[k].shown) shown[k] = 1; }
   const x = { paid, shown, mp: pileVal(moneyPile), vp: pileVal(vanPile), sb: shelfB.length, sp: shelfP.length, pi: potInput.length, po: potOutput.length, ii: inputPile.length, oo: outputPile.length, pc: carriedCounts() };
   const away = VAN.state === 'away' || VAN.state === 'depart' || VAN.state === 'return';
+  x.ea = {}; for (const e of EATS) x.ea[e.id] = pileVal(e.pile);
   x.van = { away, load: vanLoad.length + (VAN.state === 'loading' ? vanCap() - vanLoad.length : 0), sum: VAN.sum, until: away ? Date.now() + Math.max(0, 20 - VAN.trip) * 1000 : 0 };
   return x;
 }
@@ -2997,6 +2999,7 @@ function restoreExtras(x) {
   for (const k in (x.paid || {})) if (upPads[k]) upPads[k].paid = Math.min(num(x.paid[k]), Math.max(0, (upPads[k].cost() || 1) - 1));
   for (const k in (x.shown || {})) if (upPads[k]) upPads[k].shown = true;
   const bills = (st, val) => { val = num(val); if (!val) return; const n = Math.min(st.cap, 14, Math.max(1, Math.round(val / CFG.billValue))), v = Math.floor(val / n); fillStack(st, n, () => { const b = makeBill(); b.userData.v = v; return b; }, 'bill'); st.extra = val - v * n; };
+  for (const e of EATS) if (x.ea && x.ea[e.id]) bills(e.pile, x.ea[e.id]);
   bills(moneyPile, x.mp); fillStack(shelfB, num(x.sb), () => makeBouquetItem(undefined, true), 'bouquet'); fillStack(shelfP, num(x.sp), () => makePotItem(true), 'pot');
   fillStack(inputPile, num(x.ii), () => makeFlowerItem(Math.floor(Math.random() * 4), 'tulip'), 'flower'); fillStack(outputPile, num(x.oo), () => makeBouquetItem(undefined, true), 'bouquet');
   if (zone2 && !zone2.locked) { fillStack(potInput, num(x.pi), () => makeFlowerItem(Math.floor(Math.random() * 4), 'orchid'), 'orchid'); fillStack(potOutput, num(x.po), () => makePotItem(true), 'pot'); }
@@ -5160,7 +5163,7 @@ function updateBoats(dt, t) {
   const gpP = P.group.position;
   DOCK.stack.update(dt, t); DOCK.tick -= dt;
   if (DOCK.zone.group.visible && DOCK.zone.inside && DOCK.tick <= 0 && DOCK.stack.length > 0 && P.free() > 0) { const it = DOCK.stack.takeLast(); if (it) { sendToBack(P, it.mesh, 'flower', 1.5); sfx('pick'); } DOCK.tick = CFG.transferEvery; }
-  for (const p of HAMALS) updateHamal(p, dt, t);
+  for (const p of HAMALS) updateHamal(p, dt, t); updateEast(dt, t);
   for (const b of BOATS) {
     if (!b.on) continue; const g = b.g, gp = g.position, spd = boatSpeed();
     if (b.state === 'moored') {
@@ -5233,7 +5236,128 @@ function initBoats() {
   u = extPad('hamalN', '+1 Hamal', geo(4500, 2), -9.8, 24.2, iconCart, () => S.lv.hamal > 0); u.autoShow = true; UPG.hamalN.sub = () => 'Şu an ' + (1 + S.lv.hamalN) + ' hamal'; EXTAPPLY.hamalN = i => { while (HAMALS.length < 1 + (S.lv.hamalN || 0)) spawnHamal(HAMALS.length, i); };
   u = extPad('hamalSpd', 'Hamal Hızı', geo(800, 4), -14.5, 24.2, iconBolt, () => S.lv.hamal > 0); u.autoShow = true; UPG.hamalSpd.sub = () => 'Daha hızlı yürür';
   u = extPad('hamalCap', 'Arabası Kapasite', geo(1000, 4), -24.5, 24.2, iconBackpack, () => S.lv.hamal > 0); u.autoShow = true; UPG.hamalCap.sub = () => 'Araba ' + (6 + 3 * S.lv.hamalCap) + ' → ' + (9 + 3 * S.lv.hamalCap);
+  initEast();
   if (upPads.helperT && !S.lv.helperT) upPads.helperT.vis = () => false; // balıkçı "tekne yap" evrimi artık gerçek tekneler
+}
+/* =====================================================================
+   SAHİL v3: DOĞU RIHTIMI – Balık-Ekmek Teknesi (demirli tekne restoran, rıhtımda müşteri kuyruğu)
+   ===================================================================== */
+const EATS = [];
+function iconSand(ctx, cx, cy, s) { // balık-ekmek
+  ctx.lineJoin = 'round'; ctx.lineWidth = s * 0.05; ctx.strokeStyle = '#6a3a10';
+  ctx.fillStyle = '#e8b46a'; ctx.beginPath(); ctx.ellipse(cx, cy + s * 0.05, s * 0.46, s * 0.26, 0, 0, TAU); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#6fcf6a'; ctx.beginPath(); ctx.ellipse(cx, cy - s * 0.03, s * 0.4, s * 0.09, 0, 0, TAU); ctx.fill();
+  ctx.fillStyle = '#ff8a3a'; ctx.beginPath(); ctx.ellipse(cx, cy + s * 0.04, s * 0.34, s * 0.09, 0, 0, TAU); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#f6d28a'; ctx.beginPath(); ctx.ellipse(cx, cy - s * 0.14, s * 0.44, s * 0.2, 0, Math.PI, TAU); ctx.fill(); ctx.stroke();
+}
+ICONF.sand = iconSand;
+ITEMF.sand = () => { const g = new THREE.Group(); g.add(new THREE.Mesh(mkProdGeo('x_sand', () => [part(G.sph6, 0xe8b46a, 0, 0.12, 0, 0.3, 0.12, 0.2), part(G.sph6, 0x6fcf6a, 0, 0.2, 0, 0.27, 0.03, 0.17), part(G.sph6, 0xff8a3a, 0.02, 0.23, 0, 0.25, 0.04, 0.15), part(G.sph6, 0xf6d28a, 0, 0.3, 0, 0.3, 0.1, 0.2)]), vcMat2)); g.userData.prod = 'sand'; return g; };
+function bubbleSmall(c) { // küçük istek balonu
+  const draw = bubbleDraw('want', c.want - c.got, c.prod);
+  if (!c.bubble) { c.bubble = makeSprite(256, 192, draw, 1.7, 1.28, false); c.bubble.position.set(0, 3.0, 0); c.group.add(c.bubble); } else redrawSprite(c.bubble, draw);
+  c.bubble.visible = true; c.bubKind = 'want';
+}
+function makeEatery(o) {
+  const E = { id: o.id, o, cs: [], t: 2, working: false, timer: 0, pend: 0, work: 0, cookX: o.cook[0], cookZ: o.cook[1] };
+  E.input = new Stack(scene, (i, out) => { const r = i % 6, l = Math.floor(i / 6); out.set(o.crate[0] + ((r % 2) - 0.5) * 0.78, 0.62 + l * 0.27, o.crate[1] + (Math.floor(r / 2) - 1) * 0.46); }, 24); E.input.pend = 0; EXTSTACKS.push(E.input);
+  E.out = new Stack(scene, (i, out) => out.set(o.out[0] + Math.floor(i / 4) * 0.5, o.out[1], o.out[2] + (i % 4) * 0.52), 8); E.out.pend = 0; EXTSTACKS.push(E.out);
+  E.pile = new Stack(scene, (i, out) => { const r = i % 6, l = Math.floor(i / 6); out.set(o.money[0] + ((r % 3) - 1) * 0.9, 0.95 + l * 0.14, o.money[1] + (Math.floor(r / 3) - 0.5) * 0.6); }, 36); E.pile.extra = 0; E.pile.jitter = 0.07; EXTSTACKS.push(E.pile);
+  E.inZone = new Zone({ x: o.inZone[0], z: o.inZone[1], w: 2.8, d: 2.4, color: o.col, draw: drawZoneIcon(ICONF[o.inType]) }); E.inZone.group.visible = false;
+  E.monZone = new Zone({ x: o.money[0], z: o.money[1] + 2.1, w: 3.2, d: 2.4, color: '#1ed760', draw: null, labelSize: 0.01 }); E.monZone.label.visible = false; E.monZone.group.visible = false;
+  E.slot = i => [o.q[0], o.q[1] + i * o.qGap];
+  E.spd = () => Math.pow(0.8, S.lv[o.id + 'Spd'] || 0);
+  EATS.push(E); return E;
+}
+function eatSpawn(E) {
+  const o = E.o, fem = Math.random() < 0.5, c = makeChar({ shirt: pick(SHIRTS), pants: pick([0x3b4a6b, 0x5b4636, 0x2f3542]), hair: pick(HAIRS), skin: pick(SKINS), hairStyle: fem ? pick(['bob', 'long', 'ponytail', 'bun']) : pick(['short', 'spiky']), hat: !fem && Math.random() < 0.3 ? 'cap' : null, hatColor: pick([0xff5a6e, 0x4d96ff, 0xffd23f]), shoe: 0xffffff });
+  c.group.position.set(o.spawn[0] + rand(-1, 1), 0, o.spawn[1]); c.want = Math.random() < 0.5 ? 1 : 2; c.got = 0; c.pending = 0; c.prod = o.outType; c.state = 'in'; c.wait = 0; c.bubble = null; c.eat = E; c.vip = false;
+  scene.add(c.group); E.cs.push(c); return c;
+}
+function eatBill(E, c, v) {
+  const b = makeBill(); b.userData.v = v; b.position.set(c.group.position.x, 1.8, c.group.position.z); scene.add(b);
+  const idx = E.pile.length + (E.pile.pend || 0); E.pile.pend = (E.pile.pend || 0) + 1;
+  fly(b, out => { E.pile.slotFn(Math.min(idx, E.pile.cap - 1), out); return 0; }, 0.5, 1.8, () => { E.pile.pend--; if (E.pile.length >= E.pile.cap) { E.pile.extra += b.userData.v; rm(b); } else E.pile.add(b, 'bill'); sfx('cash'); });
+}
+function updateEatery(E, dt, t) {
+  const o = E.o; if (!E.active) return; const gp = P.group.position;
+  E.inZone.group.visible = E.monZone.group.visible = true;
+  if (E.inZone.inside && P.stack.count(o.inType) > 0 && E.input.length + (E.input.pend || 0) < 24) { E.tick = (E.tick || 0) - dt; if (E.tick <= 0) { dropTo(E.input, P, o.inType); E.tick = CFG.transferEvery; } }
+  if (E.monZone.inside && (E.pile.length > 0 || E.pile.extra > 0)) { E.mt = (E.mt || 0) - dt; if (E.mt <= 0) { collectMoney(E.pile); E.mt = 0.03; } }
+  // pişirme
+  const interval = o.ctime * E.spd();
+  if (!E.working && E.input.length > 0 && E.out.length + E.pend + o.outN <= 8) { const it = E.input.takeLast(); fly(it.mesh, out => { out.set(E.cookX, 1.9, E.cookZ); return 0; }, 0.2, 1.0, () => { rm(it.mesh); sfx('pack'); }); E.working = true; E.timer = 0; }
+  if (E.working) {
+    E.timer += dt; if (Math.random() < dt * 14) emit({ x: E.cookX + rand(-0.3, 0.3), y: 2.0, z: E.cookZ + rand(-0.3, 0.3), vx: 0.35, vy: rand(0.8, 1.4), vz: rand(-0.1, 0.1), life: 1.3, size: 0.5, c: 0xe8e8e8, grav: -0.5, a: 0.55, grow: 1.5 });
+    if (Math.random() < dt * 4) emit({ x: E.cookX, y: 1.8, z: E.cookZ, vx: rand(-0.5, 0.5), vy: rand(1.5, 2.5), vz: rand(-0.5, 0.5), life: 0.4, size: 0.12, c: 0xffa23a, grav: 6 });
+    if (E.timer >= interval) {
+      E.working = false; stats.grilled = (stats.grilled || 0) + 1;
+      for (let k = 0; k < o.outN; k++) { E.pend++; const b = ITEMF[o.outType](); b.position.set(E.cookX, 1.9, E.cookZ); scene.add(b); const idx = E.out.length + E.pend - 1; later(k * 0.12, () => fly(b, out => { E.out.slotFn(Math.min(idx, 7), out); return 0; }, 0.35, 1.0, () => { E.pend--; E.out.add(b, o.outType); sfx('drop'); })); }
+    }
+  } else if (Math.random() < dt * 2) emit({ x: E.cookX, y: 1.9, z: E.cookZ, vx: 0.3, vy: 1, vz: 0, life: 1.1, size: 0.35, c: 0xdddddd, grav: -0.4, a: 0.25, grow: 1.2 });
+  // müşteri
+  E.t -= dt; const qmax = 3 + (S.lv[o.id + 'Q'] || 0);
+  if (E.t <= 0 && E.cs.filter(c => c.state !== 'leave').length < qmax) { eatSpawn(E); E.t = (o.spawn[2] || 4) * Math.pow(0.85, S.lv[o.id + 'Q'] || 0) * rand(0.8, 1.2); }
+  let qi = 0;
+  for (const c of E.cs.slice()) {
+    const cp = c.group.position; let tx = null, tz = null, spd = CFG.walkSpeed;
+    if (c.state === 'in' || c.state === 'queue') {
+      const sl = E.slot(qi); tx = sl[0]; tz = sl[1]; qi++; const d = Math.hypot(tx - cp.x, tz - cp.z);
+      if (d < 0.3) { c.state = 'queue'; c.atSlot = true; faceChar(c, o.face[0], o.face[1], dt); tx = null; if (qi === 1) { c.wait += dt; if (c._sh !== c.want - c.got) { c._sh = c.want - c.got; bubbleSmall(c); } } }
+      else c.atSlot = false;
+      if (qi === 1 && c.atSlot) {
+        c.sc = (c.sc || 0) - dt;
+        if (c.sc <= 0 && c.want - c.got - c.pending > 0 && E.out.length > 0) { const it = E.out.takeLast(); c.pending++; c.sc = 0.35 * E.spd(); fly(it.mesh, out => { out.set(c.group.position.x, 1.2, c.group.position.z); return 0; }, 0.25, 1.0, () => { rm(it.mesh); c.pending--; c.got++; sfx('drop'); c._sh = -1; if (c.got >= c.want) eatDone(E, c); }); }
+        if (c.wait > 50 && c.got === 0 && c.pending === 0) { c.state = 'leave'; if (c.bubble) c.bubble.visible = false; c.path = o.leave.slice(); }
+      }
+    } else if (c.state === 'leave') {
+      const wp = c.path[0]; tx = wp[0]; tz = wp[1]; spd = CFG.leaveSpeed; if (Math.hypot(tx - cp.x, tz - cp.z) < 0.5) { c.path.shift(); if (!c.path.length) { const i1 = E.cs.indexOf(c); if (i1 >= 0) E.cs.splice(i1, 1); rm(c.group); if (c.bubble) { c.bubble.material.map.dispose(); c.bubble.material.dispose(); } continue; } }
+    }
+    let mv = 0; if (tx !== null) { const dx = tx - cp.x, dz = tz - cp.z, d = Math.hypot(dx, dz); if (d > 0.02) { const st = Math.min(d, spd * dt); cp.x += dx / d * st; cp.z += dz / d * st; c.vel.set(dx / d * spd, 0, dz / d * spd); mv = 1; faceChar(c, dx, dz, dt); } } else c.vel.set(0, 0, 0);
+    animChar(c, dt, mv, t);
+  }
+}
+function eatDone(E, c) {
+  const o = E.o; c.state = 'leave'; c.path = o.leave.slice(); setTimeout(() => { if (c.bubble) c.bubble.visible = false; }, 600); stats.sold++; stats.eaten = (stats.eaten || 0) + c.want; sfx('happy');
+  const total = Math.round(c.want * o.price * priceMul()), n = clamp(Math.round(total / CFG.billValue), 1, 8), bv = total / n, gp = c.group.position;
+  hearts(gp.x, 3.0, gp.z, 3); popText(gp.x, 3.9, gp.z, '+' + fmt(total), '#6dff6a'); for (let k = 0; k < n; k++) later(0.1 + k * 0.1, () => eatBill(E, c, bv));
+}
+function buildEastQuay(g, z) { // doğu rıhtımı: tahta güverte + babalar + teknenin kendisi
+  const P_ = [], wc = [0xb08550, 0xa07848, 0xbf9560];
+  for (let i = 0; i < 15; i++) P_.push(part(G.box, wc[i % 3], 46.9, 0.18, 17.5 + i * 0.95, 3.0, 0.12, 0.92));
+  for (let i = 0; i < 8; i++) { P_.push(part(G.cyl, 0x5a3a1c, 48.5, 0.2, 17.6 + i * 1.9, 0.13, 1.7, 0.13), part(G.cyl, 0x2d3a45, 48.5, 0.55, 17.6 + i * 1.9, 0.14, 0.1, 0.14)); }
+  const q = new THREE.Mesh(mergeParts(P_), vcMat); q.castShadow = q.receiveShadow = true; g.add(q); q.position.set(-g.userData.px, 0, -g.userData.pz);
+  const bg = new THREE.Group(); bg.userData.dyn = true; bg.position.set(51.2 - g.userData.px, 0, 23.8 - g.userData.pz); g.add(bg); EATS.boat = bg;
+  const W = 0xfdfcf6, B = [
+    part(G.box, 0x1d3b66, 0, 0.0, 0, 3.3, 0.7, 6.0), part(G.box, 0xff6f61, 0, 0.45, 0, 3.4, 0.4, 6.1), part(G.box, 0x1d3b66, 0, 0.0, -3.5, 2.3, 0.7, 2.3, 0, Math.PI / 4, 0), part(G.box, 0xff6f61, 0, 0.45, -3.5, 2.4, 0.4, 2.4, 0, Math.PI / 4, 0),
+    part(G.box, W, 0, 0.75, 0, 3.4, 0.1, 6.1), part(G.box, W, 0, 0.75, -3.5, 2.4, 0.1, 2.4, 0, Math.PI / 4, 0),
+    part(G.box, W, -0.9, 1.35, 0.1, 1.2, 1.1, 3.4), part(G.box, 0xe9f3fb, -1.52, 1.95, 0.1, 0.1, 0.1, 3.4), part(G.box, 0x6ec6ff, -1.52, 1.5, 0.1, 0.04, 0.5, 2.6),
+    part(G.box, 0xfdf3d0, 0.7, 1.7, 1.9, 1.6, 1.9, 1.7), part(G.box, 0xe8142e, 0.7, 2.75, 1.9, 1.9, 0.14, 2.0), part(G.cyl, 0x444c55, 1.1, 3.1, 2.4, 0.18, 0.8, 0.18),
+    part(G.box, 0x2d3a45, 0.1, 1.05, -1.0, 1.0, 0.45, 1.0), part(G.box, 0x6a6a6a, 0.1, 1.3, -1.0, 0.9, 0.05, 0.9), part(G.cyl, 0x8a98a8, 0.6, 2.3, -2.4, 0.05, 3.2, 0.05), part(G.box, 0xff6f61, 0.85, 3.4, -2.4, 0.55, 0.3, 0.04)
+  ];
+  const hull = new THREE.Mesh(mergeParts(B), vcMat); hull.castShadow = true; hull.userData.dyn = true; bg.add(hull); bg.userData.hull = hull;
+  const aw = new THREE.Mesh(new THREE.BoxGeometry(1.7, 0.1, 3.6), LM({ map: awningTex('#ff6f61', '#ffffff') })); aw.material.map.repeat.set(1, 3); aw.material.map.wrapS = THREE.RepeatWrapping; aw.rotation.z = 0.28; aw.position.set(-1.6, 2.7, 0.1); aw.userData.dyn = true; bg.add(aw);
+  const sg = makeBoard('BALIK-EKMEK', 3.6, 0.8, 'wood'); sg.position.set(-1.2, 3.65, 0.2); sg.rotation.y = -Math.PI / 2; sg.userData.dyn = true; sg.traverse(m => { m.userData.dyn = true; }); bg.add(sg);
+  // tezgâh önü: para masası + girdi sandığı
+  const mt = rbox(3.0, 0.75, 1.9, 0.08, woodM()); ad(g, mt, 40.5, 0.38, 26.8); mt.castShadow = true; addCollider(39, 42, 25.8, 27.8);
+  const tr = rbox(3.1, 0.1, 2.0, 0.04, mat(0x12a04a)); ad(g, tr, 40.5, 0.78, 26.8);
+  const ms = makeBoard('PARA', 1.1, 0.4, 'wood'); ad(g, ms, 40.5, 1.9, 25.6); ms.scale.setScalar(0.9);
+  const cb = rbox(2.2, 0.5, 1.6, 0.05, woodM()); ad(g, cb, 42.0, 0.25, 19.4); addCollider(40.9, 43.1, 18.6, 20.2);
+  const s1 = makeBoard('BUZLU KASA', 1.8, 0.5, 'wood'); ad(g, s1, 42.0, 1.9, 18.7); s1.rotation.x = -0.15;
+  for (const [x, zz] of [[36, 19], [35, 28]]) { const t = new THREE.Group(); t.add(mk(G.cyl, mat(0x8a5a36), 0.3, 1.6, 0.3, 0, 0.8, 0)); t.add(mk(G.sphT, mat(0x1f8f3a), 1.4, 1.2, 1.4, 0, 2.2, 0)); ad(g, t, x, 0, zz); }
+}
+function initEast() {
+  const z = makeExt({ id: 'gboat', name: 'Balık-Ekmek Teknesi', label: 'BALIK-EKMEK', R: { x0: 33, x1: 47.5, z0: 16, z1: 31 } });
+  const g0 = mkGroup(z, 0.1); buildEastQuay(g0, z);
+  const E = makeEatery({ id: 'gboat', name: 'Balık-Ekmek Teknesi', col: '#ff8a1f', inType: 'bouquet', outType: 'sand', outN: 3, ctime: 2.2, price: 24, crate: [42.0, 19.4], inZone: [42.0, 22.4], out: [50.3, 2.3, 22.3], cook: [51.3, 23.0], money: [40.5, 26.8], q: [46.6, 24.2], qGap: 1.35, face: [1, 0], spawn: [41, 38, 4.2], leave: [[43, 33.5], [38, 39], [36, 46]] });
+  z.onShow = () => { E.active = true; };
+  extPad('gboat', 'Balık-Ekmek Teknesi', [9000], 40, 34.5, iconSand, () => S.lv.boat > 0).autoShow = true; UPG.gboat.sub = () => 'Balık sandviçi satar';
+  EXTAPPLY.gboat = i => unlockExt(z, i);
+  let u = extPad('gboatSpd', 'Izgara Hızı', geo(1500, 4), 35, 38.5, iconBolt, () => S.lv.gboat > 0); u.autoShow = true; UPG.gboatSpd.sub = () => 'Daha hızlı sandviç';
+  u = extPad('gboatQ', 'Müşteri Kuyruğu', geo(2200, 4), 45, 38.5, iconStar, () => S.lv.gboat > 0); u.autoShow = true; UPG.gboatQ.sub = () => 'Daha çok müşteri';
+}
+function updateEast(dt, t) {
+  for (const E of EATS) updateEatery(E, dt, t);
+  if (EATS.boat) { EATS.boat.position.y = WATER_Y + 0.55 + Math.sin(t * 1.3) * 0.05; EATS.boat.rotation.z = Math.sin(t * 1.1) * 0.025; EATS.boat.rotation.x = Math.cos(t * 0.9) * 0.015; }
 }
 /* =====================================================================
    15. INIT
@@ -5381,6 +5505,7 @@ function padHits(p, x, z, others) {
   for (const c of colliders) { if (c.active && !c.active()) continue; if (c.x0 < x1 && c.x1 > x0 && c.z0 < z1 && c.z1 > z0) return 'collider'; }
   if (!padOnRoadOK(p)) for (const r of roadsList()) if (r[0] < x1 && r[1] > x0 && r[2] < z1 && r[3] > z0) return 'road';
   for (const b of beds) { if (!b.flowers.length) continue; const r = bedRect(b); if (r[0] < x1 && r[1] > x0 && r[2] < z1 && r[3] > z0) return 'bed'; }
+  if (z > -100) for (const q of zones) { if (q instanceof UpgradePad || q.noPadCheck) continue; if (Math.abs(q.x - x) < (q.w + p.w) / 2 + 0.8 && Math.abs(q.z - z) < (q.d + p.d) / 2 + 0.8) return 'zone'; }
   if (others) for (const q of others) { if (q === p) continue; if (p.o0 && q.o0 && Math.abs(p.o0[0] - q.o0[0]) < 0.05 && Math.abs(p.o0[1] - q.o0[1]) < 0.05) continue; if (Math.abs(q.x - x) < (q.w + p.w) / 2 - 1.5 && Math.abs(q.z - z) < (q.d + p.d) / 2 - 1.5) return 'pad'; }
   return null;
 }
@@ -5399,7 +5524,7 @@ window.__game = {
   measure() { renderer.info.reset(); if (composer) composer.render(0); else renderer.render(scene, camera); return { calls: renderer.info.render.calls, tris: renderer.info.render.triangles }; },
   get c2() { return { TD, TDM, TK, applyTier, CPADS, S, cosGate, buyTier, DSL, DSLM, DECT, DEC, zonesAll: zones, buyDecor, beautyPts, BF, placeDecor, DN, NIGHT, DN_PERIOD }; },
   path(tx, tz) { return findPath(P.group.position.x, P.group.position.z, tx, tz); }, colliders,
-  EXTZ, STN, GARD, GROLES, roleEvolve, tide: () => TIDE, BOATS, HAMALS: () => HAMALS, DOCK, deckY: (x, z) => deckY(x, z), BUSES, cafe: () => cafe, wed: () => wed, city: () => city, tractor: () => tractor, give(type, n) { n = Math.min(n, Math.max(0, P.free())); for (let i = 0; i < n; i++) P.stack.add(['orchid', 'lav', 'sun', 'rosep', 'flower'].includes(type) ? makeFlowerItem(0, type === 'flower' ? 'tulip' : type) : makeItemOf(type), type); },
+  EXTZ, STN, GARD, GROLES, roleEvolve, EATS, tide: () => TIDE, BOATS, HAMALS: () => HAMALS, DOCK, deckY: (x, z) => deckY(x, z), BUSES, cafe: () => cafe, wed: () => wed, city: () => city, tractor: () => tractor, give(type, n) { n = Math.min(n, Math.max(0, P.free())); for (let i = 0; i < n; i++) P.stack.add(['orchid', 'lav', 'sun', 'rosep', 'flower'].includes(type) ? makeFlowerItem(0, type === 'flower' ? 'tulip' : type) : makeItemOf(type), type); },
   hintOK: { canCity, canCounter, canWed, canTable, makeItemOf, lane, shelfFree },
   bot(x, z) { BOT = (x || z) ? { x, z } : null; if (BOT) hideIntro(); }, hideIntro, objective() { objective(_obj); return Object.assign({}, _obj); }, get goal() { return curGoal; }, GOALS, UPG,
   S, stats, P: () => P, queue, beds, machine, inputPile, outputPile, moneyPile, get shelf() { return shelfB; }, get shelfP() { return shelfP; }, get potInput() { return potInput; }, get potOutput() { return potOutput; }, get zone2() { return zone2; }, get zone3() { return zone3; }, VAN, get vanLoad() { return vanLoad; }, get vanPile() { return vanPile; }, get cashier() { return cashier; }, get carrier() { return carrier; }, upPads, zones, customers, CFG, POS,
