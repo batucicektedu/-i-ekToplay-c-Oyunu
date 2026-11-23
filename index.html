@@ -1923,7 +1923,7 @@ function updateHelper(dt, t) {
   }
   let mv = 0, dx = 0, dz = 0;
   if (tx !== null) {
-    dx = tx - h.group.position.x; dz = tz - h.group.position.z; const d = Math.hypot(dx, dz);
+    const w_ = wayPt(h, tx, tz); dx = w_[0] - h.group.position.x; dz = w_[1] - h.group.position.z; const d = Math.hypot(dx, dz);
     if (d > 0.35) { const st = Math.min(d, spd * dt); h.group.position.x += dx / d * st; h.group.position.z += dz / d * st; h.vel.set(dx / d * spd, 0, dz / d * spd); mv = 1; }
     else h.vel.set(0, 0, 0);
   } else h.vel.set(0, 0, 0);
@@ -2024,7 +2024,7 @@ function updateCarrierW(h, dt, t) {
     if (h.stack.length === 0) { h.state = 'idle'; h.trips = (h.trips || 0) + 1; }
   }
   let mv = 0, dx = 0, dz = 0;
-  if (tx !== null) { dx = tx - gp.x; dz = tz - gp.z; const d = Math.hypot(dx, dz); if (d > 0.3) { const st = Math.min(d, spd * dt); gp.x += dx / d * st; gp.z += dz / d * st; h.vel.set(dx / d * spd, 0, dz / d * spd); mv = 1; faceChar(h, dx, dz, dt); } else h.vel.set(0, 0, 0); }
+  if (tx !== null) { const w_ = wayPt(h, tx, tz); dx = w_[0] - gp.x; dz = w_[1] - gp.z; const d = Math.hypot(dx, dz); if (d > 0.3) { const st = Math.min(d, spd * dt); gp.x += dx / d * st; gp.z += dz / d * st; h.vel.set(dx / d * spd, 0, dz / d * spd); mv = 1; faceChar(h, dx, dz, dt); } else h.vel.set(0, 0, 0); }
   else { h.vel.set(0, 0, 0); if (h.state === 'unload') faceChar(h, 1, -0.4, dt); }
   watchdog(h, dt, gp, h.dest + h.ptype, [5.0, 3.4], c => { c.state = 'idle'; c.waitT = 0; c.stuck = 0; c.cd = 0; }, q => (q.state === 'idle' && q.stack.length === 0) || (q.state === 'unload' && q.stack.length > 0 && !q.stack.items.some(i => shelfFree(i.type) > 0) && q.dest !== 'van') || (q.state === 'unload' && q.dest === 'van' && vanFree() <= 0));
   updateSway(h, dt); animChar(h, dt, mv, t); h.stack.update(dt, t);
@@ -2435,6 +2435,19 @@ function findPath(sx, sz, tx, tz) {
   if (!found) { PG.found = false; return [[sx, sz], [tx, tz]]; }
   const pts = []; for (let k = tk; k !== -1; k = from[k]) pts.push([PG.x0 + ((k % W) + 0.5) * PG.c, PG.z0 + (((k / W) | 0) + 0.5) * PG.c]); pts.reverse(); pts[0] = [sx, sz]; pts.push([tx, tz]);
   const out = [pts[0]]; let a = 0; while (a < pts.length - 1) { let b = pts.length - 1; while (b > a + 1 && !pgLos(pts[a][0], pts[a][1], pts[b][0], pts[b][1])) b--; out.push(pts[b]); a = b; } return out;
+}
+/* işçiler: düz çizgi bir collider'a (tezgâh/masa/duvar) çarpıyorsa A* yol noktalarıyla dolanır (duvarın içinden geçmesin) */
+function wayPt(h, tx, tz) {
+  const gp = h.group.position; if (PG.tb !== T) { pgBuild(); PG.tb = T; }
+  const w = h._w || (h._w = { p: null, i: 0, tx: 0, tz: 0, t: 0 });
+  if (w.p && (Math.abs(w.tx - tx) > 0.6 || Math.abs(w.tz - tz) > 0.6 || T - w.t > 1.5 || pgLos(gp.x, gp.z, tx, tz))) w.p = null;
+  if (!w.p) {
+    if (pgLos(gp.x, gp.z, tx, tz)) return [tx, tz];
+    const pth = findPath(gp.x, gp.z, tx, tz); if (PG.found === false || pth.length < 3) return [tx, tz];
+    w.p = pth; w.i = 1; w.tx = tx; w.tz = tz; w.t = T;
+  }
+  while (w.i < w.p.length - 1 && Math.hypot(w.p[w.i][0] - gp.x, w.p[w.i][1] - gp.z) < 0.5) w.i++;
+  return w.i >= w.p.length - 1 ? [tx, tz] : w.p[w.i];
 }
 const TRAIL = { path: null, key: '', t: 0 };
 function updateTrail(tx, tz, show, t, dt) {
@@ -3001,7 +3014,7 @@ function updateGardener(h, dt, t) {
       if (d) { h.dest = d; h.destTy = h.ctype; tx = d.zone.x; tz = d.zone.z; } else h.dest = null; }
   }
   let mv = 0, dx = 0, dz = 0;
-  if (tx !== null) { dx = tx - gp.x; dz = tz - gp.z; const d = Math.hypot(dx, dz); if (d > 0.35) { const s2 = Math.min(d, spd * dt); gp.x += dx / d * s2; gp.z += dz / d * s2; h.vel.set(dx / d * spd, 0, dz / d * spd); mv = 1; } else h.vel.set(0, 0, 0); } else h.vel.set(0, 0, 0);
+  if (tx !== null) { const w_ = wayPt(h, tx, tz); dx = w_[0] - gp.x; dz = w_[1] - gp.z; const d = Math.hypot(dx, dz); if (d > 0.35) { const s2 = Math.min(d, spd * dt); gp.x += dx / d * s2; gp.z += dz / d * s2; h.vel.set(dx / d * spd, 0, dz / d * spd); mv = 1; } else h.vel.set(0, 0, 0); } else h.vel.set(0, 0, 0);
   if (mv) faceChar(h, dx, dz, dt);
   h.cd -= dt;
   if (h.state === 'seek' && h.target && h.cd <= 0 && Math.hypot(h.target.x - gp.x, h.target.z - gp.z) < (h.tr ? 1.3 : 0.9) && h.free() > 0) { harvest(h.target, h); h.target = null; h.cd = h.tr ? 0.06 : 0.12; }
@@ -3215,7 +3228,7 @@ function updateWaiter(w, dt, t) {
     workerPop(w, dt); const gw = w.group.position, tray = STN.tea.out; let tx = null, tz = null; w.cd -= dt;
     if (!w.hold) { const tb = teaWaiting(w)[0]; if (tb && tray.length > 0) { tx = STN.tea.outZone.x; tz = STN.tea.outZone.z; if (Math.hypot(tx - gw.x, tz - gw.z) < 0.8 && w.cd <= 0) { const it = tray.takeLast(); if (it) { w.hold = it.mesh; w.group.add(w.hold); w.hold.position.set(0, 1.6, 0.3); w.hold.scale.setScalar(0.8); w.target = null; } } } else { tx = w.hx || -4; tz = -45; } }
     else { if (!w.target || !w.target.guest || w.target.guest.state !== 'wait') { w.target = teaWaiting(w)[0] || null; if (w.target) w.target.claimed = true; } if (w.target) { tx = w.target.x; tz = w.target.z + 1.5; if (Math.hypot(tx - gw.x, tz - gw.z) < 0.8) { const m = w.hold; w.group.remove(m); scene.add(m); m.position.set(gw.x, 1.6, gw.z); m.scale.setScalar(1); w.hold = null; serveTea(w.target, m); w.target = null; w.cd = 0.4; } } else { /* masa kalmadı: tepsiye geri bırak */ tray.add(w.hold, 'tea'); w.group.remove(w.hold); scene.add(w.hold); w.hold = null; } }
-    let mv = 0; const spd = 4.6 * (1 + 0.12 * (S.lv.teaSpd || 0)); if (tx !== null) { const dx = tx - gw.x, dz = tz - gw.z, d = Math.hypot(dx, dz); if (d > 0.35) { const s2 = Math.min(d, spd * dt); gw.x += dx / d * s2; gw.z += dz / d * s2; w.vel.set(dx / d * spd, 0, dz / d * spd); mv = 1; faceChar(w, dx, dz, dt); } else w.vel.set(0, 0, 0); } else w.vel.set(0, 0, 0);
+    let mv = 0; const spd = 4.6 * (1 + 0.12 * (S.lv.teaSpd || 0)); if (tx !== null) { const w_ = wayPt(w, tx, tz), dx = w_[0] - gw.x, dz = w_[1] - gw.z, d = Math.hypot(dx, dz); if (d > 0.35) { const s2 = Math.min(d, spd * dt); gw.x += dx / d * s2; gw.z += dz / d * s2; w.vel.set(dx / d * spd, 0, dz / d * spd); mv = 1; faceChar(w, dx, dz, dt); } else w.vel.set(0, 0, 0); } else w.vel.set(0, 0, 0);
     watchdog(w, dt, gw, (w.hold ? 1 : 0) + '' + (w.target ? 1 : 0), [w.hx || -4, -45], q => { for (const tb of cafe.tables) tb.claimed = false; for (const o of CAFEW()) o.target = null; q.target = null; q.cd = 0; }, q => !q.hold && !q.target);
     animChar(w, dt, mv, t);
   }
@@ -4235,7 +4248,7 @@ function updateBeekW(h, dt, t) {
     }
   } else { const d = STN.hon.ins[0].zone; tx = d.x; tz = d.z; if (h.stack.length === 0 && h.incoming === 0) h.state = 'seek'; }
   let mv = 0, dx = 0, dz = 0;
-  if (tx !== null) { dx = tx - gp.x; dz = tz - gp.z; const d = Math.hypot(dx, dz); if (d > 0.35) { const s2 = Math.min(d, spd * dt); gp.x += dx / d * s2; gp.z += dz / d * s2; h.vel.set(dx / d * spd, 0, dz / d * spd); mv = 1; } else h.vel.set(0, 0, 0); } else h.vel.set(0, 0, 0);
+  if (tx !== null) { const w_ = wayPt(h, tx, tz); dx = w_[0] - gp.x; dz = w_[1] - gp.z; const d = Math.hypot(dx, dz); if (d > 0.35) { const s2 = Math.min(d, spd * dt); gp.x += dx / d * s2; gp.z += dz / d * s2; h.vel.set(dx / d * spd, 0, dz / d * spd); mv = 1; } else h.vel.set(0, 0, 0); } else h.vel.set(0, 0, 0);
   if (mv) faceChar(h, dx, dz, dt);
   if (h.state === 'seek' && h.hv && h.cd <= 0 && Math.hypot(h.hv.x - gp.x, h.hv.z + 1.5 - gp.z) < 1.2 && h.free() > 0 && h.hv.stack.length > 0) { const it = h.hv.stack.takeLast(); if (it) { sendToBack(h, it.mesh, 'comb', 1.4); h.cd = 0.15; sfx('pick'); } }
   if (h.state === 'deliver' && h.cd <= 0) { const d = STN.hon.ins[0]; if (d.zone.contains(gp.x, gp.z) && h.stack.count('comb') > 0 && d.stack.length + (d.stack.pend || 0) < 24) { dropTo(d.stack, h, 'comb'); h.cd = 0.1; } }
@@ -4624,7 +4637,7 @@ function updatePorterW(h, dt, t) {
     if (h.stack.length === 0 && h.incoming === 0) h.state = 'idle';
   } else if (h.state === 'toShelf') { tx = 8.9; tz = -1.1; if (Math.hypot(tx - gp.x, tz - gp.z) < 0.5) { const o = h.stack.items[h.stack.items.length - 1]; if (o && shelfFree(o.type) > 0) toShelf(takeFromBack(h, o.type), h); else if (o) { const it = takeFromBack(h, o.type); rm(it.mesh); } if (h.stack.length === 0) h.state = 'idle'; } }
   else h.state = 'idle';
-  let mv = 0, dx = 0, dz = 0; if (tx !== null) { dx = tx - gp.x; dz = tz - gp.z; const d = Math.hypot(dx, dz); if (d > 0.3) { const s2 = Math.min(d, spd * dt); gp.x += dx / d * s2; gp.z += dz / d * s2; h.vel.set(dx / d * spd, 0, dz / d * spd); mv = 1; faceChar(h, dx, dz, dt); } else h.vel.set(0, 0, 0); } else { h.vel.set(0, 0, 0); if (h.state === 'unload') faceChar(h, -0.3, -1, dt); }
+  let mv = 0, dx = 0, dz = 0; if (tx !== null) { const w_ = wayPt(h, tx, tz); dx = w_[0] - gp.x; dz = w_[1] - gp.z; const d = Math.hypot(dx, dz); if (d > 0.3) { const s2 = Math.min(d, spd * dt); gp.x += dx / d * s2; gp.z += dz / d * s2; h.vel.set(dx / d * spd, 0, dz / d * spd); mv = 1; faceChar(h, dx, dz, dt); } else h.vel.set(0, 0, 0); } else { h.vel.set(0, 0, 0); if (h.state === 'unload') faceChar(h, -0.3, -1, dt); }
   watchdog(h, dt, gp, h.state + (h.ptype || ''), [h.hx, -126.5], c => { c.state = 'idle'; c.waitT = 0; c.cd = 0; }, q => q.state === 'idle' || (q.state === 'toShip' && !(S.pt.cur && S.pt.cur.st === 'load')));
   updateSway(h, dt); animChar(h, dt, mv, t); h.stack.update(dt, t);
 }
