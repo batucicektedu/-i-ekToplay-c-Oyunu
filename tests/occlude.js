@@ -49,7 +49,7 @@ for(const fx of fixtures){
     let bad=null;camAt(o.x,o.z+3);if(Math.hypot(P.group.position.x-o.x,P.group.position.z-(o.z+3))>1.5){camAt(o.x,o.z)}const hit=occl(o.x,o.y,o.z);const tipHit=occl(o.x,o.y+1.9,o.z);
     const nc=[[1,1],[-1,1],[1,-1],[-1,-1]].filter(([a,c])=>occl(o.x+a*0.85,0.1,o.z+c*0.85,0.22)).length;
     if(o.kind==='harvest'){}else if(hit&&hit.point.y>=1.2&&nc>=3)bad='target occluded by y='+hit.point.y.toFixed(1)+' @'+hit.point.x.toFixed(1)+','+hit.point.z.toFixed(1);
-    if(tipHit&&!bad&&o.kind!=='harvest')bad='arrow tip occluded';
+    if(tipHit&&occl(o.x,o.y+3.2,o.z,0.12)&&!bad&&o.kind!=='harvest')bad='arrow (tip and tail) occluded';
     if(!pathOK&&o.kind!=='harvest')bad=(bad?bad+'; ':'')+'unreachable (no A* path)';
     if(o.kind!=='harvest'&&[[0,0],[1,0],[-1,0],[0,1],[0,-1],[.7,.7],[-.7,.7],[.7,-.7],[-.7,-.7]].every(([a,c])=>g.blockedAt(o.x+a*1.1,o.z+c*1.1)))bad=(bad?bad+'; ':'')+'target cell blocked';
     if(bad)probs.push(['hint:'+o.kind,'hint',+o.x.toFixed(1),+o.z.toFixed(1),bad])}
