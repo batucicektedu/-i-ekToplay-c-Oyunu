@@ -13,8 +13,15 @@ const FIX = process.env.FIX ? process.env.FIX.split(',') : fs.readdirSync(dir).f
       const g = __game, cam = g.camera, out = [], seen = new Set();
       const rc = new THREE.Raycaster();
       const anc = (o, grp) => { for (; o; o = o.parent) if (o === grp) return true; return false; };
-      function check(tag, x, z, grp, y) {
+      function check(tag, x, z, grp, y, half) {
         g.tp(x, z); g.sim(0.4); const PG_ = g.P().group; PG_.visible = false; g.render(); cam.updateMatrixWorld(true);
+        const res = [], cs = []; const hh_ = half || 0; const smp = hh_ ? [[0, 0], [-hh_, -hh_], [hh_, -hh_], [-hh_, hh_], [hh_, hh_]] : [[0, 0]];
+        smp.forEach(([ox, oz], si) => { const before = res.length; ray(tag, x, z, grp, y, ox, oz, res, PG_); cs[si] = res.length > before; });
+        PG_.visible = true;
+        const nc = cs.slice(1).filter(Boolean).length; if (cs[0] || nc >= 2) for (const e of res) { const k = e.tag + '|' + e.hit[0].toFixed(0) + ',' + e.hit[2].toFixed(0); if (!seen.has(k)) { seen.add(k); out.push(e); } }
+      }
+      function ray(tag, x0, z0, grp, y, ox, oz, res, PG_) {
+        const x = x0 + ox, z = z0 + oz;
         const tgt = new THREE.Vector3(x, y == null ? 0.4 : y, z), from = cam.getWorldPosition(new THREE.Vector3()), dir = tgt.clone().sub(from), dist = dir.length(); dir.normalize();
         for (const w of [...g.GARD, ...g.HAMALS(), g.helper()].filter(Boolean)) if (w.group) w.group.visible = false; rc.set(from, dir); rc.far = dist - 0.05;
         const hits = []; g.scene.traverse(o => { if (!o.isMesh || o.isSprite || o.isInstancedMesh || !o.visible) return; try { rc.intersectObject(o, false).forEach(x => hits.push(x)); } catch (e) {} }); hits.sort((a, b) => a.distance - b.distance); PG_.visible = true;
@@ -27,13 +34,12 @@ const FIX = process.env.FIX ? process.env.FIX.split(',') : fs.readdirSync(dir).f
           if (!hh.face || hh.face.normal.y > 0.9 && hh.point.y < 0.6) continue;
           const pa = o.geometry.attributes.position, A = new THREE.Vector3().fromBufferAttribute(pa, hh.face.a).applyMatrix4(o.matrixWorld), B = new THREE.Vector3().fromBufferAttribute(pa, hh.face.b).applyMatrix4(o.matrixWorld), C = new THREE.Vector3().fromBufferAttribute(pa, hh.face.c).applyMatrix4(o.matrixWorld); const w = Math.min(B.clone().sub(A).cross(C.clone().sub(A)).length() / 2 / Math.max(A.distanceTo(B), B.distanceTo(C), A.distanceTo(C)) * 2, 99); if (hh.point.y > 3.5 && w < 0.25) continue; // ince tel/ip: gercek perde degil
           const bb = o.geometry && (o.geometry.boundingBox || (o.geometry.computeBoundingBox(), o.geometry.boundingBox));
-          const k = tag + '|' + hh.point.x.toFixed(0) + ',' + hh.point.z.toFixed(0);
-          if (!seen.has(k)) { seen.add(k); out.push({ tag, tgt: [+x.toFixed(1), +z.toFixed(1)], hit: [+hh.point.x.toFixed(1), +hh.point.y.toFixed(1), +hh.point.z.toFixed(1)], d: +hh.distance.toFixed(1), w: +w.toFixed(2), tri: [A, B, C].map(v => [v.x, v.y, v.z].map(q => +q.toFixed(1)).join(',')).join(' '), obj: (o.name || o.type) + (o.isInstancedMesh ? ':inst' : '') + ' size ' + (bb ? [bb.max.x - bb.min.x, bb.max.y - bb.min.y].map(v => v.toFixed(1)).join('x') : '?') }); }
+          { res.push({ tag, tgt: [+x.toFixed(1), +z.toFixed(1)], hit: [+hh.point.x.toFixed(1), +hh.point.y.toFixed(1), +hh.point.z.toFixed(1)], d: +hh.distance.toFixed(1), w: +w.toFixed(2), tri: [A, B, C].map(v => [v.x, v.y, v.z].map(q => +q.toFixed(1)).join(',')).join(' '), obj: (o.name || o.type) + (o.isInstancedMesh ? ':inst' : '') + ' size ' + (bb ? [bb.max.x - bb.min.x, bb.max.y - bb.min.y].map(v => v.toFixed(1)).join('x') : '?') }); }
           break;
         }
       }
       let n = 0;
-      for (const p of g.allPads()) { if (p.done) continue; const vis = p.group.visible; if (!vis && !process_all) continue; p.group.visible = true; n++; check('pad:' + p.key + (vis ? '' : '(hidden)'), p.x, p.z, p.group); p.group.visible = vis; }
+      for (const p of g.allPads()) { if (p.done) continue; const vis = p.group.visible; if (!vis && !process_all) continue; p.group.visible = true; n++; check('pad:' + p.key + (vis ? '' : '(hidden)'), p.x, p.z, p.group, 0.4, p.w * 0.4); p.group.visible = vis; }
       for (const z of g.zones) { if (z instanceof Object && g.allPads().includes(z)) continue; if (!z.group || !z.group.visible || z.noPadCheck && 0) continue; let v = true; for (let p = z.group; p; p = p.parent) if (!p.visible) v = false; if (!v) continue; n++; check('zone', z.x, z.z, z.group); }
       for (const gt of (g.GATES || [])) if (gt.g && gt.g.visible) { n++; check('gate', gt.o.x, gt.o.z, gt.g, 1.0); }
       // pad ayak izi / statik mesh kutulari
@@ -51,6 +57,8 @@ const FIX = process.env.FIX ? process.env.FIX.split(',') : fs.readdirSync(dir).f
       // her pad A* ile erisilebilir ve suda degil
       g.tp(-2, 13); g.sim(0.1);
       for (const p of g.allPads()) { if (p.done) continue; const pth = g.path(p.x, p.z), last = pth && pth[pth.length - 1]; const water = p.z > 44.2; hint.push({ k: 'pad:' + p.key, reach: !!(pth && pth.length) && (!last || Math.hypot(last[0] - p.x, last[1] - p.z) < 3.5), water }); }
+      // baslangic yuruyus alaninda olan pad, fixPads sonrasi da o alanda kalmali (bot/oyuncu ulasabilmeli)
+      { const B = g.CFG.bounds, inB = (x, z) => x >= B.x0 + 0.5 && x <= B.x1 + 1.0 && z >= B.z0 + 0.5 && z <= B.z1; for (const p of g.allPads()) if (p.o0 && inB(p.o0[0], p.o0[1]) && !inB(p.x, p.z)) hint.push({ k: 'pad:' + p.key + ' moved outside walk bounds', reach: false, water: false }); }
       return { n, occ: out, fp, hint, hbad: hint.filter(q => !q.reach || q.water) };
     }, true);
     const ee = errs.filter(e => !/vibrate/.test(e));

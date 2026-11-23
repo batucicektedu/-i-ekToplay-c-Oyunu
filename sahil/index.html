@@ -872,7 +872,7 @@ function mergeParts(parts, W) {
   out.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); out.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3)); out.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
   return out;
 }
-const PROPBOX = []; let PBON = false; const _pbb = new THREE.Box3();
+const PROPBOX = [], OCCBOX = []; let PBON = false, HIDCHK = true; const _pbb = new THREE.Box3();
 function mergeStatic(root, ao) {
   root.updateMatrixWorld(true);
   const inv = new THREE.Matrix4().copy(root.matrixWorld).invert(), buckets = new Map(), nm = new THREE.Matrix3(), v = new THREE.Vector3(), M = new THREE.Matrix4();
@@ -881,7 +881,7 @@ function mergeStatic(root, ao) {
       if (ch.userData.dyn || ch.isSprite || ch.isInstancedMesh || ch.isPoints) continue;
       if (ch.isMesh) {
         if (!ch.geometry || Array.isArray(ch.material) || !ch.geometry.attributes.position || ch.userData.keep || ch.userData.ib) continue;
-        if (PBON) { const gg = ch.geometry; if (!gg.boundingBox) gg.computeBoundingBox(); _pbb.copy(gg.boundingBox).applyMatrix4(ch.matrixWorld); if (_pbb.max.y > 0.45 && _pbb.min.y < 1.2 && _pbb.max.x - _pbb.min.x < 30 && _pbb.max.z - _pbb.min.z < 30 && (_pbb.max.x - _pbb.min.x > 0.55 || _pbb.max.z - _pbb.min.z > 0.55)) PROPBOX.push([_pbb.min.x, _pbb.max.x, _pbb.min.z, _pbb.max.z]); }
+        if (PBON) { const gg = ch.geometry; if (!gg.boundingBox) gg.computeBoundingBox(); _pbb.copy(gg.boundingBox).applyMatrix4(ch.matrixWorld); if (_pbb.max.y > 0.45 && _pbb.min.y < 1.2 && _pbb.max.x - _pbb.min.x < 30 && _pbb.max.z - _pbb.min.z < 30 && (_pbb.max.x - _pbb.min.x > 0.55 || _pbb.max.z - _pbb.min.z > 0.55)) PROPBOX.push([_pbb.min.x, _pbb.max.x, _pbb.min.z, _pbb.max.z, _pbb.max.y]); if (_pbb.max.y >= 1.8 && _pbb.max.x - _pbb.min.x < 30 && _pbb.max.z - _pbb.min.z < 30 && _pbb.max.x - _pbb.min.x > 0.3 && _pbb.max.z - _pbb.min.z > 0.3) OCCBOX.push([_pbb.min.x, _pbb.max.x, _pbb.min.z, _pbb.max.z, _pbb.min.y, _pbb.max.y]); }
         const g = ch.geometry, mt = ch.material, plain = (mt.isMeshLambertMaterial || (mt.isMeshStandardMaterial && mt.roughness === 0.78 && mt.metalness === 0)) && !mt.map && !mt.transparent && !mt.vertexColors && mt.side === THREE.FrontSide && !mt.emissiveMap;
         const tm = plain ? vcMat : mt, hasCol = plain || !!g.attributes.color, hasUv = !plain && !!g.attributes.uv;
         const key = tm.uuid + '|' + (ch.castShadow ? 1 : 0) + (ch.receiveShadow ? 1 : 0) + (hasUv ? 'u' : '') + (hasCol ? 'c' : '') + ch.renderOrder;
@@ -2182,7 +2182,7 @@ function buildZones() {
   moneyZone.label.visible = false;
   const z = POS.upgradeZ, z2 = POS.upgradeZ2, L = S.lv;
   const mk_ = (key, x, zz, icon, vis) => { const u = new UpgradePad(key, x, zz, icon); u.vis = vis || null; upPads[key] = u; return u; };
-  mk_('bed', -8.4, -7.6, iconBed);
+  mk_('bed', 8.6, -8.0, iconBed); // eski yer (-8.4,-7.6) Ege evlerinin icindeydi, fixPads onu sinirin disina (z<-10.4, ulasilamaz) atiyordu
   mk_('sera', 17.0, 2.4, iconSera);
   buildSeraZones(); buildVanZones();
   mk_('van', 17.8, 14.6, iconVan);
@@ -3998,9 +3998,13 @@ function allPads() { const l = []; for (const k in upPads) l.push(upPads[k]); re
 function roadsList() { return [[3.45, 7.35, -172, -11.5], [8.3, 11.7, 12, 47], [-10.4, -9.0, -1.5, 1.5]]; } // sokak, minibüs yolu, toprak patikalar
 function bedRect(b) { return b.rc || (b.rc = (() => { let x0 = 1e9, x1 = -1e9, z0 = 1e9, z1 = -1e9; for (const f of b.flowers) { x0 = Math.min(x0, f.x); x1 = Math.max(x1, f.x); z0 = Math.min(z0, f.z); z1 = Math.max(z1, f.z); } return [x0 - 0.8, x1 + 0.8, z0 - 0.8, z1 + 0.8]; })()); }
 function padOnRoadOK(p) { return !!(p.key && (EXTZ[p.key] || p.key === 'sera' || p.key === 'van' || p.key === 'coll')); } // bölge açma pad'leri sokak üstünde durur
+function padBounds(x, z) { const B = CFG.bounds; return x >= B.x0 + 0.5 && x <= B.x1 + 1.0 && z >= B.z0 + 0.5 && z <= B.z1; } // oyuncunun baslangicta yurudugu alan
 function padHits(p, x, z, others) {
   const hw = p.w / 2 + 0.2, hd = p.d / 2 + 0.2, x0 = x - hw, x1 = x + hw, z0 = z - hd, z1 = z + hd;
   for (const b of PROPBOX) if (b[0] < x1 && b[1] > x0 && b[2] < z1 && b[3] > z0) return 'prop';
+  // kamera arkasi: yuksek bir binanin/prop'un arkasinda kalan (gorunmeyen) pad. Kamera yonu (sin yaw, cos yaw), egim CFG.tilt.
+  if (HIDCHK) { const k = 1 / Math.tan(CFG.tilt), sx = Math.sin(CFG.yaw), sz = Math.cos(CFG.yaw);
+    for (const b of OCCBOX) { const smin = Math.max(0.3, (b[4] - 0.4) * k), smax = (b[5] - 0.4) * k; for (let s = smin; s <= smax + 0.01; s += 0.3) { const qx = x + sx * s, qz = z + sz * s; if (qx > b[0] && qx < b[1] && qz > b[2] && qz < b[3]) return 'hidden'; } } }
   for (const c of colliders) { if (c.active && !c.active()) continue; if (c.water && x < -28.5) continue; if (c.x0 < x1 && c.x1 > x0 && c.z0 < z1 && c.z1 > z0) return 'collider'; }
   if (!padOnRoadOK(p)) for (const r of roadsList()) if (r[0] < x1 && r[1] > x0 && r[2] < z1 && r[3] > z0) return 'road';
   for (const b of beds) { if (!b.flowers.length) continue; const r = bedRect(b); if (r[0] < x1 && r[1] > x0 && r[2] < z1 && r[3] > z0) return 'bed'; }
@@ -4012,7 +4016,9 @@ function fixPads() {
   const pads = allPads(), moved = []; let bad = 0; for (const p of pads) if (!p.o0) p.o0 = [p.x, p.z];
   for (const p of pads) {
     if (!padHits(p, p.x, p.z, pads)) continue;
-    let done = false; for (let r = 0.8; r <= 14 && !done; r += 0.8) for (let a = 0; a < 24 && !done; a++) { const ang = a / 24 * TAU, nx = p.x + Math.cos(ang) * r, nz = p.z + Math.sin(ang) * r; if (nz < -170 || nz > 40 || nx < -26 || nx > 46) continue; if (!padHits(p, nx, nz, pads)) { moved.push([p.key || '?', +p.x.toFixed(1), +p.z.toFixed(1), +nx.toFixed(1), +nz.toFixed(1)]); p.x = nx; p.z = nz; p.group.position.set(nx, 0.04, nz); done = true; } }
+    const inB0 = padBounds(p.o0[0], p.o0[1]); let done = false;
+    for (let pass = 0; pass < 2 && !done; pass++) { HIDCHK = pass === 0; for (let r = 0.8; r <= 14 && !done; r += 0.8) for (let a = 0; a < 24 && !done; a++) { const ang = a / 24 * TAU, nx = p.x + Math.cos(ang) * r, nz = p.z + Math.sin(ang) * r; if (nz < -170 || nz > 40 || nx < -26 || nx > 46) continue; if (inB0 && !padBounds(nx, nz)) continue; if (!padHits(p, nx, nz, pads)) { moved.push([p.key || '?', +p.x.toFixed(1), +p.z.toFixed(1), +nx.toFixed(1), +nz.toFixed(1)]); p.x = nx; p.z = nz; p.group.position.set(nx, 0.04, nz); done = true; } } }
+    HIDCHK = true;
     if (!done) bad++;
   }
   return { moved, bad };
@@ -4073,7 +4079,7 @@ const ADMIN = (function () {
 })();
 window.__game = {
   admin: ADMIN,
-  padCheck() { const pads = allPads(); const hits = []; for (const p of pads) { const h = padHits(p, p.x, p.z, pads); if (h) hits.push([p.key || (p.o && p.o.id) || '?', h, +p.x.toFixed(1), +p.z.toFixed(1)]); } return hits; }, fixPads, allPads, PROPBOX, padOK: () => PADOK,
+  padCheck() { const pads = allPads(); const hits = []; HIDCHK = false; for (const p of pads) { const h = padHits(p, p.x, p.z, pads); if (h) hits.push([p.key || (p.o && p.o.id) || '?', h, +p.x.toFixed(1), +p.z.toFixed(1)]); } HIDCHK = true; return hits; }, fixPads, allPads, PROPBOX, OCCBOX, padOK: () => PADOK,
   get camera() { return camera; },
   measure() { renderer.info.reset(); if (composer) composer.render(0); else renderer.render(scene, camera); return { calls: renderer.info.render.calls, tris: renderer.info.render.triangles }; },
   path(tx, tz) { return findPath(P.group.position.x, P.group.position.z, tx, tz); }, colliders,
