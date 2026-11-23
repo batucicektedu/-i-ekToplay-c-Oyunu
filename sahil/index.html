@@ -2630,7 +2630,7 @@ window.addEventListener('keydown', e => { initAudio(); if (/^(Key[WASD]|Arrow)/.
 window.addEventListener('keyup', e => { keys[e.code] = false; });
 window.addEventListener('blur', () => { for (const k in keys) keys[k] = false; joy.id = null; joy.x = joy.y = 0; joyBase.style.display = 'none'; });
 function joyStart(e) {
-  if (e.target && e.target.closest && e.target.closest('button,#menu,#ward,#beauty,.ovl,#evt')) return;
+  if (e.target && e.target.closest && e.target.closest('button,#menu,#ward,#beauty,.ovl,#evt,#money,#adm')) return;
   initAudio();
   if (joy.id !== null) return;
   joy.id = e.pointerId; joy.ox = e.clientX; joy.oy = e.clientY; joy.x = joy.y = 0;
@@ -4012,7 +4012,62 @@ function fixPads() {
   }
   return { moved, bad };
 }
+/* ---- GİZLİ YÖNETİCİ PANELİ (docs/bolumler.md; ayrı anahtarlar: cicek_admin, cicek_admin_inf; oyun kaydına dokunmaz) ---- */
+const ADMIN = (function () {
+  const THIS = 2, PIN = '2468', AK = 'cicek_admin', IK = 'cicek_admin_inf';
+  const CH = [{ n: 1, name: 'Bölüm 1: Çiçek Bahçesi', url: '../' }, { n: 2, name: 'Bölüm 2: Sahil Balıkçısı', url: './' }, { n: 3, name: 'Bölüm 3: Hayvan Çiftliği', url: '../ciftlik/' }];
+  const lsGet = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
+  const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} };
+  const lsDel = k => { try { localStorage.removeItem(k); } catch (e) {} };
+  const infRead = () => { try { const o = JSON.parse(lsGet(IK)); return o && typeof o === 'object' ? o : {}; } catch (e) { return {}; } };
+  let inf = !!infRead()[THIS], taps = [], pin = '';
+  const st = document.createElement('style');
+  st.textContent = '#adm{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(10,20,40,.6);z-index:45;pointer-events:auto;touch-action:manipulation}' +
+    '#adm .cb{background:linear-gradient(#fff,#e6f6ff);border-radius:24px;padding:18px 16px 14px;width:min(330px,90vw);max-height:92vh;overflow:auto;text-align:center;box-shadow:0 10px 0 rgba(0,0,0,.18),0 24px 44px rgba(0,0,0,.4);display:flex;flex-direction:column;gap:9px}' +
+    '#adm .ct{font-weight:900;font-size:24px;color:#0d4a6e;line-height:1.15}#adm .cs{font-weight:900;font-size:15px;color:#4a6a82}' +
+    '#adm button{font:900 19px/1 inherit;font-family:inherit;border:0;border-radius:16px;padding:15px 8px;color:#fff;background:linear-gradient(#2fd45a,#1e9e3e);box-shadow:0 5px 0 #146b2a}' +
+    '#adm button.no{background:linear-gradient(#aab6c8,#8393ab);box-shadow:0 5px 0 #5b6b82}#adm button.nav{background:linear-gradient(#4aa8ff,#2f7bff);box-shadow:0 5px 0 #1d4fb0}' +
+    '#adm button.on{background:linear-gradient(#ffb347,#ff8a1f);box-shadow:0 5px 0 #b85a00}#adm button:disabled{background:#c5cfdc;box-shadow:0 5px 0 #9aa8ba;color:#fff}' +
+    '#adm .pad{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}#adm .pad button{font-size:34px;padding:14px 0;background:linear-gradient(#4aa8ff,#2f7bff);box-shadow:0 5px 0 #1d4fb0}' +
+    '#adm .dots{font-weight:900;font-size:40px;letter-spacing:10px;color:#0d4a6e;height:46px}#adm .row3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}';
+  document.head.appendChild(st);
+  const el = document.createElement('div'); el.id = 'adm'; el.innerHTML = '<div class="cb"></div>'; document.getElementById('app').appendChild(el);
+  const box = el.querySelector('.cb');
+  const close = () => { el.style.display = 'none'; pin = ''; };
+  const mkBtn = (t, cls, fn) => { const b = document.createElement('button'); b.textContent = t; if (cls) b.className = cls; b.addEventListener('click', fn); return b; };
+  function bolAdd(n) { try { let o = null; try { o = JSON.parse(lsGet('cicek_bolumler')); } catch (e) {} if (!o || typeof o !== 'object' || !Array.isArray(o.open)) o = { v: 1, open: [1], last: 1 }; if (!o.open.includes(n)) o.open.push(n); o.open.sort(); o.last = n; lsSet('cicek_bolumler', JSON.stringify(o)); } catch (e) {} }
+  function go(c) { close(); bolAdd(c.n); chapGo(c); }
+  function addM(v) { S.money += v; saveDirty = true; writeSave(); }
+  function showPin() {
+    pin = ''; box.innerHTML = '<div class="ct">PIN</div><div class="dots"></div><div class="pad"></div>';
+    const dots = box.querySelector('.dots'), pad = box.querySelector('.pad');
+    const upd = () => { dots.textContent = '●'.repeat(pin.length) + '○'.repeat(4 - pin.length); };
+    const press = d => { pin += d; upd(); if (pin.length >= 4) { if (pin === PIN) { lsSet(AK, '1'); showPanel(); } else close(); } };
+    for (const d of ['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', '']) { if (d === '') { pad.appendChild(document.createElement('span')); continue; } pad.appendChild(mkBtn(d, '', () => press(d))); }
+    upd(); el.style.display = 'flex';
+  }
+  function showPanel() {
+    box.innerHTML = '<div class="ct">Yönetici</div><div class="cs">Para: <span class="am"></span></div>';
+    const am = box.querySelector('.am'); am.textContent = Math.floor(S.money).toLocaleString('tr-TR');
+    for (const c of CH) { const cur = c.n === THIS, b = mkBtn(c.name + (cur ? ' (burada)' : ''), 'nav', () => go(c)); b.dataset.ch = c.n; if (cur) b.disabled = true; box.appendChild(b); }
+    const r = document.createElement('div'); r.className = 'row3';
+    for (const [t, v] of [['+100K', 1e5], ['+1M', 1e6], ['+10M', 1e7]]) r.appendChild(mkBtn(t, '', () => { addM(v); am.textContent = Math.floor(S.money).toLocaleString('tr-TR'); }));
+    box.appendChild(r);
+    const ib = mkBtn('', '', () => { setInf(!inf); ib.textContent = 'Sınırsız para: ' + (inf ? 'AÇIK' : 'kapalı'); ib.className = inf ? 'on' : 'no'; am.textContent = Math.floor(S.money).toLocaleString('tr-TR'); });
+    ib.textContent = 'Sınırsız para: ' + (inf ? 'AÇIK' : 'kapalı'); ib.className = inf ? 'on' : 'no'; ib.dataset.k = 'inf'; box.appendChild(ib);
+    box.appendChild(mkBtn("Admin'den çık", 'no', () => { lsDel(AK); lsDel(IK); inf = false; close(); }));
+    box.appendChild(mkBtn('Kapat', 'no', close));
+    el.style.display = 'flex';
+  }
+  function setInf(on) { inf = !!on; const o = infRead(); if (inf) o[THIS] = true; else delete o[THIS]; lsSet(IK, JSON.stringify(o)); if (inf) tick(); }
+  function tick() { if (inf && S.money < 9.99e8) { S.money = 1e9; saveDirty = true; } }
+  function open() { if (lsGet(AK) === '1') showPanel(); else showPin(); }
+  const mEl = document.getElementById('money'); mEl.style.pointerEvents = 'auto';
+  mEl.addEventListener('pointerdown', e => { e.stopPropagation(); const t = performance.now(); taps.push(t); taps = taps.filter(x => t - x <= 3000); if (taps.length >= 7) { taps = []; open(); } });
+  return { open, tick, showPin, showPanel, close, setInf, get inf() { return inf; }, get isOpen() { return el.style.display === 'flex'; } };
+})();
 window.__game = {
+  admin: ADMIN,
   padCheck() { const pads = allPads(); const hits = []; for (const p of pads) { const h = padHits(p, p.x, p.z, pads); if (h) hits.push([p.key || (p.o && p.o.id) || '?', h, +p.x.toFixed(1), +p.z.toFixed(1)]); } return hits; }, fixPads, allPads, PROPBOX, padOK: () => PADOK,
   get camera() { return camera; },
   measure() { renderer.info.reset(); if (composer) composer.render(0); else renderer.render(scene, camera); return { calls: renderer.info.render.calls, tris: renderer.info.render.triangles }; },
@@ -4039,7 +4094,7 @@ function fpsWatch(rawDt) {
 }
 function loop(now) {
   const rawDt = Math.max(0, (now - last) / 1000), dt = Math.min(0.05, rawDt); last = now; if (rawDt > 0 && !window.__noAuto) fpsWatch(rawDt);
-  if (!window.__freeze) update(dt); renderer.info.reset(); if (composer) composer.render(dt); else renderer.render(scene, camera); requestAnimationFrame(loop);
+  ADMIN.tick(); if (!window.__freeze) update(dt); renderer.info.reset(); if (composer) composer.render(dt); else renderer.render(scene, camera); requestAnimationFrame(loop);
 }
 requestAnimationFrame(loop);
 })();
