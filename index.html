@@ -2378,7 +2378,7 @@ function coinBurstUI() { const w = window.innerWidth, h = window.innerHeight; fo
 let gainAcc = 0, gainT = 0;
 function updateGain(dt) {
   gainT -= dt; if (gainAcc <= 0 || gainT > 0) return; gainT = 0.4;
-  const r = moneyEl.getBoundingClientRect(), e = document.createElement('div'); e.className = 'gain'; e.textContent = '+' + (gainAcc >= 100000 ? fmt(gainAcc) : gainAcc); e.style.left = (r.left + r.width + 4) + 'px'; e.style.top = (r.top + 4) + 'px'; fxEl.appendChild(e); gainAcc = 0; setTimeout(() => e.remove(), 950);
+  const r = moneyEl.getBoundingClientRect(), e = document.createElement('div'); e.className = 'gain'; e.textContent = '+' + fmt(Math.max(1, gainAcc)); e.style.left = (r.left + r.width + 4) + 'px'; e.style.top = (r.top + 4) + 'px'; fxEl.appendChild(e); gainAcc = 0; setTimeout(() => e.remove(), 950);
 }
 function drawGoalIcon() {
   if (!curGoal) { goalEl.style.display = 'none'; return; }
@@ -4736,6 +4736,7 @@ function updateFest(dt, t) {
   const on = !!FEST.ev; FEST.on = damp(FEST.on, on ? 1 : 0, 3, dt);
   // HUD
   const el = document.getElementById('evt'), e2 = FEST.ev;
+  { const mt = e2 ? '46px' : ''; if (hintEl.style.marginTop !== mt) hintEl.style.marginTop = mt; } // festival çubuğu ipucu balonunu örtmesin
   if (e2) { const p = festProgress(), sig = p + '|' + Math.ceil(e2.left); if (sig !== FEST.hsig) { FEST.hsig = sig; el.style.display = 'flex'; document.getElementById('evtN').textContent = 'Festival: ' + e2.k.txt(e2.n) + ' • ' + Math.floor(e2.left / 60) + ':' + String(Math.floor(e2.left % 60)).padStart(2, '0'); const pc = Math.round(p / e2.n * 100); document.getElementById('evtF').style.width = pc + '%'; document.getElementById('evtP').textContent = p + '/' + e2.n; const c = el.querySelector('canvas').getContext('2d'); c.clearRect(0, 0, 60, 60); e2.k.ic(c, 30, 30, 56); } } else FEST.hsig = '';
   if (!near) { FEST.balloons.visible = false; for (const c of FEST.crowd) c.group.visible = false; return; }
   const bm = FEST.balloons; bm.visible = FEST.on > 0.05; const M = new THREE.Matrix4(), V = new THREE.Vector3(), Q = new THREE.Quaternion(), Sc = new THREE.Vector3();
