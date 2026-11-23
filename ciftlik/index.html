@@ -951,7 +951,7 @@ function mergeParts(parts, W) {
   out.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); out.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3)); out.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
   return out;
 }
-const PROPBOX = []; let PBON = false; const _pbb = new THREE.Box3();
+const PROPBOX = [], PROPALL = []; let PBON = false; const _pbb = new THREE.Box3();
 function mergeStatic(root, ao) {
   root.updateMatrixWorld(true);
   const inv = new THREE.Matrix4().copy(root.matrixWorld).invert(), buckets = new Map(), nm = new THREE.Matrix3(), v = new THREE.Vector3(), M = new THREE.Matrix4();
@@ -961,6 +961,7 @@ function mergeStatic(root, ao) {
       if (ch.isMesh) {
         if (!ch.geometry || Array.isArray(ch.material) || !ch.geometry.attributes.position || ch.userData.keep) continue;
         if (PBON) { const gg = ch.geometry; if (!gg.boundingBox) gg.computeBoundingBox(); _pbb.copy(gg.boundingBox).applyMatrix4(ch.matrixWorld); if (_pbb.max.y > 0.45 && _pbb.min.y < 1.2 && _pbb.max.x - _pbb.min.x < 30 && _pbb.max.z - _pbb.min.z < 30 && (_pbb.max.x - _pbb.min.x > 0.55 || _pbb.max.z - _pbb.min.z > 0.55)) PROPBOX.push([_pbb.min.x, _pbb.max.x, _pbb.min.z, _pbb.max.z]); }
+        if (PBON && _pbb.max.y > 0.3 && _pbb.max.x - _pbb.min.x < 30 && _pbb.max.z - _pbb.min.z < 30) PROPALL.push([_pbb.min.x, _pbb.max.x, _pbb.min.z, _pbb.max.z, _pbb.min.y, _pbb.max.y]); // tüm statik mesh kutuları (bina, ağaç tacı, çit...)
         const g = ch.geometry, mt = ch.material, plain = (mt.isMeshLambertMaterial || (mt.isMeshStandardMaterial && mt.roughness === 0.78 && mt.metalness === 0)) && !mt.map && !mt.transparent && !mt.vertexColors && mt.side === THREE.FrontSide && !mt.emissiveMap;
         const tm = plain ? vcMat : mt, hasCol = plain || !!g.attributes.color, hasUv = !plain && !!g.attributes.uv;
         const key = tm.uuid + '|' + (ch.castShadow ? 1 : 0) + (ch.receiveShadow ? 1 : 0) + (hasUv ? 'u' : '') + (hasCol ? 'c' : '') + ch.renderOrder;
@@ -1172,7 +1173,7 @@ const shadowGeo = new THREE.CircleGeometry(1, 20);
 let _faceMat = null, _shadowMat = null;
 function ns(m) { m.userData.ns = true; return m; }
 function makeChar(o) {
-  const g = new THREE.Group(), body = new THREE.Group(); g.add(body);
+  const g = new THREE.Group(), body = new THREE.Group(); g.userData.isChar = true; g.add(body);
   const skin = mat(o.skin || 0xffcfa0), shirt = mat(o.shirt), pants = mat(o.pants || 0x3b5bdb), hair = mat(o.hair || 0x5a3a22), shoe = mat(o.shoe || 0x3a2a22);
   if (!_faceMat) { _faceMat = LM({ map: faceTexture(), transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 }); _shadowMat = new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.28, depthWrite: false }); }
   const sh = new THREE.Mesh(shadowGeo, _shadowMat); sh.rotation.x = -Math.PI / 2; sh.position.y = 0.035; sh.scale.set(0.6, 0.45, 1); sh.userData.ns = true; sh.renderOrder = 1; g.add(sh);
@@ -1996,7 +1997,7 @@ function buildVan() {
   vanHud();
 }
 function buildVanZones() {
-  vanZone = new Zone({ x: 22.4, z: 24, w: 2.6, d: 3.6, color: '#ffd400', draw: drawZoneIcon(iconVan, 0.6) });
+  vanZone = new Zone({ x: 22.4, z: 24.9, w: 2.6, d: 2.8, color: '#ffd400', draw: drawZoneIcon(iconVan, 0.6) });
   vanMoneyZone = new Zone({ x: 16.2, z: 19.8, w: 3.4, d: 3.0, color: '#1ed760', draw: null, labelSize: 0.01 }); vanMoneyZone.label.visible = false;
   vanZone.group.visible = vanMoneyZone.group.visible = false;
 }
@@ -2187,7 +2188,7 @@ function buildZones() {
   packZone = new Zone({ x: POS.packPad.x, z: POS.packPad.z, w: 2.8, d: 2.6, color: '#ff2fa0', draw: drawZoneIcon(iconFlower) });
   outZone = new Zone({ x: POS.outPad.x, z: POS.outPad.z, w: 2.8, d: 2.6, color: '#ff8a1f', draw: drawZoneIcon(iconBouquet) });
   counterZone = new Zone({ x: POS.counterPad.x, z: POS.counterPad.z, w: 2.6, d: 2.6, color: '#2f7bff', draw: drawZoneIcon(iconSmile, 0.55) });
-  moneyZone = new Zone({ x: POS.moneyPile.x, z: POS.moneyPile.z + 0.9, w: 3.4, d: 3.4, color: '#1ed760', draw: null, labelSize: 0.01 });
+  moneyZone = new Zone({ x: POS.moneyPile.x, z: POS.moneyPile.z + 1.9, w: 3.4, d: 3.4, color: '#1ed760', draw: null, labelSize: 0.01 });
   moneyZone.label.visible = false;
   const z = POS.upgradeZ, z2 = POS.upgradeZ2, L = S.lv;
   const mk_ = (key, x, zz, icon, vis) => { const u = new UpgradePad(key, x, zz, icon); u.vis = vis || null; upPads[key] = u; return u; };
@@ -4244,9 +4245,15 @@ function allPads() { const l = []; for (const k in upPads) l.push(upPads[k]); re
 function roadsList() { return [[3.45, 7.35, -172, -11.5], [8.3, 11.7, 12, 47], [-11.1, -8.9, -11, 11], [-17.5, -10.5, -5.5, -2.5], [-17.5, -10.5, 2.5, 5.5], [-17.5, -10.5, -13.2, -10.5]]; } // sokak, minibüs yolu, toprak patikalar
 function bedRect(b) { return b.rc || (b.rc = (() => { let x0 = 1e9, x1 = -1e9, z0 = 1e9, z1 = -1e9; for (const f of b.flowers) { x0 = Math.min(x0, f.x); x1 = Math.max(x1, f.x); z0 = Math.min(z0, f.z); z1 = Math.max(z1, f.z); } return [x0 - 0.8, x1 + 0.8, z0 - 0.8, z1 + 0.8]; })()); }
 function padOnRoadOK(p) { return !!(p.key && (EXTZ[p.key] || p.key === 'sera' || p.key === 'van' || p.key === 'coll')); } // bölge açma pad'leri sokak üstünde durur
+function padMeshHit(p, x, z, mg) { // pad ayak izi herhangi bir statik mesh kutusuyla (bina, silo, ağaç tacı, çit...) kesişiyor mu
+  const m = mg === undefined ? 0.1 : mg, hw = p.w / 2 + m, hd = p.d / 2 + m, x0 = x - hw, x1 = x + hw, z0 = z - hd, z1 = z + hd;
+  for (const b of PROPALL) if (!(mg < 0 && b[4] > 1.0) && b[0] < x1 && b[1] > x0 && b[2] < z1 && b[3] > z0) return 'box ' + b.map(v => +v.toFixed(1)).join(',');
+  return null;
+}
 function padHits(p, x, z, others) {
   const hw = p.w / 2 + 0.2, hd = p.d / 2 + 0.2, x0 = x - hw, x1 = x + hw, z0 = z - hd, z1 = z + hd;
   for (const b of PROPBOX) if (b[0] < x1 && b[1] > x0 && b[2] < z1 && b[3] > z0) return 'prop';
+  if (padMeshHit(p, x, z)) return 'mesh';
   for (const c of colliders) { if (c.active && !c.active()) continue; if (c.x0 < x1 && c.x1 > x0 && c.z0 < z1 && c.z1 > z0) return 'collider'; }
   for (const q of zones) { if (q instanceof UpgradePad || q.noPadCheck) continue; if (Math.abs(q.x - x) < q.w / 2 + p.w / 2 + 0.8 && Math.abs(q.z - z) < q.d / 2 + p.d / 2 + 0.8) return 'zone'; }
   if (!padOnRoadOK(p)) for (const r of roadsList()) if (r[0] < x1 && r[1] > x0 && r[2] < z1 && r[3] > z0) return 'road';
@@ -4319,7 +4326,7 @@ const ADMIN = (function () {
 })();
 window.__game = {
   admin: ADMIN,
-  padCheck() { const pads = allPads(); const hits = []; for (const p of pads) { const h = padHits(p, p.x, p.z, pads); if (h) hits.push([p.key || (p.o && p.o.id) || '?', h, +p.x.toFixed(1), +p.z.toFixed(1)]); } return hits; }, fixPads, allPads, PROPBOX, padOK: () => PADOK,
+  padCheck() { const pads = allPads(); const hits = []; for (const p of pads) { const h = padHits(p, p.x, p.z, pads); if (h) hits.push([p.key || (p.o && p.o.id) || '?', h, +p.x.toFixed(1), +p.z.toFixed(1)]); } return hits; }, fixPads, allPads, PROPBOX, PROPALL, padMeshHit, padOK: () => PADOK,
   get camera() { return camera; },
   measure() { renderer.info.reset(); if (composer) composer.render(0); else renderer.render(scene, camera); return { calls: renderer.info.render.calls, tris: renderer.info.render.triangles }; },
   path(tx, tz) { return findPath(P.group.position.x, P.group.position.z, tx, tz); }, colliders,
