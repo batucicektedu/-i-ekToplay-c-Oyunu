@@ -303,8 +303,10 @@ function initAudio() {
     if (AC && AC.state === 'suspended') AC.resume();
   } catch (e) { AC = null; }
 }
+let SFXV = 1, SFXA = 0, SFXAMB = -99, SFXPL = 0;
 function blip(f, dur, type, vol, slide, delay) {
   if (!AC) return;
+  vol = (vol || 0.1) * SFXV;
   try {
     const t = AC.currentTime + (delay || 0), o = AC.createOscillator(), g = AC.createGain();
     o.type = type || 'sine'; o.frequency.setValueAtTime(f, t);
@@ -313,9 +315,11 @@ function blip(f, dur, type, vol, slide, delay) {
     o.connect(g); g.connect(AC.destination); o.start(t); o.stop(t + dur + 0.03);
   } catch (e) {}
 }
-function sfx(name) {
+function sfx(name, force) {
   const now = performance.now();
   if (sfxLast[name] && now - sfxLast[name] < 45) return; sfxLast[name] = now;
+  // oyuncu bir sey yapmiyorken (isci/musteri/balik sesleri) ortak bir ses butcesi: en cok 3 sn'de bir, kisik. Oyuncu eylemi (1 sn) ve force (pad satin alma) hep calar.
+  SFXV = 1; if (!force && T - SFXA > 1.0) { if (T - SFXAMB < 3) return; SFXAMB = T; SFXV = 0.45; }
   switch (name) {
     case 'pick': blip(520 + Math.random() * 160, 0.09, 'sine', 0.11, 1.7); break;
     case 'drop': blip(330 + Math.random() * 60, 0.07, 'triangle', 0.1, 1.4); break;
@@ -1596,7 +1600,7 @@ function updateJumps(dt) {
   for (let i = JUMPS.length - 1; i >= 0; i--) {
     const j = JUMPS[i]; j.t += dt / j.dur; const k = Math.min(1, j.t), m = j.m;
     m.position.set(j.x0 + j.dx * k, WATER_Y + 0.1 + 4 * j.h * k * (1 - k), j.z0 + j.dz * k); m.rotation.set(0, Math.atan2(-j.dz, j.dx), 0); m.rotation.z = Math.PI * 0.5 - (k * 2 - 1) * 1.2; m.scale.setScalar(1.25);
-    if (k >= 1) { splashRing(m.position.x, m.position.z, 1.4); for (let n = 0; n < 7; n++) { const a = rand(0, TAU), s = rand(0.6, 1.8); emit({ x: m.position.x, y: 0.2, z: m.position.z, vx: Math.cos(a) * s, vy: rand(2, 3.6), vz: Math.sin(a) * s, life: rand(0.4, 0.6), size: rand(0.12, 0.2), c: n % 3 ? 0xdff6ff : 0x7fd3f0, grav: 11, drag: 0.8 }); } rm(m); JUMPS.splice(i, 1); sfx('drop'); }
+    if (k >= 1) { splashRing(m.position.x, m.position.z, 1.4); for (let n = 0; n < 7; n++) { const a = rand(0, TAU), s = rand(0.6, 1.8); emit({ x: m.position.x, y: 0.2, z: m.position.z, vx: Math.cos(a) * s, vy: rand(2, 3.6), vz: Math.sin(a) * s, life: rand(0.4, 0.6), size: rand(0.12, 0.2), c: n % 3 ? 0xdff6ff : 0x7fd3f0, grav: 11, drag: 0.8 }); } rm(m); JUMPS.splice(i, 1); if (Math.hypot(m.position.x - P.group.position.x, m.position.z - P.group.position.z) < 9 && T - (updateJumps.snd || -99) > 8) { updateJumps.snd = T; sfx('drop'); } }
   }
 }
 function splashRing(x, z, s) { ring(x, z, 0xdff6ff, s * 2.2, WATER_Y + 0.07); }
@@ -2608,7 +2612,7 @@ function applyUpgrade(key, instant) {
 const RIZA = { sera: 'Gelgit çekilince midyeler ortaya çıkar. Acele et!', boat: 'Tekneler denize açıldı! Kasaları rıhtımdan al ya da hamal tut.', gboat: 'Balık-ekmek en sevilen yemek. Buzlu kasaları tekneye getir!', cage: 'Kafeslerde karides ve yengeç var. Tabak yap, kalabalık yığılsın!', hall: 'Mezat zili çaldı mı herkes toplanır. Stoku hazır tut!', bridge: 'Eski fenere giden yol açıldı. Gün batımı orada daha güzel...', fener: 'Fener Kafe senin. Artık sahil seninle anılacak!', gate: 'Yeni ufuklar seni bekliyor, evlat. Çiftlikte görüşürüz!' };
 function purchase(u) {
   const key = u.key; S.lv[key]++; u.paid = 0; stats.upgrades++; saveDirty = true; u.locked = true; u.pause = 0.3; u.off = false; u.hold = 0; u.pop = 0.6;
-  sfx('up'); confetti(u.x, 1.2, u.z, 44); sparkles(u.x, 0.8, u.z, 14, 0xfff2a0, 1.0); ring(u.x, u.z, 0xffc21a, 4.5);
+  sfx('up', true); confetti(u.x, 1.2, u.z, 44); sparkles(u.x, 0.8, u.z, 14, 0xfff2a0, 1.0); ring(u.x, u.z, 0xffc21a, 4.5);
   ring(P.group.position.x, P.group.position.z, 0x7dff7a, 3); sparkles(P.group.position.x, 0.6, P.group.position.z, 12, 0x9dffb0, 0.5); vib(18);
   popText(u.x, 2.6, u.z, '+ ' + UPG[key].name + '!', '#7dff7a');
   applyUpgrade(key, false);
@@ -3003,6 +3007,7 @@ function updateZoneActions(dt) {
 function update(dt) {
   T += dt;
   movePlayer(dt);
+  { const pl = P.stack.length; let act = Math.abs(P.vel.x) + Math.abs(P.vel.z) > 0.3 || pl !== SFXPL; SFXPL = pl; if (!act) for (const z of zones) if (z.inside) { act = true; break; } if (act) SFXA = T; }
   updateBeds(dt);
   updateZoneActions(dt);
   updateGoalState(); updateUpgrades(dt); updateExpansion(dt, T);
