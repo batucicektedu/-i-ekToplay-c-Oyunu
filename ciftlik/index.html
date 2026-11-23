@@ -2390,7 +2390,7 @@ function pickProduct() { const l = PROD_LIST.filter(prodOK); if (l.length === 1)
 const maxWant = t => t === 'bouquet' ? 6 : t === 'perfume' || t === 'bonsai' ? 2 : 3;
 function leaveSad(c) {
   const qi = queue.indexOf(c); if (qi >= 0) queue.splice(qi, 1);
-  c.state = 'leaving'; setBubble(c, 'sad'); c.hideBubble = 1.4; c.path = [[12.4, -0.3], [12.4, 12.5], [10, 18], [10, 40]]; sfx('drop');
+  c.state = 'leaving'; setBubble(c, 'sad'); c.hideBubble = 1.4; c.path = [[12.4, -0.3], [12.4, 9.5], [10, 12], [10, 18], [10, 40]]; sfx('drop');
 }
 function spawnCustomer(z) {
   const fem = Math.random() < 0.5, sh = pick(SHIRTS); custCount++; const vip = custCount % 6 === 0 || Math.random() < 0;
@@ -2411,7 +2411,7 @@ function setBubble(c, kind) {
 function finishCustomer(c) {
   const qi = queue.indexOf(c); if (qi >= 0) queue.splice(qi, 1);
   c.state = 'leaving'; setBubble(c, 'happy'); c.hideBubble = 1.2; stats.sold++; stats['s_' + c.prod] = (stats['s_' + c.prod] || 0) + c.want; sfx('happy');
-  c.path = [[12.4, -0.3], [12.4, 12.5], [10, 18], [10, 40]];
+  c.path = [[12.4, -0.3], [12.4, 9.5], [10, 12], [10, 18], [10, 40]];
   const gp = c.group.position, total = Math.round(c.want * PRICE[c.prod] * (c.vip ? 3 : 1) * priceMul() * 1), n = clamp(Math.round(total / CFG.billValue), 1, 10), bv = total / n;
   hearts(gp.x, 3.4, gp.z, 5); coins(gp.x, 2.2, gp.z, 8); popText(gp.x, 4.2, gp.z, '+' + fmt(total), '#6dff6a'); vib(8);
   for (let k = 0; k < n; k++) later(0.15 + k * Math.min(0.16, 0.8 / n), () => spawnBill(c, bv));
@@ -2761,8 +2761,9 @@ const sstep = (a, b, v) => { const k = clamp((v - a) / (b - a), 0, 1); return k 
 /* ---- yol bulma (A*): iz ve bot için ---- */
 const PG = { x0: -27, z0: -172, c: 0.75, w: 100, h: 276, blocked: null, sig: '', open: [], g: null, from: null };
 function pgBuild() {
-  const sig = colliders.map(c => (c.active && !c.active()) ? 0 : 1).join(''); if (sig === PG.sig && PG.blocked) return; PG.sig = sig;
+  const wl = walkRects(), sig = colliders.map(c => (c.active && !c.active()) ? 0 : 1).join('') + '|' + wl.map(r => r.join(',')).join(';'); if (sig === PG.sig && PG.blocked) return; PG.sig = sig;
   const bl = PG.blocked = new Uint8Array(PG.w * PG.h);
+  for (let j = 0; j < PG.h; j++) for (let i = 0; i < PG.w; i++) { const cx = PG.x0 + (i + 0.5) * PG.c, cz = PG.z0 + (j + 0.5) * PG.c; if (!inRects(wl, cx, cz) || !inRects(wl, cx - 0.3, cz - 0.3) || !inRects(wl, cx + 0.3, cz - 0.3) || !inRects(wl, cx - 0.3, cz + 0.3) || !inRects(wl, cx + 0.3, cz + 0.3)) bl[j * PG.w + i] = 1; } // yürünemez alan (walkRects dışı): rota duvara girmesin
   for (const c of colliders) { if (c.active && !c.active()) continue; const i0 = Math.max(0, Math.floor((c.x0 - 0.55 - PG.x0) / PG.c)), i1 = Math.min(PG.w - 1, Math.floor((c.x1 + 0.55 - PG.x0) / PG.c)), j0 = Math.max(0, Math.floor((c.z0 - 0.55 - PG.z0) / PG.c)), j1 = Math.min(PG.h - 1, Math.floor((c.z1 + 0.55 - PG.z0) / PG.c)); for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) bl[j * PG.w + i] = 1; }
   PG.g = new Float32Array(PG.w * PG.h); PG.from = new Int32Array(PG.w * PG.h);
 }
@@ -2885,7 +2886,7 @@ function updatePanQ(dt) {
 const WALKX = []; // ek dikdörtgenler: {x0,x1,z0,z1,on:()=>bool}
 function walkRects() {
   const B = CFG.bounds, z1 = zone3 && !zone3.locked ? 31.5 : 16, x1 = Math.max(zone2 && !zone2.locked ? 44.5 : B.x1, zone3 && !zone3.locked ? 24.2 : 0);
-  B.z1 = z1; const l = [[B.x0, x1, B.z0, z1], [1, 11, -26, B.z0 + 0.5]];
+  B.z1 = z1; const l = [[B.x0, x1, B.z0, z1], [1, 11, -27.2, B.z0 + 0.5]];
   for (const w of WALKX) if (!w.on || w.on()) l.push([w.x0, w.x1, w.z0, w.z1]);
   return l;
 }
@@ -4250,10 +4251,18 @@ function padMeshHit(p, x, z, mg) { // pad ayak izi herhangi bir statik mesh kutu
   for (const b of PROPALL) if (!(mg < 0 && b[4] > 1.0) && b[0] < x1 && b[1] > x0 && b[2] < z1 && b[3] > z0) return 'box ' + b.map(v => +v.toFixed(1)).join(',');
   return null;
 }
+function padViewBlock(p, x, z) { // kameradan pad merkezine ışın bir statik mesh kutusuna (bina, silo, ağaç tacı) çarpıyorsa: pad görünmez
+  const cd = 30, hh = cd * Math.cos(CFG.tilt), cy = cd * Math.sin(CFG.tilt), cx = x + Math.sin(CFG.yaw) * hh, cz = z + Math.cos(CFG.yaw) * hh;
+  const hit = (px, py, pz) => { const dx = cx - px, dy = cy - py, dz = cz - pz;
+    for (const b of PROPALL) { let t0 = 0.02, t1 = 0.98; const sl = (o, d, lo, hi) => { if (Math.abs(d) < 1e-9) return o >= lo && o <= hi; let a = (lo - o) / d, c2 = (hi - o) / d; if (a > c2) { const q = a; a = c2; c2 = q; } t0 = Math.max(t0, a); t1 = Math.min(t1, c2); return t0 <= t1; };
+      if (b[5] < 2.0 || Math.max(b[1] - b[0], b[3] - b[2]) < 2.6) continue; if (sl(px, dx, b[0], b[1]) && sl(py, dy, b[4], b[5]) && sl(pz, dz, b[2], b[3])) return true; } return false; };
+  if (!hit(x, 0.4, z)) return false; let n = 1; const hw = p.w * 0.3, hd = p.d * 0.3; for (const [ox, oz] of [[-hw, -hd], [hw, -hd], [-hw, hd], [hw, hd]]) if (hit(x + ox, 0.4, z + oz)) n++; return n >= 3;
+}
 function padHits(p, x, z, others) {
   const hw = p.w / 2 + 0.2, hd = p.d / 2 + 0.2, x0 = x - hw, x1 = x + hw, z0 = z - hd, z1 = z + hd;
   for (const b of PROPBOX) if (b[0] < x1 && b[1] > x0 && b[2] < z1 && b[3] > z0) return 'prop';
   if (padMeshHit(p, x, z)) return 'mesh';
+  if (p instanceof UpgradePad && padViewBlock(p, x, z)) return 'view';
   for (const c of colliders) { if (c.active && !c.active()) continue; if (c.x0 < x1 && c.x1 > x0 && c.z0 < z1 && c.z1 > z0) return 'collider'; }
   for (const q of zones) { if (q instanceof UpgradePad || q.noPadCheck) continue; if (Math.abs(q.x - x) < q.w / 2 + p.w / 2 + 0.8 && Math.abs(q.z - z) < q.d / 2 + p.d / 2 + 0.8) return 'zone'; }
   if (!padOnRoadOK(p)) for (const r of roadsList()) if (r[0] < x1 && r[1] > x0 && r[2] < z1 && r[3] > z0) return 'road';
@@ -4326,7 +4335,7 @@ const ADMIN = (function () {
 })();
 window.__game = {
   admin: ADMIN,
-  padCheck() { const pads = allPads(); const hits = []; for (const p of pads) { const h = padHits(p, p.x, p.z, pads); if (h) hits.push([p.key || (p.o && p.o.id) || '?', h, +p.x.toFixed(1), +p.z.toFixed(1)]); } return hits; }, fixPads, allPads, PROPBOX, PROPALL, padMeshHit, padOK: () => PADOK,
+  padCheck() { const pads = allPads(); const hits = []; for (const p of pads) { const h = padHits(p, p.x, p.z, pads); if (h) hits.push([p.key || (p.o && p.o.id) || '?', h, +p.x.toFixed(1), +p.z.toFixed(1)]); } return hits; }, fixPads, allPads, PROPBOX, PROPALL, PANQ, nudge, padMeshHit, padViewBlock, walkOK: (x, z) => inRects(walkRects(), x, z), padOK: () => PADOK,
   get camera() { return camera; },
   measure() { renderer.info.reset(); if (composer) composer.render(0); else renderer.render(scene, camera); return { calls: renderer.info.render.calls, tris: renderer.info.render.triangles }; },
   path(tx, tz) { return findPath(P.group.position.x, P.group.position.z, tx, tz); }, colliders,

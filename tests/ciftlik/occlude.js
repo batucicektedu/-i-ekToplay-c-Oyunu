@@ -22,7 +22,7 @@ for(const f of files){
    // çarpılan parçanın (üçgenin komşuları dahil) gerçek kutusu için yakın üçgenleri tara: aynı mesh'te hit noktasına 3 birim içindeki köşeler
    for(let i=0;i<pa.count;i++){v.fromBufferAttribute(pa,i);if(Math.abs(v.x-hit.point.x)<1.5&&Math.abs(v.z-hit.point.z)<1.5&&v.y>-0.2)bb.expandByPoint(v)}
    return 'hit@'+hit.point.x.toFixed(1)+','+hit.point.y.toFixed(1)+','+hit.point.z.toFixed(1)+' near-box x['+bb.min.x.toFixed(1)+','+bb.max.x.toFixed(1)+'] y['+bb.min.y.toFixed(1)+','+bb.max.y.toFixed(1)+'] z['+bb.min.z.toFixed(1)+','+bb.max.z.toFixed(1)+']'};
-  const settle=(x,z)=>{G.tp(x,z);G.sim(0.6);G.render();cam.updateMatrixWorld(true)};
+  const settle=(x,z)=>{G.PANQ.length=0;G.nudge.t=99;G.tp(x,z);G.sim(0.4);let last=cam.position.clone();for(let i=0;i<30;i++){G.sim(0.2);G.PANQ.length=0;G.nudge.t=99;if(cam.position.distanceTo(last)<0.03)break;last.copy(cam.position)}G.render();cam.updateMatrixWorld(true)}; // kamera oturana kadar
   // statik = (a) dünya koordinatına pişmiş birleştirilmiş mesh (birim matris) ya da (b) hareketsiz, dyn işaretli bina grubu (tezgâh, makine, tabela...).
   // karakter (oyuncu, işçi, müşteri, at, hayvan), yığınlar ve zone grafikleri sayılmaz.
   const topOf=o=>{while(o.parent&&o.parent!==scene)o=o.parent;return o};
@@ -54,13 +54,17 @@ for(const f of files){
   for(const it of items){
    settle(it.x,it.z);
    const oc=occN(it.x,it.y,it.z,it.hint?0.6:it.w*0.3,it.hint?0.01:it.d*0.3);if(oc)out.push([it.tag,it.k,'ışın örtülü',oc]);
-   if(it.hint){const v=new T.Vector3(it.x,it.y,it.z).project(cam);if(Math.abs(v.x)>1||Math.abs(v.y)>1)out.push([it.tag,it.k,'ekran dışı',v.x.toFixed(2)+','+v.y.toFixed(2)]);
+   if(it.hint){const v=new T.Vector3(it.x,it.y,it.z).project(cam);if(Math.abs(v.x)>1||Math.abs(v.y)>1)out.push([it.tag,it.k+'@'+it.x.toFixed(1)+','+it.z.toFixed(1)+' player='+G.P().group.position.x.toFixed(1)+','+G.P().group.position.z.toFixed(1)+' goal='+(G.goal&&G.goal.key),'ekran dışı',v.x.toFixed(2)+','+v.y.toFixed(2)]);
     const pth=G.path(it.x,it.z);const end=pth[pth.length-1];if(!pth||pth.length<2)out.push([it.tag,it.k,'yol yok','']);
     // A* gerçekten bir yol buldu mu (düz çizgi + engelli değil)? colliders ile kontrol
     const blocked=G.colliders.some(c=>(!c.active||c.active())&&it.x>c.x0-0.3&&it.x<c.x1+0.3&&it.z>c.z0-0.3&&it.z<c.z1+0.3);if(blocked)out.push([it.tag,it.k,'hedef collider içinde','']);}
   }
   // yaklaşma denetimi: rehber yolu üzerinde hedefin 12/8/4 birim gerisinde kamera hedefi görüyor mu (oyuncu pad'e varmadan önce ok/pad görünmeli)
-  const approach=(k,x,z,y,w,d)=>{G.tp(G.CFG.start.x,G.CFG.start.z);G.sim(0.3);const pth=G.path(x,z);if(!pth||pth.length<2)return;
+  const approach=(k,x,z,y,w,d,reachOnly)=>{G.tp(G.CFG.start.x,G.CFG.start.z);G.sim(0.3);const pth=G.path(x,z);if(!pth||pth.length<2)return;
+   // rota yürünebilir bölge içinde mi (oyuncu duvara takılmasın) ve hedefe gerçekten ulaşılıyor mu
+   for(let i=0;i<pth.length-1;i++){const a=pth[i],b2=pth[i+1],L=Math.hypot(b2[0]-a[0],b2[1]-a[1]),n=Math.ceil(L/0.1);let bad=null;for(let q=1;q<=n&&!bad;q++){const px=a[0]+(b2[0]-a[0])*q/n,pz=a[1]+(b2[1]-a[1])*q/n;if(!G.walkOK(px,pz)&&Math.hypot(px-x,pz-z)>Math.max(w,d)/2+0.3)bad=[px,pz]}if(bad){out.push(['reach',k,'rota yürünemez alandan geçiyor',bad[0].toFixed(1)+','+bad[1].toFixed(1)]);break}}
+   {const hw=Math.max(0.2,w/2-0.8),hd=Math.max(0.2,d/2-0.8);if(![[0,0],[hw,hd],[-hw,hd],[hw,-hd],[-hw,-hd]].some(([ox,oz])=>G.walkOK(x+ox,z+oz)))out.push(['reach',k,'hedefin yürünebilir kısmı yok (pad\'e basılamaz)',x.toFixed(1)+','+z.toFixed(1)])}
+   if(reachOnly)return;
    // yol boyunca hedeften geriye doğru d mesafedeki nokta
    const at=back=>{let rem=back;for(let i=pth.length-1;i>0;i--){const a=pth[i],b=pth[i-1],l=Math.hypot(a[0]-b[0],a[1]-b[1]);if(rem<=l){const f=rem/l;return [a[0]+(b[0]-a[0])*f,a[1]+(b[1]-a[1])*f]}rem-=l}return null};
    for(const bk of [12,8,4]){const q=at(bk);if(!q)continue;settle(q[0],q[1]);const oc=occN(x,y,z,w*0.3,d*0.3);if(oc)out.push(['approach',k+'@-'+bk,'yaklaşırken örtülü',oc+' from '+q[0].toFixed(1)+','+q[1].toFixed(1)])}};
@@ -70,10 +74,16 @@ for(const f of files){
   const savedAct=G.colliders.map(c=>c.active);G.colliders.forEach(c=>{c.active=()=>false}); // kilitli bölgedeki pad'e de kamera gidebilsin
   const pads=G.allPads(),was=pads.map(p=>[p.group.visible,p.done]);
   for(const p of pads){if(p.done||(p.vis&&!p.vis()))continue;p.group.visible=true;settle(p.x,p.z);
-   const oc=occN(p.x,0.4,p.z,p.w*0.3,p.d*0.3);if(oc)out.push(['all',p.key,'ışın örtülü',oc]);
+   approach(p.key,p.x,p.z,0.4,p.w,p.d,true);settle(p.x,p.z);
+   const oc=occN(p.x,0.4,p.z,p.w*0.3,p.d*0.3);if(oc)out.push(['all',p.key+'@'+p.x.toFixed(1)+','+p.z.toFixed(1)+' cam='+cam.position.toArray().map(v=>v.toFixed(0)),'ışın örtülü',oc]);
    const oc2=occN(p.x,2.3,p.z,0.6,0.01);if(oc2)out.push(['all',p.key,'ok ucu örtülü',oc2]);
    const fp=G.padMeshHit(p,p.x,p.z);if(fp)out.push(['all',p.key,'ayak izi mesh kutusunda',fp]);}
   pads.forEach((p,i)=>{p.group.visible=was[i][0]});G.colliders.forEach((c,i)=>{c.active=savedAct[i]});
+  // pişmemiş (dyn) statik bina grupları (tezgâh, makine, kamyon...) ile pad ayak izi
+  const dynBoxes=[];for(const c of scene.children){if(c.userData&&c.userData.merged||skip.has(c)||moving.has(c)||c.isChar||!c.visible||c.isInstancedMesh||c.isLight)continue;if(!c.userData.dyn||c.children.length<=2||c.children.some(k=>k.userData&&k.userData.ns))continue; // <=2 çocuk: hayvan/karakter
+   const bb=new T.Box3().setFromObject(c),sz=bb.getSize(new T.Vector3());if(sz.y>0.6&&Math.max(sz.x,sz.z)>1.5&&sz.x<30&&sz.z<30)dynBoxes.push([bb,c])}
+  for(const p of G.allPads()){if(p.done||(p.vis&&!p.vis()))continue;const hw=p.w/2,hd=p.d/2;
+   for(const [bb,c] of dynBoxes){if(bb.min.x<p.x+hw&&bb.max.x>p.x-hw&&bb.min.z<p.z+hd&&bb.max.z>p.z-hd)out.push(['all',p.key,'ayak izi dyn-bina kutusunda','x['+bb.min.x.toFixed(1)+','+bb.max.x.toFixed(1)+'] z['+bb.min.z.toFixed(1)+','+bb.max.z.toFixed(1)+'] y'+bb.max.y.toFixed(1)+' kids='+c.children.length])}}
   // diğer bölgeler/kapılar için de ayak izi
   for(const z of G.zones){if(z.key||!visChain(z.group)||z.w<1.5||z.label.scale.x<0.1)continue;const fp=G.padMeshHit(z,z.x,z.z,-0.2);if(fp)out.push(['zone',z.constructor.name+'#'+Math.round(z.x)+','+Math.round(z.z),'ayak izi mesh kutusunda',fp])}
   return out;
