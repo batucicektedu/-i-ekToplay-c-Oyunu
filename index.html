@@ -778,6 +778,7 @@ function mergeParts(parts, W) {
   out.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); out.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3)); out.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
   return out;
 }
+const OC = { x0: -34, z0: -172, c: 0.25, w: 344, h: 848, sol: null, shd: null, cov: null };
 const PROPBOX = []; let PBON = false; const _pbb = new THREE.Box3();
 function mergeStatic(root, ao) {
   root.updateMatrixWorld(true);
@@ -1044,6 +1045,7 @@ function makeChar(o) {
   g.scale.setScalar(CHAR_S);
   g.traverse(m => { if (m.isMesh) { m.castShadow = !m.userData.ns && m.scale.x >= 0.25; m.receiveShadow = false; } });
   c.armL.userData.dyn = c.armR.userData.dyn = head.userData.dyn = true; mergeStatic(head); mergeStatic(body); mergeStatic(c.armL); mergeStatic(c.armR); mergeStatic(c.legL); mergeStatic(c.legR);
+  g.traverse(m => { if (m.isMesh) m.userData.chr = 1; }); // karakter parçaları: statik sahne taramasından (örtülme/ayak izi) hariç
   return c;
 }
 function animChar(c, dt, moveAmt, t) {
@@ -1639,7 +1641,7 @@ function buildVan() {
   vanHud();
 }
 function buildVanZones() {
-  vanZone = new Zone({ x: 22.4, z: 24, w: 2.6, d: 3.6, color: '#ffd400', draw: drawZoneIcon(iconVan, 0.6) });
+  vanZone = new Zone({ x: 22.4, z: 25.2, w: 2.6, d: 3.4, color: '#ffd400', draw: drawZoneIcon(iconVan, 0.6) });
   vanMoneyZone = new Zone({ x: 16.2, z: 19.8, w: 3.4, d: 3.0, color: '#1ed760', draw: null, labelSize: 0.01 }); vanMoneyZone.label.visible = false;
   vanZone.group.visible = vanMoneyZone.group.visible = false;
 }
@@ -2418,7 +2420,7 @@ function pgBuild() {
 }
 function pgLos(ax, az, bx, bz) { const d = Math.hypot(bx - ax, bz - az), n = Math.ceil(d / 0.35); for (let k = 1; k < n; k++) { const x = ax + (bx - ax) * k / n, z = az + (bz - az) * k / n, i = Math.floor((x - PG.x0) / PG.c), j = Math.floor((z - PG.z0) / PG.c); if (i < 0 || j < 0 || i >= PG.w || j >= PG.h || PG.blocked[j * PG.w + i]) return false; } return true; }
 function findPath(sx, sz, tx, tz) {
-  pgBuild(); const W = PG.w, H = PG.h, bl = PG.blocked, g = PG.g, from = PG.from; if (pgLos(sx, sz, tx, tz)) return [[sx, sz], [tx, tz]];
+  pgBuild(); const W = PG.w, H = PG.h, bl = PG.blocked, g = PG.g, from = PG.from; PG.found = true; if (pgLos(sx, sz, tx, tz)) return [[sx, sz], [tx, tz]];
   const cell = (x, z) => [clamp(Math.floor((x - PG.x0) / PG.c), 0, W - 1), clamp(Math.floor((z - PG.z0) / PG.c), 0, H - 1)];
   let [si, sj] = cell(sx, sz), [ti, tj] = cell(tx, tz);
   const near = (i, j) => { if (!bl[j * W + i]) return [i, j]; for (let r = 1; r < 6; r++) for (let dj = -r; dj <= r; dj++) for (let di = -r; di <= r; di++) { const a = i + di, b = j + dj; if (a >= 0 && b >= 0 && a < W && b < H && !bl[b * W + a]) return [a, b]; } return [i, j]; };
@@ -2430,7 +2432,7 @@ function findPath(sx, sz, tx, tz) {
     const k = pop(); if (k === tk) { found = true; break; } const i = k % W, j = (k / W) | 0;
     for (const [di, dj, cst] of D) { const a = i + di, b = j + dj; if (a < 0 || b < 0 || a >= W || b >= H) continue; const nk = b * W + a; if (bl[nk]) continue; if (di && dj && (bl[j * W + a] || bl[b * W + i])) continue; const ng = g[k] + cst; if (ng < g[nk] - 1e-3) { g[nk] = ng; from[nk] = k; push(nk, ng + Math.hypot(a - ti, b - tj)); } }
   }
-  if (!found) return [[sx, sz], [tx, tz]];
+  if (!found) { PG.found = false; return [[sx, sz], [tx, tz]]; }
   const pts = []; for (let k = tk; k !== -1; k = from[k]) pts.push([PG.x0 + ((k % W) + 0.5) * PG.c, PG.z0 + (((k / W) | 0) + 0.5) * PG.c]); pts.reverse(); pts[0] = [sx, sz]; pts.push([tx, tz]);
   const out = [pts[0]]; let a = 0; while (a < pts.length - 1) { let b = pts.length - 1; while (b > a + 1 && !pgLos(pts[a][0], pts[a][1], pts[b][0], pts[b][1])) b--; out.push(pts[b]); a = b; } return out;
 }
@@ -2527,6 +2529,7 @@ function updateHUD(dt) {
 const camFocus = new THREE.Vector3(CFG.start.x, 0, CFG.start.z); const inV = { x: 0, z: 0 };
 let T = 0, spawnT = 2, camInit = false;
 const nudge = { t: 99, x: 0, z: 0, w: 0.6, dur: 1.8, skip: 0 }; let camS = 1;
+function camSTarget() { return 1 + (zone2 && !zone2.locked ? 0.2 : 0) + (zone3 && !zone3.locked ? 0.12 : 0) + 0.03 * EXTLIST.filter(q => !q.locked).length; }
 function panTo(x, z, w, dur) { nudge.t = 0; nudge.x = x; nudge.z = z; nudge.w = w || 0.8; nudge.dur = dur || 1.8; nudge.skip = 0; }
 /* C5: kamera gezisi sadece önemli ilk olaylarda, her tür bir kez (S.seen), sıraya girer; oyuncu hareket ederken bekler */
 const PANQ = []; let panIdle = 0;
@@ -2641,7 +2644,7 @@ function update(dt) {
   if (nudge.t < 90) { if (Math.hypot(inV.x, inV.z) > 0.3) nudge.skip += dt; else nudge.skip = 0; if (nudge.skip > 1.2) nudge.t = 99; }
   nudge.t += dt; const nk = nudge.t / nudge.dur; const nw = nk >= 1 ? 0 : nk < 0.3 ? sstep(0, 1, nk / 0.3) : nk < 0.7 ? 1 : sstep(0, 1, (1 - nk) / 0.3);
   camFocus.x = damp(camFocus.x, lerp(tx, nudge.x, nw * nudge.w), 6, dt); camFocus.z = damp(camFocus.z, lerp(tz, nudge.z, nw * nudge.w), 6, dt);
-  camS = damp(camS, 1 + (zone2 && !zone2.locked ? 0.2 : 0) + (zone3 && !zone3.locked ? 0.12 : 0) + 0.03 * EXTLIST.filter(q => !q.locked).length, 1.2, dt);
+  camS = damp(camS, camSTarget(), 1.2, dt);
   const cd = camDist * camMul * camS * (1 - 0.1 * nw), H = cd * Math.cos(CFG.tilt), Y = cd * Math.sin(CFG.tilt);
   camera.position.set(camFocus.x + Math.sin(CFG.yaw) * H, Y, camFocus.z + Math.cos(CFG.yaw) * H);
   camera.lookAt(camFocus.x, 0, camFocus.z);
@@ -3083,7 +3086,7 @@ function buildExpansion() {
       const t = new THREE.Group(); t.add(mk(G.cyl, mat(0xffffff), 0.9, 0.12, 0.9, 0, 1.0, 0), mk(G.cyl, mat(0x8a5a30), 0.1, 1.0, 0.1, 0, 0.5, 0), mk(G.cyl, mat(0x8a5a30), 0.5, 0.08, 0.5, 0, 0.04, 0));
       for (const sx of [-1, 1]) { const ch = new THREE.Group(); ch.add(mk(G.box, mat(0xff7a8a), 0.6, 0.12, 0.6, 0, 0.5, 0), mk(G.box, mat(0xff7a8a), 0.6, 0.6, 0.1, 0, 0.85, sx * -0.28), mk(G.box, mat(0x8a5a30), 0.1, 0.5, 0.1, 0.22, 0.25, 0.22), mk(G.box, mat(0x8a5a30), 0.1, 0.5, 0.1, -0.22, 0.25, -0.22)); ch.position.set(sx * 1.3, 0, 0); ch.rotation.y = sx > 0 ? -Math.PI / 2 : Math.PI / 2; t.add(ch); }
       t.add(mk(G.cyl, mat(0xff9ec4), 0.18, 0.05, 0.18, 0.2, 1.1, 0.1)); shadowAll(t, true, true); ad(g2, t, tx, 0, tz); addCollider(tx - 0.6, tx + 0.6, tz - 0.6, tz + 0.6);
-      const zn = new Zone({ x: tx, z: tz + 2.6, w: 2.4, d: 2.0, color: '#ff7a8a', draw: drawZoneIcon(iconTea, 0.5) }); zn.group.visible = false;
+      const zn = new Zone({ x: tx, z: tz + 1.5, w: 2.4, d: 2.0, color: '#ff7a8a', draw: drawZoneIcon(iconTea, 0.5) }); zn.group.visible = false;
       cafe.tables.push({ x: tx, z: tz, zone: zn, guest: null });
     });
     z.onShow = () => { cafe.tables.forEach(t => { t.zone.group.visible = true; }); };
@@ -3589,7 +3592,7 @@ function vanKit(d, tier, A, H, kit) {
   for (const [x, z] of ps) col(x, z, 3.7);
   for (const x of [21.5, 24.0]) A(mk(G.box, lux ? goldM : accM, 0.22, 0.2, 4.9, 0, 0, 0), x, 3.75, 24);
   for (let i = 0; i < 7; i++) { const z = 21.7 + i * 0.77; A(mk(G.box, lux ? creamM : mat(0x8a5a30), 3.2, 0.12, 0.2, 0, 0, 0), 22.75, 3.9, z); }
-  for (let i = 0; i < 3; i++) { const sm = new THREE.Mesh(new THREE.BoxGeometry(3.0, 0.06, 0.7), LM({ map: stripeTex(lux ? '#7a1230' : '#0aa89a', lux ? '#fff1d0' : '#ffffff', 2) })); A(sm, 22.75, 3.98, 22.5 + i * 1.5); }
+  for (let i = 0; i < 2; i++) { const sm = new THREE.Mesh(new THREE.BoxGeometry(3.0, 0.06, 0.7), LM({ map: stripeTex(lux ? '#7a1230' : '#0aa89a', lux ? '#fff1d0' : '#ffffff', 2) })); A(sm, 22.75, 3.98, 21.9 + i * 1.0); } // tente şeritleri sadece arka (kuzey) yarıda: kameradan bakınca Teslimat bölgesini örtmesin
   string(21.5, 3.5, 21.7, 24.0, 3.5, 21.7, 0.3, 6); string(21.5, 3.5, 26.3, 24.0, 3.5, 26.3, 0.3, 6); string(21.5, 3.5, 21.7, 21.5, 3.5, 26.3, 0.4, 9); string(24.0, 3.5, 21.7, 24.0, 3.5, 26.3, 0.4, 9);
   if (lux) for (const z of [22.7, 25.3]) { A(mk(G.cyl, goldM, 0.025, 0.6, 0.025, 0, 0, 0), 22.75, 3.5, z); A(mk(G.sphT, goldM, 0.28, 0.18, 0.28, 0, 0, 0), 22.75, 3.1, z); A(mk(G.sphT, GLOWM, 0.18, 0.18, 0.18, 0, 0, 0), 22.75, 2.95, z); }
   const sb = tierSign(d.title, 3.6, 0.8, d.acc, lux); sb.rotation.x = -0.2; A(sb, 22.75, 4.9, 26.3);
@@ -5130,23 +5133,67 @@ function padOnRoadOK(p) { return !!(p.key && (EXTZ[p.key] || p.key === 'sera' ||
 function zoneRects() { const l = []; for (const z of zones) { if (z instanceof UpgradePad || z instanceof CPad) continue; l.push([z.x - z.w / 2, z.x + z.w / 2, z.z - z.d / 2, z.z + z.d / 2, z]); } l.push([CFG.queueX - 1, CFG.queueX + 1, CFG.queueZ0 - 0.8, CFG.queueZ0 + (CFG.queueMax - 1) * CFG.queueGap + 0.8, null]); return l; }
 function padZoneHit(p, x, z) { const hw = p.w / 2 + 0.8, hd = p.d / 2 + 0.8; for (const r of zoneRects()) if (r[0] < x + hw && r[1] > x - hw && r[2] < z + hd && r[3] > z - hd) return r; return null; }
 function padBlocked(p) { const px = P.group.position.x, pz = P.group.position.z, hw = p.w / 2, hd = p.d / 2; for (const z of zones) { if (z instanceof UpgradePad || z instanceof CPad || !z.group.visible || z.locked || !z.contains(px, pz)) continue; if (Math.abs(z.x - p.x) < hw + z.w / 2 && Math.abs(z.z - p.z) < hd + z.d / 2) return true; } return false; } // oyuncu bir bırakma/alma bölgesinde duruyorsa, onunla çakışan pad para almaz
+/* statik mesh ızgarası: bina/prop/ağaç/tabela/çatı üçgenleri 0.25'lik ızgaraya işlenir. sol = yerde duran katı (ayak izi), shd = kameranın gölgesi (arkasında kalan zemin),
+   cov = zemini örten alçak düz yüzey. Pad bunlarla çakışırsa (altında/arkasında kalırsa) en yakın temiz yere taşınır. */
+function occRaster(L, ax, az, bx, bz, cx, cz, eps, val) {
+  const c = OC.c, i0 = Math.max(0, Math.floor((Math.min(ax, bx, cx) - eps - OC.x0) / c)), i1 = Math.min(OC.w - 1, Math.floor((Math.max(ax, bx, cx) + eps - OC.x0) / c)), j0 = Math.max(0, Math.floor((Math.min(az, bz, cz) - eps - OC.z0) / c)), j1 = Math.min(OC.h - 1, Math.floor((Math.max(az, bz, cz) + eps - OC.z0) / c));
+  if (i1 < i0 || j1 < j0) return;
+  const V = [ax, az, bx, bz, cx, cz];
+  for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) {
+    const rx0 = OC.x0 + i * c - eps, rx1 = rx0 + c + 2 * eps, rz0 = OC.z0 + j * c - eps, rz1 = rz0 + c + 2 * eps; let sep = false;
+    for (let k = 0; k < 3 && !sep; k++) { const px = V[k * 2], pz = V[k * 2 + 1], qx = V[(k * 2 + 2) % 6], qz = V[(k * 2 + 3) % 6], nx = -(qz - pz), nz = qx - px; let a0 = 1e9, a1 = -1e9, b0 = 1e9, b1 = -1e9; for (let m = 0; m < 3; m++) { const d = V[m * 2] * nx + V[m * 2 + 1] * nz; if (d < a0) a0 = d; if (d > a1) a1 = d; } for (let m = 0; m < 4; m++) { const d = (m & 1 ? rx1 : rx0) * nx + (m & 2 ? rz1 : rz0) * nz; if (d < b0) b0 = d; if (d > b1) b1 = d; } if (a1 < b0 || b1 < a0) sep = true; }
+    if (!sep && L[j * OC.w + i] < val) L[j * OC.w + i] = val;
+  }
+}
+function occBuild() {
+  OC.sol = new Uint8Array(OC.w * OC.h); OC.shd = new Uint8Array(OC.w * OC.h); OC.cov = new Float32Array(OC.w * OC.h);
+  const skip = new Set([zone2 && zone2.lockedGroup, zone3 && zone3.lockedGroup].concat(EXTLIST.map(z => z.lockedGroup)).filter(Boolean));
+  const kx = Math.sin(CFG.yaw) / Math.tan(CFG.tilt), kz = Math.cos(CFG.yaw) / Math.tan(CFG.tilt), A = new THREE.Vector3(), B = new THREE.Vector3(), C = new THREE.Vector3();
+  world.updateMatrixWorld(true);
+  world.traverse(o => {
+    if (!o.isMesh || !o.userData.merged || o.userData.chr || o.isInstancedMesh) return;
+    for (let q = o.parent; q; q = q.parent) if (skip.has(q)) return;
+    const pa = o.geometry.attributes.position, mw = o.matrixWorld;
+    for (let i = 0; i + 2 < pa.count; i += 3) {
+      A.fromBufferAttribute(pa, i).applyMatrix4(mw); B.fromBufferAttribute(pa, i + 1).applyMatrix4(mw); C.fromBufferAttribute(pa, i + 2).applyMatrix4(mw);
+      const y1 = Math.max(A.y, B.y, C.y), y0 = Math.min(A.y, B.y, C.y); if (y1 < 0.12) continue;
+      if (y1 < 0.7) { if (y1 - y0 < 0.5) occRaster(OC.cov, A.x, A.z, B.x, B.z, C.x, C.z, 0, y1); continue; }
+      if (y0 < 2.2) occRaster(OC.sol, A.x, A.z, B.x, B.z, C.x, C.z, 0.05, 1);
+      occRaster(OC.shd, A.x - A.y * kx, A.z - A.y * kz, B.x - B.y * kx, B.z - B.y * kz, C.x - C.y * kx, C.z - C.y * kz, 0, 1);
+    }
+  });
+}
+function occV(L, x, z) { const i = Math.floor((x - OC.x0) / OC.c), j = Math.floor((z - OC.z0) / OC.c); return i >= 0 && j >= 0 && i < OC.w && j < OC.h ? L[j * OC.w + i] : 0; }
+function occAt(L, x, z) { return occV(L, x, z) > 0; }
+function occCheck(p, x, z) { // pad ayak izi bir mesh ile kesişiyor mu / pad bir yapının altında ya da arkasında (kameradan görünmez) mı
+  if (!OC.sol) return null;
+  const hw = p.w / 2 - 0.3, hd = p.d / 2 - 0.3;
+  for (let a = -hw; a <= hw + 1e-6; a += hw / 3) for (let b = -hd; b <= hd + 1e-6; b += hd / 3) if (occAt(OC.sol, x + a, z + b)) return 'mesh';
+  { const h0 = occV(OC.cov, x, z); for (const [a, b] of [[1, 1], [-1, 1], [1, -1], [-1, -1]]) if (Math.abs(occV(OC.cov, x + a * p.w * 0.4, z + b * p.d * 0.4) - h0) > 0.02) return 'cover'; } // alçak zemin (iskele...) pad'in yarısını örtmemeli; tamamını örtüyorsa pad üstüne çıkarılır
+  if (occAt(OC.shd, x, z)) return 'hidden'; let n = 0; for (const [a, b] of [[1, 1], [-1, 1], [1, -1], [-1, -1]]) if (occAt(OC.shd, x + a * p.w * 0.35, z + b * p.d * 0.35)) n++; if (n >= 2) return 'hidden';
+  return null;
+}
+function liftZones() { if (!OC.cov) return; for (const z of zones) { const h = occV(OC.cov, z.x, z.z); z.group.position.y = h > 0.1 ? h + 0.02 : 0.04; } } // alçak yüzeyin (iskele tahtası) üstündeki bölge/pad zeminin altında kalmasın
 function padHits(p, x, z, others) {
   const hw = p.w / 2 + 0.2, hd = p.d / 2 + 0.2, x0 = x - hw, x1 = x + hw, z0 = z - hd, z1 = z + hd;
   if (padZoneHit(p, x, z)) return 'zone';
   for (const b of PROPBOX) if (b[0] < x1 && b[1] > x0 && b[2] < z1 && b[3] > z0) return 'prop';
   for (const c of colliders) { if (c.active) continue; if (c.x0 < x1 && c.x1 > x0 && c.z0 < z1 && c.z1 > z0) return 'collider'; }
+  { const m = occCheck(p, x, z); if (m) return m; }
   if (!padOnRoadOK(p)) for (const r of roadsList()) if (r[0] < x1 && r[1] > x0 && r[2] < z1 && r[3] > z0) return 'road';
   for (const b of beds) { if (!b.flowers.length) continue; const r = bedRect(b); if (r[0] < x1 && r[1] > x0 && r[2] < z1 && r[3] > z0) return 'bed'; }
   if (others) for (const q of others) { if (q === p) continue; if (p.o0 && q.o0 && Math.abs(p.o0[0] - q.o0[0]) < 0.05 && Math.abs(p.o0[1] - q.o0[1]) < 0.05) continue; if (Math.abs(q.x - x) < (q.w + p.w) / 2 - 1.5 && Math.abs(q.z - z) < (q.d + p.d) / 2 - 1.5) return 'pad'; }
   return null;
 }
 function fixPads() {
+  if (!OC.sol) occBuild();
   const pads = allPads(), moved = []; let bad = 0; for (const p of pads) if (!p.o0) p.o0 = [p.x, p.z];
   for (const p of pads) {
     if (!padHits(p, p.x, p.z, pads)) continue;
     let done = false; for (let r = 0.8; r <= 40 && !done; r += 0.6) for (let a = 0; a < 40 && !done; a++) { const ang = a / 40 * TAU, nx = p.x + Math.cos(ang) * r, nz = p.z + Math.sin(ang) * r; if (nz < -170 || nz > 40 || nx < -34 || nx > 52) continue; if (!padHits(p, nx, nz, pads)) { moved.push([p.key || '?', +p.x.toFixed(1), +p.z.toFixed(1), +nx.toFixed(1), +nz.toFixed(1)]); p.x = nx; p.z = nz; p.group.position.set(nx, 0.04, nz); done = true; } }
     if (!done) bad++;
   }
+  liftZones();
   return { moved, bad };
 }
 /* ---- GİZLİ YÖNETİCİ PANELİ (docs/bolumler.md; ayrı anahtarlar: cicek_admin, cicek_admin_inf; oyun kaydına dokunmaz) ---- */
@@ -5205,11 +5252,11 @@ const ADMIN = (function () {
 })();
 window.__game = {
   admin: ADMIN,
-  padCheck() { const pads = allPads(); const hits = []; for (const p of pads) { const h = padHits(p, p.x, p.z, pads); if (h) hits.push([p.key || (p.o && p.o.id) || '?', h, +p.x.toFixed(1), +p.z.toFixed(1)]); } return hits; }, fixPads, allPads, PROPBOX, padOK: () => PADOK,
+  padCheck() { const pads = allPads(); const hits = []; for (const p of pads) { const h = padHits(p, p.x, p.z, pads); if (h) hits.push([p.key || (p.o && p.o.id) || '?', h, +p.x.toFixed(1), +p.z.toFixed(1)]); } return hits; }, fixPads, allPads, PROPBOX, padOK: () => PADOK, occCheck, OC,
   get camera() { return camera; },
   measure() { renderer.info.reset(); if (composer) composer.render(0); else renderer.render(scene, camera); return { calls: renderer.info.render.calls, tris: renderer.info.render.triangles }; },
   get c2() { return { TD, TDM, TK, applyTier, CPADS, S, cosGate, buyTier, DSL, DSLM, DECT, DEC, zonesAll: zones, buyDecor, beautyPts, BF, placeDecor, DN, NIGHT, DN_PERIOD }; },
-  path(tx, tz) { return findPath(P.group.position.x, P.group.position.z, tx, tz); }, colliders,
+  path(tx, tz) { return findPath(P.group.position.x, P.group.position.z, tx, tz); }, pathOK(tx, tz) { findPath(P.group.position.x, P.group.position.z, tx, tz); return PG.found !== false; }, blockedAt(x, z) { pgBuild(); const i = Math.floor((x - PG.x0) / PG.c), j = Math.floor((z - PG.z0) / PG.c); return i < 0 || j < 0 || i >= PG.w || j >= PG.h || !!PG.blocked[j * PG.w + i]; }, colliders,
   EXTZ, STN, GARD, GROLES, roleEvolve, BUSES, cafe: () => cafe, wed: () => wed, city: () => city, tractor: () => tractor, give(type, n) { n = Math.min(n, Math.max(0, P.free())); for (let i = 0; i < n; i++) P.stack.add(['orchid', 'lav', 'sun', 'rosep', 'flower'].includes(type) ? makeFlowerItem(0, type === 'flower' ? 'tulip' : type) : makeItemOf(type), type); },
   hintOK: { canCity, canCounter, canWed, canTable, makeItemOf, lane, shelfFree },
   bot(x, z) { BOT = (x || z) ? { x, z } : null; if (BOT) hideIntro(); }, hideIntro, objective() { objective(_obj); return Object.assign({}, _obj); }, get goal() { return curGoal; }, GOALS, UPG,
@@ -5219,6 +5266,7 @@ window.__game = {
   helper: () => helper, get c3() { return { C3, JAP, E3, beek: () => beek, beeZone, hiveInterval, nearFlowerZones }; },
   carry(n) { while (P.stack.length) P.stack.items.pop(); n = Math.min(n, P.capFn()); for (let i = 0; i < n; i++) P.stack.add(makeFlowerItem(0, "tulip"), "flower"); },
   tp(x, z) { P.group.position.set(x, 0, z); P.vel.set(0, 0, 0); camInit = false; },
+  camAt(x, z) { P.group.position.set(x, 0, z); P.vel.set(0, 0, 0); camInit = false; PANQ.length = 0; nudge.t = 99; camS = camSTarget(); update(1 / 30); camera.updateMatrixWorld(true); }, // test: kamerayı oyuncunun üstüne oturt (gezi/pan yok)
   sim(sec) { const n = Math.round(sec * 30); for (let i = 0; i < n; i++) update(1 / 30); },
   simDt(sec, dt) { const n = Math.round(sec / dt); for (let i = 0; i < n; i++) update(dt); },
   render() { if (composer) composer.render(0); else renderer.render(scene, camera); },
