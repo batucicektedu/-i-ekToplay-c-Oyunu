@@ -11,7 +11,7 @@ const KEY='bolum2_sahil';
 exports.open=async function(opts={}){
   await ensureGame();
   const b=await chromium.launch({args:['--use-angle=swiftshader','--enable-unsafe-swiftshader','--use-gl=swiftshader','--ignore-gpu-blocklist']});
-  const page=await (await b.newContext({viewport:{width:opts.w||390,height:opts.h||844}})).newPage(); const errs=[];
+  const page=await (await b.newContext(opts.device||{viewport:{width:opts.w||390,height:opts.h||844}})).newPage(); const errs=[];
   page.on('console',m=>{if(m.type()==='error')errs.push(m.text())}); page.on('pageerror',e=>errs.push(e.message));
   await page.addInitScript((q)=>{window.__noAuto=true;try{localStorage.setItem('cicek_grafik',q)}catch(e){}},opts.q||'high');
   await page.route('**/three.min.js',r=>r.fulfill({path:SP+'/node_modules/three/build/three.min.js',contentType:'application/javascript'}));
