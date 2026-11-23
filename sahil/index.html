@@ -1387,7 +1387,7 @@ function buildBayHub() {
   addCollider(-7.8, -3.4, -10.7, -7.7); addCollider(1.6, 4.8, -10.7, -8.1); addCollider(-9.2, -7.4, -11.2, -8.0);
   const hm = new THREE.Mesh(mergeParts(H), vcMat); hm.castShadow = true; hm.receiveShadow = true; world.add(hm);
   // yelkenliler (ufukta)
-  const S_ = []; [[-92, 12, 0.6, 0xff6f61], [-75, -8, 2.3, 0x1d6fb8], [-84, 18, 1.2, 0x1d6fb8], [-68, 28, 0.2, 0xff6f61], [-96, -2, 0.9, 0xff6f61], [-58, -26, 1.9, 0x1d6fb8]].forEach(a => sailboatParts(S_, a[0], a[1], a[2], 0.9, a[3]));
+  const S_ = []; [[-92, 12, 0.6, 0xff6f61], [-93, -14, 2.3, 0x1d6fb8], [-84, 18, 1.2, 0x1d6fb8], [-68, 28, 0.2, 0xff6f61], [-96, -2, 0.9, 0xff6f61], [-60, -33, 1.9, 0x1d6fb8]].forEach(a => sailboatParts(S_, a[0], a[1], a[2], 0.9, a[3]));
   const sb = new THREE.Mesh(mergeParts(S_), vcMat); sb.userData.dyn = false; sb.position.y = WATER_Y + 0.1; world.add(sb);
 }
 const BEACH = { foam: [] };
@@ -3756,7 +3756,7 @@ function initHall() {
   HALL.pile = new Stack(scene, (i, out) => { const r = i % 6, l = Math.floor(i / 6); out.set(-8.6 + ((r % 3) - 1) * 0.9, 0.95 + l * 0.14, 33.0 + (Math.floor(r / 3) - 0.5) * 0.6); }, 36); HALL.pile.extra = 0; HALL.pile.jitter = 0.07; EXTSTACKS.push(HALL.pile);
   HALL.zone = new Zone({ x: HALL.cx, z: 29.0, w: 3.4, d: 2.2, color: '#ffd23f', draw: drawZoneIcon(iconBouquet) }); HALL.zone.group.visible = false;
   HALL.monZone = new Zone({ x: -8.6, z: 35.1, w: 3.2, d: 2.2, color: '#1ed760', draw: null, labelSize: 0.01 }); HALL.monZone.label.visible = false; HALL.monZone.group.visible = false;
-  HALL.spr = makeSprite(384, 128, () => {}, 4.6, 1.53, false); HALL.spr.position.set(HALL.cx, 6.9, 27.6); HALL.spr.visible = false; scene.add(HALL.spr);
+  HALL.spr = makeSprite(384, 128, () => {}, 4.6, 1.53, false); HALL.spr.position.set(HALL.cx, 8.9, 27.6); HALL.spr.visible = false; scene.add(HALL.spr);
   z.onShow = () => { HALL.active = true; };
   extPad('hall', 'Balık Hali', [45000], -1.5, 27.5, iconHall, () => S.lv.cage > 0).autoShow = true; UPG.hall.sub = () => 'Toplu satış, x1.5–2 çarpan'; EXTAPPLY.hall = i => unlockExt(z, i);
   let u = extPad('hallBonus', 'Mezat Çarpanı', geo(6000, 5), -1.5, 32.5, iconStar, () => S.lv.hall > 0); u.autoShow = true; UPG.hallBonus.sub = () => 'Çarpan +0.12';
