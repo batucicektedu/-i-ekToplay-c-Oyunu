@@ -8,6 +8,7 @@ for(const fx of fixtures){
  const {b,page,errs}=await h.open({q:'low',fixture:fx,wait:1500});
  await page.evaluate(()=>{window.__resetting=false;__game.hideIntro()});
  await page.evaluate((m)=>{window.__maxfx=m},fx.endsWith('max.json'));
+ await page.evaluate(m=>{window.__isMax=m},fx.endsWith('max.json'));
  const r=await page.evaluate(()=>{
   const g=__game,sc=g.scene,cam=g.camera,P=g.P(),probs=[],info={pads:0,zones:0,hints:0};
   // --- statik mesh listesi: birleştirilmiş dünya/bölge mesh'leri (karakter parçaları hariç). Kilitli bölge yer tutucuları ayrı listelenir.
@@ -40,6 +41,7 @@ for(const fx of fixtures){
   };
   const pads=g.allPads(),ps=new Set(pads);
   for(const p of pads){useSet(p.group.visible?'vis':'all');info.pads++;test('pad:'+(p.key||(p.o&&p.o.id)||'cpad'),p.x,p.z,p.w,p.d,true,p.group.position.y)}
+  if(window.__isMax)for(const p of pads){g.tp(8,2);if(!g.pathOK(p.x,p.z)||[[0,0],[1,0],[-1,0],[0,1],[0,-1]].every(([a,c])=>g.blockedAt(p.x+a*1.2,p.z+c*1.2)))probs.push(['pad:'+(p.key||'cpad'),'unreachable',+p.x.toFixed(1),+p.z.toFixed(1),'pad cannot be reached from the plaza'])} // tüm bölgeler açıkken her pad'e yürünebilmeli
   useSet('vis');for(const z of g.zones){if(ps.has(z)||g.c2.CPADS.includes(z)||!z.group.visible||z.w<0.5)continue;info.zones++;test('zone',z.x,z.z,z.w,z.d,false,z.group.position.y)}
   // --- ok/ipucu hedefleri
   const seen=new Set(),CARRY=['none','bouquet','pot','sachet','perfume','sbq','tea','orchid','lav','sun','rosep','flower'],spots=[[-5.5,2.6],[20,-60],[-10,-130]],S=g.S;

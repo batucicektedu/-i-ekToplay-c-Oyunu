@@ -778,6 +778,7 @@ function mergeParts(parts, W) {
   out.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); out.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3)); out.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
   return out;
 }
+let FUTCOL = null;
 const OC = { x0: -34, z0: -172, c: 0.25, w: 344, h: 848, sol: null, shd: null, cov: null };
 const PROPBOX = []; let PBON = false; const _pbb = new THREE.Box3();
 function mergeStatic(root, ao) {
@@ -5191,7 +5192,7 @@ function padHits(p, x, z, others) {
   const hw = p.w / 2 + 0.2, hd = p.d / 2 + 0.2, x0 = x - hw, x1 = x + hw, z0 = z - hd, z1 = z + hd;
   if (padZoneHit(p, x, z)) return 'zone';
   for (const b of PROPBOX) if (b[0] < x1 && b[1] > x0 && b[2] < z1 && b[3] > z0) return 'prop';
-  for (const c of colliders) { if (c.active) continue; if (c.x0 < x1 && c.x1 > x0 && c.z0 < z1 && c.z1 > z0) return 'collider'; }
+  for (const c of (FUTCOL || colliders)) { if (!FUTCOL && c.active) continue; if (c.x0 < x1 && c.x1 > x0 && c.z0 < z1 && c.z1 > z0) return 'collider'; }
   { const m = occCheck(p, x, z); if (m) return m; }
   if (!padOnRoadOK(p)) for (const r of roadsList()) if (r[0] < x1 && r[1] > x0 && r[2] < z1 && r[3] > z0) return 'road';
   for (const b of beds) { if (!b.flowers.length) continue; const r = bedRect(b); if (r[0] < x1 && r[1] > x0 && r[2] < z1 && r[3] > z0) return 'bed'; }
@@ -5201,6 +5202,10 @@ function padHits(p, x, z, others) {
 function fixPads() {
   if (!OC.sol) occBuild();
   const pads = allPads(), moved = []; let bad = 0; for (const p of pads) if (!p.o0) p.o0 = [p.x, p.z];
+  { // tüm bölgeler açılmış varsayımıyla (koşullu collider'lar dahil) yerleşim: kilitliyken seçilen pad konumu sonradan duvarın içinde kalmasın
+    const lk = [zone2, zone3].concat(EXTLIST).filter(z => z && z.locked); lk.forEach(z => { z.locked = false; });
+    try { FUTCOL = colliders.filter(c => { try { return !c.active || c.active(); } catch (e) { return false; } }); } finally { lk.forEach(z => { z.locked = true; }); }
+  }
   for (const p of pads) {
     if (!padHits(p, p.x, p.z, pads)) continue;
     let done = false; for (let r = 0.8; r <= 40 && !done; r += 0.6) for (let a = 0; a < 40 && !done; a++) { const ang = a / 40 * TAU, nx = p.x + Math.cos(ang) * r, nz = p.z + Math.sin(ang) * r; if (nz < -170 || nz > 40 || nx < -34 || nx > 52) continue; if (!padHits(p, nx, nz, pads)) { moved.push([p.key || '?', +p.x.toFixed(1), +p.z.toFixed(1), +nx.toFixed(1), +nz.toFixed(1)]); p.x = nx; p.z = nz; p.group.position.set(nx, 0.04, nz); done = true; } }
