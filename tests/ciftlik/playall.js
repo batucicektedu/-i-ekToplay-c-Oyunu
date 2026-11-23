@@ -25,17 +25,18 @@ await page.evaluate(()=>{window.__resetting=false;window.__freeze=true;__game.hi
      for(const c of g.colliders){if(c.active&&!c.active())continue;if(x>c.x0+0.25&&x<c.x1-0.25&&z>c.z0+0.25&&z<c.z1-0.25){const key=kind+'@'+Math.round(x)+','+Math.round(z)+' in['+c.x0.toFixed(1)+','+c.x1.toFixed(1)+','+c.z0.toFixed(1)+','+c.z1.toFixed(1)+']';window.__walls[key]=(window.__walls[key]||0)+1;break}}}
    }}
   return {T:window.__T,ev,m:Math.round(g.S.money),cg:g.goal&&g.goal.key}}});
+const VIEWK={ranch:[7,-36],horse:[-12,-42],ata:[-1,-34],instr:[12,-42],foal:[-9,-34],show:[30,-43],sheep:[2,23],sheep2:[2,26],knit:[-14,26],cheese:[-8,26],zoo:[31,20],zoo2:[34,22],orchard:[38,24],groom:[-4,-31],shep:[-5,36],seller:[0,35],carrier:[14,0],cashier:[10,-6],helper:[-8,6],bed:[-14,8]};
 let n=0;const shot=async(tag,wide)=>{
- const info=await page.evaluate(([tag,wide])=>{const g=__game,p=g.P().group.position,sv={x:p.x,z:p.z,m:g.S.money};g.S.money=0;
-  let tx=sv.x,tz=sv.z;const z=g.EXTZ[tag];if(z){tx=z.cx;tz=z.cz}else if(tag==='sera'){tx=40;tz=0}else if(tag==='van'){tx=19;tz=22}
-  window.__sv=sv;g.tp(tx,tz);g.zoom(wide);g.sim(4);g.render();return {tx,tz}},[tag,wide]);
+ const info=await page.evaluate(([tag,wide,VIEW])=>{const g=__game,p=g.P().group.position,sv={x:p.x,z:p.z,m:g.S.money};g.S.money=0;g.bot(0,0);
+  let tx=sv.x,tz=sv.z;const z=g.EXTZ[tag];if(z){tx=z.cx;tz=z.cz}else if(tag==='sera'){tx=40;tz=0}else if(tag==='van'){tx=19;tz=22}else if(VIEW[tag]){tx=VIEW[tag][0];tz=VIEW[tag][1]}
+  window.__sv=sv;g.tp(tx,tz);g.zoom(wide);g.sim(4);g.render();return {tx,tz}},[tag,wide,VIEWK]);
  await page.waitForTimeout(250);await page.screenshot({path:path.join(OUT,'ciftlik_'+String(++n).padStart(2,'0')+'_'+tag+'.png')});
  await page.evaluate(()=>{const g=__game,sv=window.__sv;g.zoom(1);g.tp(sv.x,sv.z);g.S.money=sv.m;g.sim(0.2)});};
 let tot=0,last=0;
 for(let T=0;T<MIN*60;T+=10){const r=await Promise.race([page.evaluate(()=>window.__chunk(10)),new Promise((_,rej)=>setTimeout(()=>rej(new Error('chunk hang at T='+T)),120000))]).catch(async e=>{console.log(e.message);const t=await page.evaluate(()=>({T:window.__T})).catch(()=>null);console.log('state',t);await b.close();process.exit(2)});
  if(T%300===0)console.log('..T',T);
  for(const e of r.ev){const mm=Math.floor(r.T/60),ss=Math.round(r.T%60);console.log((mm+':'+String(ss).padStart(2,'0')).padStart(7),e.join(' '),'$'+r.m);
-  if(e[0]==='ZONE')await shot(e[1],1.5);}
+  if(e[0]==='ZONE')await shot(e[1],1.5);else if(VIEWK[e[0]]&&e[1]===1)await shot(e[0],1.4);}
  if(ASSIST&&r.cg&&r.T-await page.evaluate(()=>window.__lastBuy)>240){await page.evaluate(()=>{const g=__game,u=g.upPads[g.goal.key];if(u&&!u.done){g.S.money=Math.max(g.S.money,u.cost()+10);window.__assists++;window.__lastBuy=window.__T}})}
  const fin=await page.evaluate(()=>!__game.goal&&window.__T>60);if(fin&&++tot>=18)break;}
 const res=await page.evaluate(()=>({T:Math.round(window.__T),money:Math.round(__game.S.money),assists:window.__assists,walls:window.__walls,lv:Object.keys(__game.S.lv).filter(k=>__game.S.lv[k]>0).length,goal:__game.goal&&__game.goal.key}));

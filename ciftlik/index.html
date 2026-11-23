@@ -2270,7 +2270,7 @@ function updateHelper(dt, t) {
   }
   let mv = 0, dx = 0, dz = 0;
   if (tx !== null) {
-    dx = tx - h.group.position.x; dz = tz - h.group.position.z; const d = Math.hypot(dx, dz);
+    const w_ = wayPt(h, tx, tz); dx = w_[0] - h.group.position.x; dz = w_[1] - h.group.position.z; const d = Math.hypot(dx, dz);
     if (d > 0.35) { const st = Math.min(d, spd * dt); h.group.position.x += dx / d * st; h.group.position.z += dz / d * st; h.vel.set(dx / d * spd, 0, dz / d * spd); mv = 1; }
     else h.vel.set(0, 0, 0);
   } else h.vel.set(0, 0, 0);
@@ -2371,7 +2371,7 @@ function updateCarrierW(h, dt, t) {
     if (h.stack.length === 0) { h.state = 'idle'; h.trips = (h.trips || 0) + 1; }
   }
   let mv = 0, dx = 0, dz = 0;
-  if (tx !== null) { dx = tx - gp.x; dz = tz - gp.z; const d = Math.hypot(dx, dz); if (d > 0.3) { const st = Math.min(d, spd * dt); gp.x += dx / d * st; gp.z += dz / d * st; h.vel.set(dx / d * spd, 0, dz / d * spd); mv = 1; faceChar(h, dx, dz, dt); } else h.vel.set(0, 0, 0); }
+  if (tx !== null) { const w_ = wayPt(h, tx, tz); dx = w_[0] - gp.x; dz = w_[1] - gp.z; const d = Math.hypot(dx, dz); if (d > 0.3) { const st = Math.min(d, spd * dt); gp.x += dx / d * st; gp.z += dz / d * st; h.vel.set(dx / d * spd, 0, dz / d * spd); mv = 1; faceChar(h, dx, dz, dt); } else h.vel.set(0, 0, 0); }
   else { h.vel.set(0, 0, 0); if (h.state === 'unload') faceChar(h, 1, -0.4, dt); }
   watchdog(h, dt, gp, h.dest + h.ptype, [5.0, 3.4], c => { c.state = 'idle'; c.waitT = 0; c.stuck = 0; c.cd = 0; }, q => (q.state === 'idle' && q.stack.length === 0) || (q.state === 'unload' && q.stack.length > 0 && !q.stack.items.some(i => shelfFree(i.type) > 0) && q.dest !== 'van') || (q.state === 'unload' && q.dest === 'van' && vanFree() <= 0));
   updateSway(h, dt); animChar(h, dt, mv, t); tractorFx(h, mv, spd, dt); h.stack.update(dt, t);
@@ -2784,6 +2784,18 @@ function findPath(sx, sz, tx, tz) {
   if (!found) return [[sx, sz], [tx, tz]];
   const pts = []; for (let k = tk; k !== -1; k = from[k]) pts.push([PG.x0 + ((k % W) + 0.5) * PG.c, PG.z0 + (((k / W) | 0) + 0.5) * PG.c]); pts.reverse(); pts[0] = [sx, sz]; pts.push([tx, tz]);
   const out = [pts[0]]; let a = 0; while (a < pts.length - 1) { let b = pts.length - 1; while (b > a + 1 && !pgLos(pts[a][0], pts[a][1], pts[b][0], pts[b][1])) b--; out.push(pts[b]); a = b; } return out;
+}
+/* işçiler: düz çizgi bir collider'a (tezgâh/masa/çit/duvar) çarpıyorsa A* yol noktalarıyla dolanır (duvarın içinden geçmesin) */
+function wayPt(h, tx, tz) {
+  const gp = h.group.position, w = h._w || (h._w = { p: null, i: 0, tx: 0, tz: 0, t: 0 });
+  if (w.p && (Math.abs(w.tx - tx) > 0.6 || Math.abs(w.tz - tz) > 0.6 || T - w.t > 1.5 || pgLos(gp.x, gp.z, tx, tz))) w.p = null;
+  if (!w.p) {
+    pgBuild(); if (pgLos(gp.x, gp.z, tx, tz)) return [tx, tz];
+    const pth = findPath(gp.x, gp.z, tx, tz); if (pth.length < 3) return [tx, tz];
+    w.p = pth; w.i = 1; w.tx = tx; w.tz = tz; w.t = T;
+  }
+  while (w.i < w.p.length - 1 && Math.hypot(w.p[w.i][0] - gp.x, w.p[w.i][1] - gp.z) < 0.5) w.i++;
+  return w.i >= w.p.length - 1 ? [tx, tz] : w.p[w.i];
 }
 const TRAIL = { path: null, key: '', t: 0 };
 function updateTrail(tx, tz, show, t, dt) {
@@ -3270,7 +3282,7 @@ function updateGardener(h, dt, t) {
     else { const d = gNeed(h.ctype || 'flower', 25) || gTargets(h.ctype).find(q => q.stack.length + (q.stack.pend || 0) < q.cap); if (d) { h.dest = d; tx = d.zone.x; tz = d.zone.z; } else h.dest = null; }
   }
   let mv = 0, dx = 0, dz = 0;
-  if (tx !== null) { dx = tx - gp.x; dz = tz - gp.z; const d = Math.hypot(dx, dz); if (d > Math.max(0.35, spd * dt * 1.5)) { const s2 = Math.min(d, spd * dt); gp.x += dx / d * s2; gp.z += dz / d * s2; h.vel.set(dx / d * spd, 0, dz / d * spd); mv = 1; } else h.vel.set(0, 0, 0); } else h.vel.set(0, 0, 0);
+  if (tx !== null) { const w_ = wayPt(h, tx, tz); dx = w_[0] - gp.x; dz = w_[1] - gp.z; const d = Math.hypot(dx, dz); if (d > Math.max(0.35, spd * dt * 1.5)) { const s2 = Math.min(d, spd * dt); gp.x += dx / d * s2; gp.z += dz / d * s2; h.vel.set(dx / d * spd, 0, dz / d * spd); mv = 1; } else h.vel.set(0, 0, 0); } else h.vel.set(0, 0, 0);
   if (mv) { faceChar(h, dx, dz, dt); const hd = Math.atan2(dx, dz); if (h._hd !== undefined && Math.abs(angDiff(h._hd, hd)) > 2.4) h._fl = (h._fl || 0) + 1; h._hd = hd; }
   h._ft = (h._ft || 0) + dt; if (h._ft > 10) { if (h._fl > 6) { h.idleCool = 5; h.helping = false; resetGardener(h); } h._ft = 0; h._fl = 0; }
   h.cd -= dt;
@@ -3428,7 +3440,7 @@ function buildFarmGround() {
 function buildFarmLandmarks() {
   buildBarn(-11, -21, 1.25, 0); buildSilo(-1.2, -19, 1.15); buildSilo(1.3, -17.6, 0.85); buildWindmill(15.5, -20, 1.35);
   hayStack(-19.5, -17.5, 3); hayStack(-20, -12.8, 2); hayBale(10.4, -14.4, 0.3); hayBale(11.5, -14.2, 1.1); hayBale(11, -14.3, 0.2, 0.9);
-  for (const [k, x, z, s] of [['oak', -26, -6, 1.4], ['oak', -25, 6, 1.5], ['oak', -24, 17, 1.3], ['oak', 24, 18, 1.4], ['oak', 26, -20, 1.5], ['pop', -3, -26, 1.1], ['pop', 0, -27, 0.95], ['oak', 21, -28, 1.4], ['pop', 22.2, 22, 1.2], ['oak', -30, 24, 1.5], ['oak', 31, 30, 1.4], ['pop', -22, -26, 1.2], ['oak', -30, -20, 1.5]]) treeAt(k, x, z, s);
+  for (const [k, x, z, s] of [['oak', -26, -6, 1.4], ['oak', -25, 6, 1.5], ['oak', -24, 17, 1.3], ['oak', 24, 18, 1.4], ['oak', 26, -20, 1.5], ['pop', -3.4, -23.6, 1.1], ['pop', 0.2, -24.6, 0.95], ['oak', 21, -28, 1.4], ['pop', 22.2, 22, 1.2], ['oak', -30, 24, 1.5], ['oak', 31, 30, 1.4], ['pop', -22, -26, 1.2], ['oak', -30, -20, 1.5]]) treeAt(k, x, z, s);
   for (const [x, z, s] of [[-18, -9, 1], [-6, -9.5, 1.2], [0.5, -9, 1], [13, -8.5, 1.2], [-19.2, 13, 1], [18.5, 13, 1.1], [6, 13.4, 0.9]]) buildBush(x, z, s);
 }
 function woodFenceBox(cx, cz, w, d) { // eski çalı kutusu yerine ahşap çit (aynı çarpışma)
@@ -3922,7 +3934,7 @@ function spawnFW(key, instant) {
 }
 function fwSync(key, instant) { const r = FWR[key]; while (FWU.filter(u => u.role === key).length < fwN(r)) spawnFW(key, instant); }
 function fwRelease(w) { if (w.tgt && w.tgt.claim === w) w.tgt.claim = null; w.tgt = null; }
-function fwGo(w, tx, tz, dt) { const dx = tx - w.group.position.x, dz = tz - w.group.position.z, d = Math.hypot(dx, dz); if (d > 0.3) { const st = Math.min(d, fwSpeed() * dt); w.group.position.x += dx / d * st; w.group.position.z += dz / d * st; w.vel.set(dx / d * fwSpeed(), 0, dz / d * fwSpeed()); faceChar(w, dx, dz, dt); } else w.vel.set(0, 0, 0); return d; }
+function fwGo(w, tx, tz, dt) { const gp = w.group.position, rd = Math.hypot(tx - gp.x, tz - gp.z); if (rd > 0.3) { const w_ = wayPt(w, tx, tz), dx = w_[0] - gp.x, dz = w_[1] - gp.z, d = Math.hypot(dx, dz) || 1, st = Math.min(d, fwSpeed() * dt); gp.x += dx / d * st; gp.z += dz / d * st; w.vel.set(dx / d * fwSpeed(), 0, dz / d * fwSpeed()); faceChar(w, dx, dz, dt); } else w.vel.set(0, 0, 0); return rd; }
 const fwLoad = w => w.stack.length + w.incoming, fwFull = w => fwLoad(w) >= fwCap();
 function fwPickStack(w, stack, type, n) { const it = stack.takeLast(); if (!it) return false; it.mesh.getWorldPosition(_w); scene.add(it.mesh); it.mesh.position.copy(_w); sendToBack(w, it.mesh, type, 1.3); return true; }
 function feedHorse(hh, ty, mesh) { fly(mesh, out => { out.set(hh.x, 2.8, hh.z); return 0; }, 0.35, 1.4, () => { rm(mesh); hh.love = Math.min(100, hh.love + (ty === 'apple' ? 32 : ty === 'carrot' ? 24 : 13)); hh.eatT = 1.4; hearts(hh.x, 3.7, hh.z, 3); sfx('happy'); stats.fed = (stats.fed || 0) + 1; }); }
