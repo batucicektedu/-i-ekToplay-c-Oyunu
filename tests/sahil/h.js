@@ -16,6 +16,7 @@ exports.open=async function(opts={}){
   await page.addInitScript((q)=>{window.__noAuto=true;try{localStorage.setItem('cicek_grafik',q)}catch(e){}},opts.q||'high');
   await page.route('**/three.min.js',r=>r.fulfill({path:SP+'/node_modules/three/build/three.min.js',contentType:'application/javascript'}));
   await page.route('**/cdn.jsdelivr.net/npm/three@0.128.0/examples/js/**',r=>{const u=r.request().url().split('examples/js/')[1];r.fulfill({path:SP+'/node_modules/three/examples/js/'+u,contentType:'application/javascript'})});
+  if(opts.pre) await opts.pre(page);
   const url=GAME+(opts.q?'?q='+opts.q:'');
   if(opts.fixture){ const sv=JSON.parse(fs.readFileSync(opts.fixture,'utf8')).value; if(opts.patch) opts.patch(sv);
     await page.addInitScript(([k,v])=>{ if(!sessionStorage.getItem('__seed')){ sessionStorage.setItem('__seed','1'); localStorage.setItem(k,v); window.__resetting=true; } },[KEY,JSON.stringify(sv)]); }

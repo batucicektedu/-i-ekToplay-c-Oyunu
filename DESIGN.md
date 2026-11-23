@@ -161,7 +161,20 @@ Müşteri istekleri yeni ürünlere ağırlıklıdır (sıra ağırlığı 1,5+1
 - Harita: merkezde beyaz kireç taşı yürüyüş yolu (plaza); batıda körfez (kara poligonu çentikli, deniz yüzeyi kara seviyesinin 0.3 altında, köpük şeridi; yalnız iskele/köprü/rıhtım üzerinden yürünür, her yer su çarpışması ile kapalı, işçiler de suya girmez; iskele güvertesi y=0.07). Güney kıyıda Batı Rıhtımı (tekneler), doğuda Doğu Rıhtımı (balık-ekmek teknesi), güneyde Güney Rıhtımı (kafesler), güney-batı sahilde Balık Hali, uzakta Deniz Feneri Adası.
 - Çekirdek: OLTA. İskelede durunca olta atılır; balıklar SUYUN ALTINDA gölge olarak yüzer, dalga halkaları çıkar, ara sıra biri yaydan sıçrar; yakalanan balık sudan fırlayıp sırta gider. Zincir: balık → Temizleme Tezgâhı → Buzlu Kasa → Balık Tezgâhı (müşteri kuyruğu). Midye Kayalığı: gelgit (36 sn), sadece alçak gelgitte yürüyerek toplanır (oyuncu işçinin talebini çalar).
 - Açılış sırası: İskele (başlangıç) → Midye (gelgit) → Balıkçı Tekneleri (3'e kadar, hız, kasa; rıhtıma boşaltır; "El Arabalı Hamal" kasaları tezgâha taşır, +1 hamal, hız, kapasite; oyuncu da rıhtımdan alabilir) → Balık-Ekmek Teknesi (demirli tekne restoran, ızgara dumanı, rıhtım müşteri kuyruğu; girdi buzlu kasa) → Karides & Yengeç Kafesleri (vinç+ip ile sudan çekilir, Deniz Tabağı kiosku) → Balık Hali/Mezat (~45 sn'de zil, kalabalık, tüm parti x1.5–2.6) → Fener Adası Köprüsü → Fener Kafe (gün batımı terası geliri) → SIRADAKİ BÖLÜME GEÇ kapısı (adada; Hayvan Çiftliği). Arada otomasyon pad'leri (yardımcı, kasiyer, taşıyıcı, teslimat aracı = üç tekerlekli buz kamyoneti, yıldızlar).
-- Fiyat eğrisi (2–3 saat): tekne 3.5K, balık-ekmek 9K, kafesler 22K, hal 45K, köprü 60K, fener kafe 120K, kapı 400K (+ aralardaki yükseltmeler); tam kadro pasif gelir ≈ 85–105 $/sn (tests/sahil/rate ölçümü, idle30).
+- Fiyat eğrisi (v9, bot ölçümü ~2 saat): kafesler 11K, hal 12K, köprü 20K, fener kafe 30K, kapı 90K, yıldız tabanı 8K (+%30/seviye). Ara yükseltmeler (tekne/hamal/ızgara/kafes/mezat/fener/yıldız) GOALS zincirine her büyük açılışın arasına serpiştirildi; tam kadro pasif gelir ≈ 85–105 $/sn (tests/sahil/rate, idle30).
+- Ekonomi ölçümü (`tests/sahil/econ.js`, bot sıfırdan oynar, 390x844/high; dakika, bota göre): 
+  | satın alma | önce | sonra |
+  |---|---|---|
+  | balıkçı teknesi | 11.8 | 12.8 |
+  | balık-ekmek teknesi | 22.3 | 23.5 |
+  | kafesler | 35.5 | 29.7 |
+  | balık hali | 50.4 | 39.0 |
+  | köprü | 76.6 | 67.5 |
+  | fener kafe | 108.0 | 85.5 |
+  | kapı (bölüm sonu) | 175.8 | 120.8 |
+  | en uzun "alacak şey yok" boşluğu | 62.4 dk (fener→kapı), 31 dk (köprü→fener), 17 dk (hal→köprü) | 6.6 dk (köprü→fener); diğer boşluklar ≤6 dk |
+  Yöntem: fiyatlar düşürüldü (kafes 22K→11K, hal 45K→12K, köprü 60K→20K, fener 120K→30K, kapı 400K→90K, yıldız 18K→8K) ve GOALS zincirine 40+ ara yükseltme eklendi (bot yalnız hedef zincirini alır; 2–4 küçük satın alma büyük açılışlar arasındaki bekleyişi doldurur). Kayıt: fiyat düşünce pad'de yatırılmış fazla para iade edilir; seviyeler/para/bölgeler azalmaz.
+- Yol bulma (A*) ızgarası batı adayı da kapsar (köprü koridoru + ada, deniz kapalı): ada üzerindeki ipucu izi ve bot artık suya doğru düz gitmez.
 - Hikâye: Kaptan Rıza giriş kartı ve her bölgede bir kez gösterilen (S.seen) ipucu mesajları.
 - Kayıt göçü v8: eski açılmış bölge SAYISI yeni sıraya eşlenir; eşlenemeyenlerin açma bedeli ve kaldırılan tüm yükseltmelerin bedeli para olarak iade edilir; para, ortak seviyeler, Midye/van/kapı korunur. Örnekler: `tests/sahil/saves/` (v7 eski, v8 yeni: mid/late/end).
 - Testler: `tests/sahil/` smoke, saves, padoverlap (pad↔engel/bölge ≥0.8), shore (denize yürüme), mussel, boats, eat, cage, hall, finale (köprü/ada/kafe/kapı→chapGo), vanwater, hints, idle30(+osc). Ekran görüntüleri: `docs/sahil/v3_*.png`, `shore_*.png`.
