@@ -3737,7 +3737,7 @@ function buildHallBody(g) {
   P_.push(part(G.box, 0xf4ead0, cx, 0.06, cz, 18.4, 0.12, 12.4), part(G.box, 0xdbeaf5, cx, 0.13, cz, 17.2, 0.02, 11.2));
   for (const px of [-8.6, -2.9, 2.9, 8.6]) for (const pz of [-5.8, 5.8]) P_.push(part(G.cyl, 0xffffff, cx + px, 2.3, cz + pz, 0.34, 4.5, 0.34), part(G.cyl, 0x1d6fb8, cx + px, 0.35, cz + pz, 0.42, 0.5, 0.42));
   P_.push(part(G.box, 0xfdfcf6, cx, 4.65, cz + 5.9, 18.6, 0.5, 0.3), part(G.box, 0x1d6fb8, cx, 4.65, cz - 5.9, 18.6, 0.14, 0.14));
-  for (let i = 0; i < 8; i++) P_.push(part(G.box, i % 2 ? 0xffffff : 0x1d6fb8, cx - 7.9 + i * 2.25, 4.95, cz + 4.4, 2.2, 0.3, 3.2, 0, 0, 0)); // arka çizgili çatı (ön açık)
+  for (let i = 0; i < 8; i++) P_.push(part(G.box, i % 2 ? 0xffffff : 0x1d6fb8, cx - 7.9 + i * 2.25, 4.95, cz + 5.65, 2.2, 0.3, 0.8, 0, 0, 0)); // arka çizgili çatı (ön açık)
   // buz tezgâhları (arka duvar) ve stok masası
   for (let i = 0; i < 6; i++) P_.push(part(G.box, 0xe8f6fc, cx - 6.5 + i * 2.6, 0.6, cz + 4.9, 2.2, 1.0, 1.0), part(G.box, 0xcfeeff, cx - 6.5 + i * 2.6, 1.15, cz + 4.9, 2.0, 0.12, 0.8));
   P_.push(part(G.box, 0x8a5a30, cx, 0.7, cz - 2.6, 8.0, 0.14, 2.0), part(G.box, 0xb98040, cx, 0.35, cz - 2.6, 7.6, 0.6, 1.7));
