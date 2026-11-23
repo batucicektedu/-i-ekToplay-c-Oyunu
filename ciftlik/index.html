@@ -375,6 +375,7 @@ function onResize() {
   if (typeof pMat !== 'undefined') pMat.uniforms.scale.value = renderer.domElement.height / (2 * t);
 }
 window.addEventListener('resize', onResize);
+try { if (window.visualViewport) window.visualViewport.addEventListener('resize', onResize); } catch (e) {} // iOS: adres çubuğu/PWA görünür alan değişince canvas tam ekranı kaplasın
 window.addEventListener('orientationchange', () => setTimeout(onResize, 120));
 
 const hemi = new THREE.HemisphereLight(0xe4f4ff, 0x8aaa5a, HQ ? 0.55 : 0.62); scene.add(hemi);
@@ -4349,6 +4350,7 @@ window.__game = {
   admin: ADMIN,
   padCheck() { const pads = allPads(); const hits = []; for (const p of pads) { const h = padHits(p, p.x, p.z, pads); if (h) hits.push([p.key || (p.o && p.o.id) || '?', h, +p.x.toFixed(1), +p.z.toFixed(1)]); } return hits; }, fixPads, allPads, PROPBOX, PROPALL, PANQ, nudge, padMeshHit, padViewBlock, walkOK: (x, z) => inRects(walkRects(), x, z), padOK: () => PADOK,
   get camera() { return camera; },
+  hintState() { return { arrow: tutArrow.visible, x: tutArrow.position.x, z: tutArrow.position.z, disp: hintEl.style.display, lb: hintT.textContent }; }, near: () => camera.near,
   measure() { renderer.info.reset(); if (composer) composer.render(0); else renderer.render(scene, camera); return { calls: renderer.info.render.calls, tris: renderer.info.render.triangles }; },
   path(tx, tz) { return findPath(P.group.position.x, P.group.position.z, tx, tz); }, colliders,
   EXTZ, STN, GARD, GROLES, roleEvolve, give(type, n) { n = Math.min(n, Math.max(0, P.free())); for (let i = 0; i < n; i++) P.stack.add(['orchid', 'lav', 'sun', 'rosep', 'flower'].includes(type) ? makeFlowerItem(0, type === 'flower' ? 'tulip' : type) : makeItemOf(type), type); },
