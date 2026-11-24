@@ -223,7 +223,7 @@ const damp = (a, b, l, dt) => a + (b - a) * (1 - Math.exp(-l * dt));
 const rand = (a, b) => a + Math.random() * (b - a);
 function angDiff(a, b) { let d = (b - a) % TAU; if (d > Math.PI) d -= TAU; if (d < -Math.PI) d += TAU; return d; }
 const easeOutBack = t => { const c = 1.70158; t = clamp(t, 0, 1); return 1 + (c + 1) * Math.pow(t - 1, 3) + c * Math.pow(t - 1, 2); };
-function rm(o) { if (o && o.parent) o.parent.remove(o); }
+function rm(o) { if (o && o.parent) { o.parent.remove(o); if (o.userData && o.userData.keepGeo) return; o.traverse(c => { if (c.userData && c.userData.merged && c.geometry) c.geometry.dispose(); }); } } // karakter/öğe başına birleştirilmiş geometri GPU'da kalmasın
 
 let fountainWater = null, clouds = [], butterflies = [];
 let LOADED_X = null, carpet1 = null, carpet2 = null;
@@ -1153,7 +1153,7 @@ const posable = m => m.userData.v !== undefined || !!m.userData.pot;
 function makeBouquetItem(v, up) { if (v === undefined) v = Math.floor(Math.random() * WRAPS.length); const g = new THREE.Group(); g.add(new THREE.Mesh(bouquetGeo(v, up), vcMat2)); g.userData.v = v; return g; }
 function bouquetPose(m, up) { m.children[0].geometry = m.userData.pot ? potGeo(up) : bouquetGeo(m.userData.v, up); }
 let _billMat = null;
-function fmt(n) { n = Math.round(n); if (n >= 1e6) return (n / 1e6).toFixed(n >= 1e7 ? 0 : 1).replace('.0', '') + 'M'; if (n >= 1e4) return (n / 1e3).toFixed(n >= 1e5 ? 0 : 1).replace('.0', '') + 'K'; return String(n); }
+function fmt(n) { n = Math.round(+n); if (!isFinite(n)) n = 0; if (n >= 1e6) return (n / 1e6).toFixed(n >= 1e7 ? 0 : 1).replace('.0', '') + 'M'; if (n >= 1e4) return (n / 1e3).toFixed(n >= 1e5 ? 0 : 1).replace('.0', '') + 'K'; return String(n); }
 const ITEMF = {};
 function makeItemOf(t, up) { if (t === 'bouquet') return makeBouquetItem(undefined, true); if (t === 'pot') return makePotItem(true); return ITEMF[t](); }
 function makeBill() {
@@ -1849,7 +1849,10 @@ function buildSera() {
   ad(gh, mk(G.box, mat(0xffe08a), 1.2, 0.9, 0.2), 33.0, 3.0, -7.45); ad(gh, mk(G.box, white, 1.4, 0.12, 0.22), 33.0, 3.5, -7.4);
   for (const sx of [-5.7, 5.7]) { ad(gh, mk(G.box, wd, 0.2, 1.1, 9.0), 28.5 + sx, 0.55, -3); }
   for (const z_ of [-7.2, 1.4]) for (const sx of [-5.7, 5.7]) ad(gh, mk(G.box, mat(0x8a5a2a), 0.28, 1.5, 0.28), 28.5 + sx, 0.75, z_);
-  ad(gh, mk(G.box, wd, 11.6, 0.16, 0.14), 28.5, 0.9, 1.4); ad(gh, mk(G.box, wd, 11.6, 0.14, 0.14), 28.5, 0.5, 1.4);
+  // ön çit: ortada 2.4 m'lik kapı boşluğu (oyuncu/işçi girer; yan çitler çarpışmalı, işçi çitten geçmez)
+  for (const [fx0, fx1] of [[22.7, 27.3], [29.7, 34.3]]) { const fcx = (fx0 + fx1) / 2, fw = fx1 - fx0; ad(gh, mk(G.box, wd, fw, 0.16, 0.14), fcx, 0.9, 1.4); ad(gh, mk(G.box, wd, fw, 0.14, 0.14), fcx, 0.5, 1.4); }
+  for (const gx of [27.3, 29.7]) ad(gh, mk(G.box, mat(0x8a5a2a), 0.3, 1.6, 0.3), gx, 0.8, 1.4);
+  { const on = () => !zone2.locked; addCollider(22.55, 23.05, -7.7, 1.7, on); addCollider(33.95, 34.45, -7.7, 1.7, on); addCollider(22.55, 27.4, 1.2, 1.6, on); addCollider(29.6, 34.45, 1.2, 1.6, on); }
   for (const [x_, z_] of [[24.6, -6.4], [25.7, -6.5], [25.1, -6.4], [32.2, -6.5]]) { const b_ = mk(G.cyl, mat(0xe8c860), 0.5, 0.95, 0.5, 0, 0, 0); b_.rotation.z = Math.PI / 2; ad(gh, b_, x_, 0.5 + (x_ === 25.1 ? 0.9 : 0), z_); }
   const tr_ = mk(G.box, mat(0x8a5a30), 2.0, 0.5, 0.7); ad(gh, tr_, 31.8, 0.28, 0.9); ad(gh, mk(G.box, mat(0x7ec8ff), 1.8, 0.06, 0.5), 31.8, 0.5, 0.9);
 
@@ -2647,7 +2650,7 @@ function purchase(u) {
   ring(P.group.position.x, P.group.position.z, 0x7dff7a, 3); sparkles(P.group.position.x, 0.6, P.group.position.z, 12, 0x9dffb0, 0.5); vib(18);
   popText(u.x, 2.6, u.z, '+ ' + UPG[key].name + '!', '#7dff7a');
   applyUpgrade(key, false);
-  { const gr = Object.values(GROLES).find(r => r.hireKey === key || r.evoKey === key), isEvo = gr && gr.evoKey === key; if (gr && (isEvo || gr.hireKey === key)) panReq((isEvo ? 'tr_' : 'w_') + key, gr.home[0], gr.home[1], isEvo ? 'BALIKÇI TEKNESİ!' : 'YENİ ÇALIŞAN: ' + gr.name.toUpperCase()); else if (HIREK.has(key)) panReq('w_' + key, u.x, u.z, 'YENİ ÇALIŞAN: ' + UPG[key].name.toUpperCase()); }
+  { const gr = Object.values(GROLES).find(r => r.hireKey === key || r.evoKey === key), isEvo = gr && gr.evoKey === key; if (gr && (isEvo || gr.hireKey === key)) panReq((isEvo ? 'tr_' : 'w_') + key, gr.home[0], gr.home[1], isEvo ? (gr.tlabel || 'YUMURTA ARABASI!') : 'YENİ ÇALIŞAN: ' + gr.name.toUpperCase()); else if (HIREK.has(key)) panReq('w_' + key, u.x, u.z, 'YENİ ÇALIŞAN: ' + UPG[key].name.toUpperCase()); }
   if (MAIN_UNLOCKS[key]) { praise(UPG[key].name + ' açıldı!', true); flash(); coinBurstUI(); } else if (stats.upgrades % 3 === 0) praise(pick(PRAISE));
   if (key === 'carCap' && carrier) { const cp = carrier.group.position; popText(cp.x, 4.2, cp.z, 'Kapasite ' + (6 + 4 * S.lv.carCap), '#9dffb0'); sparkles(cp.x, 1.5, cp.z, 12, 0x9dffb0, 0.6); ring(cp.x, cp.z, 0x9dffb0, 3); }
   if (S.lv[key] >= u.max()) { u.done = true; u.group.visible = false; } else u.redraw();
@@ -3375,11 +3378,11 @@ function extPad(key, name, costs, x, z, icon, vis) { UPG[key] = { name, costs };
 const unlockedZ = id => EXTZ[id] && !EXTZ[id].locked;
 const gCapShow = (r, lv) => (roleTr(r) ? 30 + 6 * lv : r.baseCap + 2 * lv);
 function gRolePads(r, P) {
-  const nm = r.baseTr ? 'Tekne' : 'Balıkçı', vis = () => S.lv[r.hireKey] > 0, tn = () => roleTr(r) ? 'tekne' : 'balıkçı'; let u;
+  const nm = r.baseTr ? 'Araba' : 'Çiftçi', vis = () => S.lv[r.hireKey] > 0, tn = () => roleTr(r) ? 'araba' : 'çiftçi'; let u;
   if (r.id !== 'main' && !EXTAPPLY[r.hireKey]) EXTAPPLY[r.hireKey] = i => roleSync(r, i);
   u = extPad(r.capKey, nm + ' Kapasite', geo(P.cap[2], 4), P.cap[0], P.cap[1], iconBackpack, vis); u.autoShow = true; UPG[r.capKey].sub = () => 'Taşıma ' + gCapShow(r, S.lv[r.capKey]) + ' → ' + gCapShow(r, S.lv[r.capKey] + 1);
   u = extPad(r.cntKey, '+1 Eleman', geo(P.cnt[2], 2), P.cnt[0], P.cnt[1], iconHelper, vis); u.autoShow = true; UPG[r.cntKey].sub = () => 'Şu an ' + (1 + S.lv[r.cntKey]) + ' ' + tn(); EXTAPPLY[r.cntKey] = i => roleSync(r, i);
-  if (r.evoKey) { u = extPad(r.evoKey, 'Tekne Yap', [P.evo[2]], P.evo[0], P.evo[1], iconTractor, () => vis() && (S.lv[r.spdKey] || 0) >= 2); u.autoShow = true; UPG[r.evoKey].sub = () => 'Balıkçı → Tekne'; EXTAPPLY[r.evoKey] = i => roleEvolve(r, i); }
+  if (r.evoKey) { u = extPad(r.evoKey, 'Araba Yap', [P.evo[2]], P.evo[0], P.evo[1], iconTractor, () => vis() && (S.lv[r.spdKey] || 0) >= 2); u.autoShow = true; UPG[r.evoKey].sub = () => 'Çiftçi → Araba'; EXTAPPLY[r.evoKey] = i => roleEvolve(r, i); }
 }
 function slab(z, g, col) { /* zemin: çim kalsın (derinlik çakışması yok) */ }
 function lamp(g, x, z) { GLOWS.push([x, z, 3.4]); const o = new THREE.Group(); o.add(mk(G.cyl, mat(0x2d3a45), 0.09, 3.2, 0.09, 0, 1.6, 0)); o.add(mk(G.sph, LAMPM, 0.26, 0.3, 0.26, 0, 3.3, 0)); if (g.userData.px === undefined) { o.position.set(x, 0, z); g.add(o); } else ad(g, o, x, 0, z); }
@@ -3916,7 +3919,7 @@ function buildFarmZones() {
   mkp('knit', -17.0, 30.4, iconKnit, sOn, () => 'Yünden kazak');
   mkp('cheese', -8.0, 30.4, iconCheese, sOn, () => 'Süt şişesinden peynir');
   mkp('zoo', 31.2, 15.0, iconSheep, () => L_('van'), () => 'Ziyaretçi bileti');
-  mkp('zoo2', 37.2, 35.4, iconSheep, () => L_('zoo'), () => 'Zoo hayvanı ekle');
+  mkp('zoo2', 37.2, 35.4, iconSheep, () => L_('zoo'), () => 'Minik hayvan ekle');
   mkp('orchard', 38.4, 15.4, iconApple, () => L_('van'), () => 'Elma: atlara yem');
   { const g0 = GOALS.findIndex(g => g.key === 'cap' && g.lv === 3); GOALS.splice(g0 + 1, 0, { key: 'orchard', lv: 1 }, { key: 'sheep', lv: 1 }, { key: 'knit', lv: 1 }); }
   { const gi = GOALS.findIndex(g => g.key === 'horse' && g.lv === 2); GOALS.splice(gi + 1, 0, { key: 'sheep2', lv: 1 }, { key: 'cheese', lv: 1 }, { key: 'zoo', lv: 1 }, { key: 'sheep2', lv: 2 }, { key: 'zoo2', lv: 1 }, { key: 'zoo2', lv: 2 }, { key: 'sheep2', lv: 3 }, { key: 'zoo2', lv: 3 }); }
@@ -4440,6 +4443,7 @@ const ADMIN = (function () {
   return { open, tick, showPin, showPanel, close, setInf, get inf() { return inf; }, get isOpen() { return el.style.display === 'flex'; } };
 })();
 window.__game = {
+  get renderer() { return renderer; }, laterLen: () => later_q.length,
   get foal() { return foal; }, get PH() { return PH; },
   admin: ADMIN,
   padCheck() { const pads = allPads(); const hits = []; for (const p of pads) { const h = padHits(p, p.x, p.z, pads); if (h) hits.push([p.key || (p.o && p.o.id) || '?', h, +p.x.toFixed(1), +p.z.toFixed(1)]); } return hits; }, fixPads, allPads, PROPBOX, PROPALL, PANQ, nudge, padMeshHit, padViewBlock, walkOK: (x, z) => inRects(walkRects(), x, z), padOK: () => PADOK,
