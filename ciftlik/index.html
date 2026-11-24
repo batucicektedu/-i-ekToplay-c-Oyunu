@@ -6,6 +6,8 @@
 <meta name="theme-color" content="#9fdc7a">
 <link rel="manifest" href="../manifest.webmanifest">
 <link rel="apple-touch-icon" href="../icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" href="../icons/icon-192.png">
+<meta name="description" content="Hayvan Çiftliği: hayvanlarını besle, ürünlerini sat. Çevrimdışı oynanır.">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -4443,7 +4445,7 @@ try {
     document.addEventListener('fullscreenchange', refresh);
     document.addEventListener('webkitfullscreenchange', refresh);
   }
-  if ('serviceWorker' in navigator && location.protocol === 'https:') {
+  if ('serviceWorker' in navigator && (location.protocol === 'https:' || /^(localhost|127.0.0.1)$/.test(location.hostname))) {
     navigator.serviceWorker.register('../sw.js').catch(() => {});
   }
 } catch (e) {}
