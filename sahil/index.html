@@ -57,7 +57,7 @@
   #wardBtn{display:none;align-items:center;justify-content:center;width:38px;height:38px;border:0;border-radius:50%;background:linear-gradient(rgba(60,110,160,.85),rgba(18,48,84,.9));box-shadow:0 4px 0 rgba(0,0,0,.25),inset 0 2px 0 rgba(255,255,255,.4);padding:0;pointer-events:auto}
   #wardBtn svg{width:24px;height:24px}
   #topleft{position:absolute;left:max(12px,env(safe-area-inset-left));top:max(12px,env(safe-area-inset-top))}
-  #toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom));transform:translateX(-50%);background:rgba(18,48,84,.9);color:#fff;font-weight:900;font-size:14px;padding:10px 16px;border-radius:14px;display:none;z-index:15;pointer-events:none}
+  #toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom));transform:translateX(-50%);background:rgba(18,48,84,.9);color:#fff;font-weight:900;font-size:14px;line-height:1.3;padding:10px 16px;border-radius:14px;display:none;z-index:15;pointer-events:none;width:max-content;max-width:calc(100vw - 32px);text-align:center}
   #hint{position:absolute;left:50%;top:max(124px,calc(env(safe-area-inset-top) + 112px));transform:translateX(-50%);display:none;align-items:center;gap:10px;
     padding:8px 18px 8px 12px;border-radius:18px;background:rgba(255,255,255,.92);color:#16324a;font-weight:900;font-size:17px;
     box-shadow:0 4px 0 rgba(0,0,0,.2);white-space:nowrap;animation:hintPulse 1.6s ease-in-out infinite}
@@ -68,9 +68,9 @@
   #fsBtn svg{width:24px;height:24px;display:block;margin:auto}
   #reset svg{width:24px;height:24px;display:block;margin:auto}
   #menu{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(10,20,40,.55);z-index:20;pointer-events:auto}
-  .mbox{background:linear-gradient(#fff,#e9f1ff);border-radius:22px;padding:18px 20px;width:min(300px,86vw);box-shadow:0 10px 0 rgba(0,0,0,.18),0 20px 40px rgba(0,0,0,.35);display:flex;flex-direction:column;gap:10px}
+  .mbox{background:linear-gradient(#fff,#e9f1ff);border-radius:22px;padding:18px 20px;width:min(300px,86vw);max-height:calc(var(--appH,100vh) - 24px);overflow-y:auto;-webkit-overflow-scrolling:touch;touch-action:pan-y;box-shadow:0 10px 0 rgba(0,0,0,.18),0 20px 40px rgba(0,0,0,.35);display:flex;flex-direction:column;gap:10px}
   .mt{font-weight:900;font-size:22px;color:#16324a;text-align:center}
-  .mbox button{font:900 17px/1 inherit;font-family:inherit;border:0;border-radius:14px;padding:14px;color:#fff;background:linear-gradient(#4aa8ff,#2f7bff);box-shadow:0 4px 0 #1d4fb0}
+  .mbox button{flex:none;min-height:46px;font:900 17px/1 inherit;font-family:inherit;border:0;border-radius:14px;padding:13px 14px;color:#fff;background:linear-gradient(#4aa8ff,#2f7bff);box-shadow:0 4px 0 #1d4fb0}
   #mReset{background:linear-gradient(#ff6b6b,#e0243c);box-shadow:0 4px 0 #9c1426}
   #mClose{background:linear-gradient(#aab6c8,#8393ab);box-shadow:0 4px 0 #5b6b82}
   #joyBase{position:fixed;width:120px;height:120px;margin:-60px 0 0 -60px;border-radius:50%;background:rgba(255,255,255,.22);
@@ -133,7 +133,7 @@
     <button id="reset" aria-label="Ayarlar"><svg viewBox="0 0 24 24"><path fill="#fff" d="M12 8a4 4 0 100 8 4 4 0 000-8zm9 5v-2l-2.2-.5a7 7 0 00-.7-1.7l1.2-1.9-1.4-1.4-1.9 1.2a7 7 0 00-1.7-.7L13 3h-2l-.5 2.2a7 7 0 00-1.7.7L6.9 4.7 5.5 6.1l1.2 1.9a7 7 0 00-.7 1.7L3.8 11v2l2.2.5c.2.6.4 1.2.7 1.7l-1.2 1.9 1.4 1.4 1.9-1.2c.5.3 1.1.5 1.7.7L11 21h2l.5-2.2c.6-.2 1.2-.4 1.7-.7l1.9 1.2 1.4-1.4-1.2-1.9c.3-.5.5-1.1.7-1.7z"/></svg></button>
     <button id="fsBtn" aria-label="Tam ekran"><svg viewBox="0 0 24 24"><path fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
   </div>
-  <div id="menu"><div class="mbox"><div class="mt">Ayarlar</div><button id="mWard" style="display:none">Gardırop</button><button id="mNight" style="display:none">Gece</button><button id="mQ"></button><button id="mFs" style="display:none">Tam Ekran</button><button id="mReset">İlerlemeyi sıfırla</button><button id="mClose">Kapat</button><a id="mPriv" href="../privacy.html" target="_blank" rel="noopener" style="align-self:center;font:700 12px/1 inherit;font-family:inherit;color:#5b6b82;text-decoration:underline;padding:4px 8px">Gizlilik</a></div></div>
+  <div id="menu"><div class="mbox"><div class="mt">Ayarlar</div><button id="mWard" style="display:none">Gardırop</button><button id="mNight" style="display:none">Gece</button><button id="mSnd"></button><button id="mVib"></button><button id="mQ"></button><button id="mFs" style="display:none">Tam Ekran</button><button id="mReset">Kaydı sıfırla</button><button id="mClose">Kapat</button><a id="mPriv" href="../privacy.html" target="_blank" rel="noopener" style="align-self:center;font:700 12px/1 inherit;font-family:inherit;color:#5b6b82;text-decoration:underline;padding:4px 8px">Gizlilik</a></div></div>
   <div id="ward"><div class="wbox"><div class="wh"><div class="wt">Gardırop</div><div class="wm" id="wMoney">0</div></div><div class="wtabs" id="wTabs"><button data-t="player" class="on">Oyuncu</button><button data-t="work">Çalışanlar</button><button data-t="floor">Meydan</button></div><div id="wgrid"></div><button id="wClose">Kapat</button></div></div>
   <div id="fx"></div><div id="flash"></div><div id="praise" class="txt"></div>
   <div id="intro"><div class="path"></div><div class="ring"></div>
@@ -300,6 +300,10 @@ function writeSave() {
   } catch (e) {}
 }
 
+/* ayarlar: ses / titreşim (kayıttan ayrı anahtar; kayıt formatına dokunmaz) */
+const PREF_KEY = 'cicek_ayar', PREF = { snd: true, vib: true };
+try { const o = JSON.parse(localStorage.getItem(PREF_KEY)); if (o && typeof o === 'object') { if (o.snd === false || o.snd === 0) PREF.snd = false; if (o.vib === false || o.vib === 0) PREF.vib = false; } } catch (e) {}
+function prefSave() { try { localStorage.setItem(PREF_KEY, JSON.stringify({ v: 1, snd: PREF.snd ? 1 : 0, vib: PREF.vib ? 1 : 0 })); } catch (e) {} }
 let AC = null; const sfxLast = {};
 function initAudio() {
   try {
@@ -309,7 +313,7 @@ function initAudio() {
 }
 let SFXV = 1, SFXA = 0, SFXAMB = -99, SFXPL = 0;
 function blip(f, dur, type, vol, slide, delay) {
-  if (!AC) return;
+  if (!AC || !PREF.snd) return;
   vol = (vol || 0.1) * SFXV;
   try {
     const t = AC.currentTime + (delay || 0), o = AC.createOscillator(), g = AC.createGain();
@@ -487,15 +491,11 @@ function iconBolt(ctx, cx, cy, s) {
   ctx.beginPath(); ctx.moveTo(cx + s * 0.1, cy - s * 0.5); ctx.lineTo(cx - s * 0.3, cy + s * 0.08); ctx.lineTo(cx - s * 0.02, cy + s * 0.08);
   ctx.lineTo(cx - s * 0.12, cy + s * 0.5); ctx.lineTo(cx + s * 0.32, cy - s * 0.12); ctx.lineTo(cx + s * 0.04, cy - s * 0.12); ctx.closePath(); ctx.fill(); ctx.stroke();
 }
-function iconPack(ctx, cx, cy, s) {
-  ctx.lineJoin = 'round'; ctx.strokeStyle = '#7a1f4a'; ctx.lineWidth = s * 0.06;
-  ctx.fillStyle = '#ff6fa5'; rrect(ctx, cx - s * 0.38, cy - s * 0.12, s * 0.76, s * 0.55, s * 0.06); ctx.fill(); ctx.stroke();
-  ctx.fillStyle = '#ff8fc0'; rrect(ctx, cx - s * 0.42, cy - s * 0.3, s * 0.84, s * 0.2, s * 0.05); ctx.fill(); ctx.stroke();
-  ctx.fillStyle = '#ffe066'; ctx.fillRect(cx - s * 0.05, cy - s * 0.3, s * 0.1, s * 0.73);
-  ctx.beginPath(); ctx.ellipse(cx - s * 0.12, cy - s * 0.38, s * 0.12, s * 0.08, -0.4, 0, TAU); ctx.ellipse(cx + s * 0.12, cy - s * 0.38, s * 0.12, s * 0.08, 0.4, 0, TAU); ctx.fill();
-  ctx.fillStyle = '#fff'; ctx.strokeStyle = '#7a1f4a'; ctx.lineWidth = s * 0.03;
-  ctx.beginPath(); ctx.arc(cx + s * 0.34, cy - s * 0.4, s * 0.15, 0, TAU); ctx.fill(); ctx.stroke();
-  ctx.strokeStyle = '#7a1f4a'; ctx.lineWidth = s * 0.035; ctx.beginPath(); ctx.moveTo(cx + s * 0.34, cy - s * 0.4); ctx.lineTo(cx + s * 0.34, cy - s * 0.5); ctx.moveTo(cx + s * 0.34, cy - s * 0.4); ctx.lineTo(cx + s * 0.42, cy - s * 0.38); ctx.stroke();
+function iconPack(ctx, cx, cy, s) { // balık temizleme: balık + bıçak
+  iconFlower(ctx, cx - s * 0.06, cy + s * 0.08, s * 0.95, '#2f9bff');
+  ctx.save(); ctx.translate(cx + s * 0.22, cy - s * 0.2); ctx.rotate(0.75); ctx.lineJoin = 'round'; ctx.strokeStyle = '#3a4a5c'; ctx.lineWidth = s * 0.04;
+  ctx.fillStyle = '#e8eef5'; ctx.beginPath(); ctx.moveTo(-s * 0.05, -s * 0.34); ctx.lineTo(s * 0.07, -s * 0.34); ctx.lineTo(s * 0.07, s * 0.1); ctx.lineTo(-s * 0.05, s * 0.1); ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#8a5a30'; rrect(ctx, -s * 0.06, s * 0.1, s * 0.14, s * 0.22, s * 0.03); ctx.fill(); ctx.stroke(); ctx.restore();
 }
 function iconPerson(ctx, cx, cy, s, shirt, hat) {
   ctx.lineJoin = 'round'; ctx.lineWidth = s * 0.05; ctx.strokeStyle = '#1d3557';
@@ -731,8 +731,9 @@ function awningTex(c1, c2) {
    5. STACK / FLIGHT / PARTICLE / SCHEDULER SYSTEMS
    ===================================================================== */
 const _v = new THREE.Vector3(), _e = new THREE.Vector3(), _w = new THREE.Vector3();
+const STACKREG = []; let STK_FROZEN = false; // test: dünyada kurulan sabit yığınların konumları
 class Stack {
-  constructor(parent, slotFn, cap, swayFn) { this.parent = parent; this.slotFn = slotFn; this.cap = cap; this.swayFn = swayFn || null; this.items = []; }
+  constructor(parent, slotFn, cap, swayFn) { if (!STK_FROZEN && parent === scene) STACKREG.push(this); this.parent = parent; this.slotFn = slotFn; this.cap = cap; this.swayFn = swayFn || null; this.items = []; }
   get length() { return this.items.length; }
   count(type) { let n = 0; for (const it of this.items) if (it.type === type) n++; return n; }
   add(mesh, type) {
@@ -821,7 +822,8 @@ function ring(x, z, color, size, y) {
   if (!r) { const m = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, depthWrite: false })); m.rotation.x = -Math.PI / 2; m.renderOrder = 4; scene.add(m); r = { m, on: false }; rings.push(r); }
   r.on = true; r.t = 0; r.size = size || 4; r.m.material.color.copy(lc(color)); r.m.position.set(x, y === undefined ? 0.08 : y, z); r.m.visible = true;
 }
-function vib(ms) { try { if (navigator.vibrate) navigator.vibrate(ms); } catch (e) {} }
+let USER_TAPPED = false; try { window.addEventListener('pointerdown', () => { USER_TAPPED = true; }, { capture: true, passive: true }); window.addEventListener('touchstart', () => { USER_TAPPED = true; }, { capture: true, passive: true }); } catch (e) {}
+function vib(ms) { try { if (PREF.vib && USER_TAPPED && navigator.vibrate) navigator.vibrate(ms); } catch (e) {} } // dokunuştan önce titreşim isteme (tarayıcı uyarısı)
 function updateParticles(dt) {
   let anyOn = false;
   if (pAny) for (let i = 0; i < PMAX; i++) {
@@ -2000,7 +2002,6 @@ function buildVan() {
   // content: road / pallet / van
   const rd = pivotGroup(18, 24); rd.visible = false; world.add(rd); zone3.groups.push([rd, 0]);
   const asph = new THREE.Mesh(G.plane, LM({ map: plankTex() })); asph.rotation.x = -Math.PI / 2; asph.scale.set(13, 5.4, 1); asph.receiveShadow = true; ad(rd, asph, 18, 0.035, 24);
-  for (const dz of [-2.75, 2.75]) ad(rd, mk(G.box, mat(0xf2ead4), 13.2, 0.1, 0.16), 18, 0.06, 24 + dz); // beyaz kenar şeridi: yükleme iskelesi
   for (let i = 0; i < 6; i++) ad(rd, mk(G.box, mat(0xfff4c0), 1.0, 0.02, 0.14), 12.8 + i * 1.9, 0.06, 24);
   const pal = rbox(1.9, 0.14, 3.7, 0.04, woodM()); pal.receiveShadow = true; ad(rd, pal, 19.9, 0.1, 24);
   const bd = makeBoard('TESLİMAT', 2.6, 0.7, 'wood'); bd.rotation.y = CFG.yaw; bd.scale.setScalar(0.85); ad(rd, bd, 22.8, 2.2, 27); ad(rd, mk(G.cyl, mat(0x5a2f12), 0.07, 2.2, 0.07), 21.9, 1.1, 27);
@@ -2707,6 +2708,10 @@ const hintEl = document.getElementById('hint'), hintT = document.getElementById(
 const menuEl = document.getElementById('menu'), mQ = document.getElementById('mQ');
 const qText = () => 'Grafik: ' + (HQ ? 'Yüksek' : 'Düşük');
 mQ.textContent = qText();
+{ const mS = document.getElementById('mSnd'), mV = document.getElementById('mVib');
+  const sync = () => { mS.textContent = 'Ses: ' + (PREF.snd ? 'Açık' : 'Kapalı'); mV.textContent = 'Titreşim: ' + (PREF.vib ? 'Açık' : 'Kapalı'); mS.style.opacity = PREF.snd ? '1' : '.72'; mV.style.opacity = PREF.vib ? '1' : '.72'; };
+  sync(); mS.addEventListener('click', () => { PREF.snd = !PREF.snd; prefSave(); sync(); if (PREF.snd) { initAudio(); sfx('pick', true); } });
+  mV.addEventListener('click', () => { PREF.vib = !PREF.vib; prefSave(); sync(); if (PREF.vib) vib(40); }); }
 (function () { // Görevler / Koleksiyon / Gardırop: ayarlar menüsünde, açıldıkça görünür
   const box = menuEl.querySelector('.mbox'), anchor = document.getElementById('mNight'), mk = (id, txt, bg, sh) => { const b = document.createElement('button'); b.id = id; b.textContent = txt; b.style.cssText = 'display:none;background:' + bg + ';box-shadow:0 4px 0 ' + sh; box.insertBefore(b, anchor); return b; };
   const mq = mk('mQuest', 'Görevler', 'linear-gradient(#5aa8ff,#2f6fd0)', '#1a3f8a'), mb = mk('mBook', 'Koleksiyon Defteri', 'linear-gradient(#58d68d,#27ae60)', '#146b38');
@@ -2716,8 +2721,11 @@ mQ.textContent = qText();
 document.getElementById('reset').addEventListener('click', () => { window.__menuSync && window.__menuSync(); menuEl.style.display = 'flex'; });
 document.getElementById('mClose').addEventListener('click', () => { menuEl.style.display = 'none'; });
 mQ.addEventListener('click', () => { try { localStorage.setItem(QKEY, HQ ? 'low' : 'high'); } catch (e) {} writeSave(); location.reload(); });
-document.getElementById('mReset').addEventListener('click', () => {
-  if (window.confirm('Tüm ilerleme silinsin mi?')) { window.__resetting = true; try { localStorage.removeItem(SAVE_KEY); localStorage.removeItem(BAK_KEY); localStorage.removeItem(TMP_KEY); } catch (e) {} location.reload(); }
+document.getElementById('mReset').addEventListener('click', () => { // çift onay: yanlışlıkla silme olmasın
+  menuEl.style.display = 'none';
+  chapShow('<div class="ct">İlerleme silinsin mi?</div><div class="cs">Paran, tekneler ve açtığın her yer silinir.</div>', [{ t: 'Vazgeç', cls: 'no' }, { t: 'Devam', fn: () => {
+    chapShow('<div class="ct">Emin misin?</div><div class="cs">Bu işlem geri alınamaz. Oyun baştan başlar.</div>', [{ t: 'Vazgeç', cls: 'no' }, { t: 'Evet, sil', cls: 'red', fn: () => { window.__resetting = true; try { localStorage.removeItem(SAVE_KEY); localStorage.removeItem(BAK_KEY); localStorage.removeItem(TMP_KEY); } catch (e) {} location.reload(); } }]);
+  } }]);
 });
 window.addEventListener('beforeunload', () => writeSave());
 window.addEventListener('pagehide', () => writeSave());
@@ -2793,8 +2801,9 @@ function pgBuild() {
   PG.g = new Float32Array(PG.w * PG.h); PG.from = new Int32Array(PG.w * PG.h);
 }
 function pgLos(ax, az, bx, bz) { const d = Math.hypot(bx - ax, bz - az), n = Math.ceil(d / 0.35); for (let k = 1; k < n; k++) { const x = ax + (bx - ax) * k / n, z = az + (bz - az) * k / n, i = Math.floor((x - PG.x0) / PG.c), j = Math.floor((z - PG.z0) / PG.c); if (i < 0 || j < 0 || i >= PG.w || j >= PG.h || PG.blocked[j * PG.w + i]) return false; } return true; }
+function isWater(x, z) { for (const c of colliders) if (c.water && (!c.active || c.active()) && x > c.x0 && x < c.x1 && z > c.z0 && z < c.z1) return true; return x < -28.5 && !(S.lv.bridge > 0 && westWalk(x, z)); }
 function findPath(sx, sz, tx, tz) {
-  pgBuild(); const W = PG.w, H = PG.h, bl = PG.blocked, g = PG.g, from = PG.from; if (pgLos(sx, sz, tx, tz)) return [[sx, sz], [tx, tz]];
+  pgBuild(); const W = PG.w, H = PG.h, bl = PG.blocked, g = PG.g, from = PG.from; findPath.fail = false; if (pgLos(sx, sz, tx, tz)) return [[sx, sz], [tx, tz]];
   const cell = (x, z) => [clamp(Math.floor((x - PG.x0) / PG.c), 0, W - 1), clamp(Math.floor((z - PG.z0) / PG.c), 0, H - 1)];
   let [si, sj] = cell(sx, sz), [ti, tj] = cell(tx, tz);
   const near = (i, j) => { if (!bl[j * W + i]) return [i, j]; for (let r = 1; r < 6; r++) for (let dj = -r; dj <= r; dj++) for (let di = -r; di <= r; di++) { const a = i + di, b = j + dj; if (a >= 0 && b >= 0 && a < W && b < H && !bl[b * W + a]) return [a, b]; } return [i, j]; };
@@ -2806,7 +2815,7 @@ function findPath(sx, sz, tx, tz) {
     const k = pop(); if (k === tk) { found = true; break; } const i = k % W, j = (k / W) | 0;
     for (const [di, dj, cst] of D) { const a = i + di, b = j + dj; if (a < 0 || b < 0 || a >= W || b >= H) continue; const nk = b * W + a; if (bl[nk]) continue; if (di && dj && (bl[j * W + a] || bl[b * W + i])) continue; const ng = g[k] + cst; if (ng < g[nk] - 1e-3) { g[nk] = ng; from[nk] = k; push(nk, ng + Math.hypot(a - ti, b - tj)); } }
   }
-  if (!found) return [[sx, sz], [tx, tz]];
+  findPath.fail = !found; if (!found) return [[sx, sz], [tx, tz]];
   const pts = []; for (let k = tk; k !== -1; k = from[k]) pts.push([PG.x0 + ((k % W) + 0.5) * PG.c, PG.z0 + (((k / W) | 0) + 0.5) * PG.c]); pts.reverse(); pts[0] = [sx, sz]; pts.push([tx, tz]);
   const out = [pts[0]]; let a = 0; while (a < pts.length - 1) { let b = pts.length - 1; while (b > a + 1 && !pgLos(pts[a][0], pts[a][1], pts[b][0], pts[b][1])) b--; out.push(pts[b]); a = b; } return out;
 }
@@ -2815,8 +2824,9 @@ function updateTrail(tx, tz, show, t, dt) {
   if (!show) { trailMesh.visible = false; return; }
   const px = P.group.position.x, pz = P.group.position.z; TRAIL.t -= dt || 0.016;
   const key = Math.round(tx * 2) + ',' + Math.round(tz * 2);
-  if (TRAIL.t <= 0 || key !== TRAIL.key) { TRAIL.t = 0.3; TRAIL.key = key; TRAIL.path = findPath(px, pz, tx, tz); }
-  const path = TRAIL.path; if (!path) { trailMesh.visible = false; return; }
+  if (TRAIL.t <= 0 || key !== TRAIL.key) { TRAIL.t = 0.3; TRAIL.key = key; TRAIL.path = findPath(px, pz, tx, tz); TRAIL.fail = findPath.fail || isWater(px, pz); }
+  const path = TRAIL.path; if (!path || TRAIL.fail) { // ulaşılamayan hedef / oyuncu suda: düz çizgiyle denize ok çizme
+    trailMesh.visible = false; return; }
   path[0] = [px, pz];
   let total = 0; const segs = []; for (let i = 0; i < path.length - 1; i++) { const l = Math.hypot(path[i + 1][0] - path[i][0], path[i + 1][1] - path[i][1]); segs.push(l); total += l; }
   const st = 1.6, en = total - 1.0; if (en - st < 1.2) { trailMesh.visible = false; return; }
@@ -2875,8 +2885,9 @@ function objective(out) {
   if (P.free() > 0) { const f = ripe(); if (f) return setPier(f); }
   return out;
 }
+const TUT_SAY = ['Fena değil evlat! Şimdi balıkları temizleme tezgâhına götür.', 'Tezgâh çalışıyor. Temiz balıklar hazır olunca al.', 'Taze ve temiz! Müşteri tezgâhta bekliyor.', 'İlk satış! Parayı yerden toplamayı unutma.', 'Parayla ilk geliştirmeni al, sahil büyüsün.', 'Aferin! Gerisi iskeleye, tekneye ve sana kalmış.'];
 function updateTutorial(dt, t) {
-  while (S.tut < TUT.length && TUT[S.tut].done()) { S.tut++; saveDirty = true; if (S.tut >= TUT.length) writeSave(); }
+  while (S.tut < TUT.length && TUT[S.tut].done()) { const ti = S.tut; S.tut++; saveDirty = true; if (S.tut >= TUT.length) writeSave(); if (introDone && TUT_SAY[ti]) later(0.7, () => toast('Kaptan Rıza: ' + TUT_SAY[ti])); }
   const o = objective(_obj);
   if (!o.ok) { hintEl.style.display = 'none'; tutArrow.visible = false; updateTrail(0, 0, false, t, dt); return; }
   const near = Math.hypot(o.x - P.group.position.x, o.z - P.group.position.z) < (o.kind === 'harvest' ? 3.0 : 1.4);
@@ -3931,6 +3942,7 @@ bolWrite(o => { o.last = CHAP_THIS; });
     '#chapCard .cb{background:linear-gradient(#fff,#e6f6ff);border-radius:24px;padding:20px 18px 16px;width:min(330px,90vw);text-align:center;box-shadow:0 10px 0 rgba(0,0,0,.18),0 24px 44px rgba(0,0,0,.4);display:flex;flex-direction:column;gap:10px}' +
     '#chapCard .ct{font-weight:900;font-size:25px;color:#0d4a6e;line-height:1.15}#chapCard .cs{font-weight:900;font-size:16px;color:#4a6a82}' +
     '#chapCard .cr{display:flex;gap:10px}#chapCard button{flex:1;font:900 20px/1 inherit;font-family:inherit;border:0;border-radius:16px;padding:16px 8px;color:#fff;background:linear-gradient(#2fd45a,#1e9e3e);box-shadow:0 5px 0 #146b2a}' +
+    '#chapCard button.red{background:linear-gradient(#ff6b6b,#e0243c);box-shadow:0 5px 0 #9c1426}#chapCard button{min-height:52px}#chapCard .cb{max-height:calc(var(--appH,100vh) - 24px);overflow-y:auto}' +
     '#chapCard button.no{background:linear-gradient(#aab6c8,#8393ab);box-shadow:0 5px 0 #5b6b82}#chapCard button.dis{background:#c5cfdc;box-shadow:0 5px 0 #9aa8ba;color:#fff}' +
     '#chapCard .big{font-size:40px;font-weight:900;color:#ff8a1f;-webkit-text-stroke:0;text-shadow:0 3px 0 #b85a00}';
   document.head.appendChild(st);
@@ -3949,7 +3961,7 @@ function chapConfirm(c, back) {
 }
 function chapName(c, back) { return c.n === 1 ? "Çiçek Bahçesi'ne" : c.n === 3 ? "Hayvan Çiftliği'ne" : "Sahil Balıkçısı'na"; }
 function chapConfirm2(c, back) {
-  chapShow('<div class="ct">' + chapName(c) + (back ? ' dön?' : ' geç?') + '</div><div class="cs">İlerlemen burada kayıtlı kalır.</div>', [{ t: back ? 'Dön' : 'Geç', fn: () => chapGo(c) }, { t: 'Kal', cls: 'no' }]);
+  chapShow('<div class="ct">' + chapName(c) + (back ? ' dön?' : ' geç?') + '</div><div class="cs">' + (!back && c.n === 3 ? 'Sahil tamam, sıra çiftlikte! ' : '') + 'İlerlemen burada kayıtlı kalır.</div>', [{ t: back ? 'Dön' : 'Geç', fn: () => chapGo(c) }, { t: 'Kal', cls: 'no' }]);
 }
 function chapMenu() {
   const op = bolRead().open;
@@ -4005,7 +4017,8 @@ function iconGate(ctx, cx, cy, s) {
 }
 function initGatePad() {
   extPad('gate', 'Hayvan Çiftliği', [90000], -66.5, 3.4, iconGate, () => S.lv.fener > 0 || S.lv.gate > 0).autoShow = true; UPG.gate.sub = () => 'Sonraki bölüm';
-  EXTAPPLY.gate = i => { bolWrite(o => { o.open.push(3); }); if (!i) { praise('SIRADAKİ BÖLÜM AÇILDI!', true); flash(); confetti(-60, 3, -8, 90); for (let k = 0; k < 6; k++) later(k * 0.25, () => fireworks(-60 + rand(-6, 6), -8 + rand(-3, 3))); } };
+  EXTAPPLY.gate = i => { bolWrite(o => { o.open.push(3); }); if (!i) { praise('SIRADAKİ BÖLÜM AÇILDI!', true); flash(); confetti(-60, 3, -8, 90); for (let k = 0; k < 10; k++) later(k * 0.3, () => fireworks(-60 + rand(-8, 8), -8 + rand(-4, 4))); sfx('up', true); later(0.5, () => sfx('happy', true)); later(1.0, () => sfx('up', true)); vib(60);
+    if (!S.seen.fin) { S.seen.fin = 1; saveDirty = true; writeSave(); later(3.2, () => { if (chapOpen) return; chapShow('<div class="cs">BÖLÜM 2 TAMAMLANDI</div><div class="big">Sahil Senin!</div><div class="ct">Hayvan Çiftliği seni bekliyor</div><div class="cs">Kaptan Rıza: "Fener yanıyor, tekneler dolu, rıhtım şenlik yeri. Sana güvenmekte haklıymışım evlat!"</div><div class="cs">İlerlemen kayıtlı. Sahile istediğin zaman dönebilirsin.</div>', [{ t: 'Sahilde Kal', cls: 'no' }, { t: 'Çiftliğe Geç', fn: () => chapGo(CHAPS[2]) }]); }); } } };
 }
 
 buildGround(); buildBeach(); buildFences();
@@ -4035,6 +4048,7 @@ for (const k in upPads) { const u = upPads[k]; if (S.lv[k] >= u.max()) { u.done 
 restoreExtras(LOADED_X); for (const k in upPads) if (!upPads[k].done) upPads[k].redraw();
 for (let i = 0; i < 3; i++) { spawnCustomer(CFG.queueZ0 + i * CFG.queueGap); const c = customers[customers.length - 1]; c.group.position.x = CFG.queueX; c.yaw = 0; c.group.rotation.y = Math.PI; c.yaw = Math.PI; c.atSlot = true; }
 initChapters(); try { window.__padFix = fixPads(); } catch (e) { window.__padFixErr = String(e.stack); } buildAmbient(); setupPost(); onResize();
+STK_FROZEN = true;
 introDone = !(S.tut === 0 && S.money === 0 && !Object.keys(S.lv).some(k => S.lv[k] > 0));
 if (!introDone) introEl.style.display = 'block';
 curGoalIdx = goalIndex(); curGoal = curGoalIdx >= 0 ? GOALS[curGoalIdx] : null; lastGoalIdx = curGoalIdx; drawGoalIcon();
@@ -4128,6 +4142,8 @@ window.__game = {
   admin: ADMIN,
   padCheck() { const pads = allPads(); const hits = []; HIDCHK = false; for (const p of pads) { const h = padHits(p, p.x, p.z, pads); if (h) hits.push([p.key || (p.o && p.o.id) || '?', h, +p.x.toFixed(1), +p.z.toFixed(1)]); } HIDCHK = true; return hits; }, fixPads, allPads, PROPBOX, OCCBOX, padOK: () => PADOK,
   get camera() { return camera; },
+  isWater, STACKREG, zones, pathFail: () => findPath.fail,
+  get info() { return { geo: renderer.info.memory.geometries, tex: renderer.info.memory.textures, prog: renderer.info.programs ? renderer.info.programs.length : 0 }; },
   measure() { renderer.info.reset(); ibPre(); if (composer) composer.render(0); else renderer.render(scene, camera); scene.autoUpdate = true; return { calls: renderer.info.render.calls, tris: renderer.info.render.triangles }; },
   path(tx, tz) { return findPath(P.group.position.x, P.group.position.z, tx, tz); }, colliders,
   EXTZ, STN, GARD, GROLES, roleEvolve, EATS, VAN, CAGES, HALL, FIN, westWalk, GATES, chapGo: c => chapGo(c), chapConfirm2, CHAPS, tide: () => TIDE, BOATS, HAMALS: () => HAMALS, DOCK, deckY: (x, z) => deckY(x, z), tractor: () => tractor, give(type, n) { n = Math.min(n, Math.max(0, P.free())); for (let i = 0; i < n; i++) P.stack.add(['orchid', 'lav', 'sun', 'rosep', 'flower'].includes(type) ? makeFlowerItem(0, type === 'flower' ? 'tulip' : type) : makeItemOf(type), type); },
@@ -4135,7 +4151,7 @@ window.__game = {
   bot(x, z) { BOT = (x || z) ? { x, z } : null; if (BOT) hideIntro(); }, hideIntro, objective() { objective(_obj); return Object.assign({}, _obj); }, get goal() { return curGoal; }, GOALS, UPG,
   S, stats, P: () => P, queue, beds, machine, inputPile, outputPile, moneyPile, get shelf() { return shelfB; }, get shelfP() { return shelfP; }, get potInput() { return potInput; }, get potOutput() { return potOutput; }, get zone2() { return zone2; }, get zone3() { return zone3; }, VAN, get vanLoad() { return vanLoad; }, get vanPile() { return vanPile; }, get cashier() { return cashier; }, get carrier() { return carrier; }, upPads, zones, customers, CFG, POS,
   helper: () => helper,
-  carry(n) { while (P.stack.length) P.stack.items.pop(); n = Math.min(n, P.capFn()); for (let i = 0; i < n; i++) P.stack.add(makeFlowerItem(0, "tulip"), "flower"); },
+  carry(n) { while (P.stack.length) { const it = P.stack.items.pop(); rm(it.mesh); } P.incoming = 0; n = Math.min(n, P.capFn()); for (let i = 0; i < n; i++) P.stack.add(makeFlowerItem(0, "tulip"), "flower"); },
   tp(x, z) { P.group.position.set(x, 0, z); P.vel.set(0, 0, 0); camInit = false; },
   sim(sec) { const n = Math.round(sec * 30); for (let i = 0; i < n; i++) update(1 / 30); },
   simDt(sec, dt) { const n = Math.round(sec / dt); for (let i = 0; i < n; i++) update(dt); },
@@ -4144,7 +4160,8 @@ window.__game = {
 };
 
 let last = performance.now(), fpsAcc = 0, fpsN = 0, fpsT = 0, fpsChecked = !HQ || qExplicit;
-function toast(t) { const e = document.getElementById('toast'); e.textContent = t; e.style.display = 'block'; setTimeout(() => { e.style.display = 'none'; }, 3500); }
+let toastTm = 0;
+function toast(t) { const e = document.getElementById('toast'); e.textContent = t; e.style.display = 'block'; clearTimeout(toastTm); toastTm = setTimeout(() => { e.style.display = 'none'; }, 3500); }
 function fpsWatch(rawDt) {
   if (fpsChecked) return; fpsT += rawDt; if (fpsT < 2) return; // warm-up
   fpsAcc += rawDt; fpsN++;

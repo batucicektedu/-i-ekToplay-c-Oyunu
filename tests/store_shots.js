@@ -8,7 +8,7 @@ const SHOTS = [ // [dosya, sayfa, kayit anahtari, fixture, tp(x,z) veya null, si
   ['shot_1_bahce', '', 'cicek_bahcesi_v1', 'tests/saves/c5-v5.json', process.env.T1 ? JSON.parse(process.env.T1) : [28, -4], 4],
   ['shot_2_bahce_buyuk', '', 'cicek_bahcesi_v1', 'tests/saves/c7-v7.json', process.env.T2 ? JSON.parse(process.env.T2) : null, 4],
   ['shot_3_sahil', 'sahil/', 'bolum2_sahil', 'tests/sahil/saves/sahil-mid-v8.json', null, 4],
-  ['shot_4_sahil_liman', 'sahil/', 'bolum2_sahil', 'tests/sahil/saves/sahil-late-v8.json', process.env.T4 ? JSON.parse(process.env.T4) : [-40, -6], 4],
+  ['shot_4_sahil_liman', 'sahil/', 'bolum2_sahil', 'tests/sahil/saves/sahil-late-v8.json', process.env.T4 ? JSON.parse(process.env.T4) : [-15, 14.6], 4],
   ['shot_5_ciftlik', 'ciftlik/', 'bolum3_ciftlik', 'tests/ciftlik/ranch2.json', process.env.T5 ? JSON.parse(process.env.T5) : [7, -40], 4]
 ];
 (async () => {
@@ -23,7 +23,7 @@ const SHOTS = [ // [dosya, sayfa, kayit anahtari, fixture, tp(x,z) veya null, si
     await page.addInitScript(([k, v]) => { window.__noAuto = true; try { localStorage.setItem('cicek_grafik', 'high'); if (!sessionStorage.getItem('__seed')) { sessionStorage.setItem('__seed', '1'); localStorage.setItem(k, v); window.__resetting = true; } } catch (e) {} }, [key, JSON.stringify(sv)]);
     await page.goto(base + pg + '?q=high'); await page.waitForFunction(() => window.__game, null, { timeout: 30000 }); await page.waitForTimeout(1500);
     await page.evaluate(() => { document.querySelectorAll('#offc .obtn, #offc button').forEach(b => b.click()); }); await page.waitForTimeout(600);
-    await page.evaluate(([tp, sec]) => { const g = window.__game; g.hideIntro && g.hideIntro(); window.__freeze = true; if (tp) g.tp(tp[0], tp[1]); g.sim(sec); g.render(); }, [tp, sec]);
+    await page.evaluate(([tp, sec]) => { const g = window.__game; g.hideIntro && g.hideIntro(); window.__freeze = true; if (/\/sahil\//.test(location.pathname) && g.carry) g.carry(8); /* tam dolu 75'lik yigin oyuncuyu kapatir: magaza karesinde az tasi */ if (tp) g.tp(tp[0], tp[1]); g.sim(sec); g.render(); }, [tp, sec]);
     await page.evaluate(() => { const c = document.getElementById('chapCard'); if (c) c.style.display = 'none'; });
     await page.waitForTimeout(400); await page.screenshot({ path: path.join(OUT, name + '.png') });
     const sz = await page.evaluate(() => [innerWidth, innerHeight]); console.log(name, sz);
