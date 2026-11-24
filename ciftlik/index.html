@@ -911,7 +911,7 @@ function ring(x, z, color, size) {
   if (!r) { const m = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, depthWrite: false })); m.rotation.x = -Math.PI / 2; m.renderOrder = 4; scene.add(m); r = { m, on: false }; rings.push(r); }
   r.on = true; r.t = 0; r.size = size || 4; r.m.material.color.copy(lc(color)); r.m.position.set(x, 0.08, z); r.m.visible = true;
 }
-function vib(ms) { try { if (SETT.vib && navigator.vibrate) navigator.vibrate(ms); } catch (e) {} }
+function vib(ms) { try { if (SETT.vib && navigator.vibrate && (!navigator.userActivation || navigator.userActivation.hasBeenActive)) navigator.vibrate(ms); } catch (e) {} }
 function updateParticles(dt) {
   let anyOn = false;
   if (pAny) for (let i = 0; i < PMAX; i++) {
@@ -2965,14 +2965,19 @@ function movePlayer(dt) {
   P.vel.x = damp(P.vel.x, tvx, 14, dt); P.vel.z = damp(P.vel.z, tvz, 14, dt);
   const gp = P.group.position, ox = gp.x, oz = gp.z; gp.x += P.vel.x * dt; gp.z += P.vel.z * dt;
   walkClamp(gp, ox, oz);
-  const r = 0.45;
-  for (const c of colliders) {
-    if (c.active && !c.active()) continue;
-    const nx = clamp(gp.x, c.x0, c.x1), nz = clamp(gp.z, c.z0, c.z1); let dx = gp.x - nx, dz = gp.z - nz; const d2 = dx * dx + dz * dz;
-    if (d2 < r * r) {
-      if (d2 > 1e-8) { const d = Math.sqrt(d2); gp.x = nx + dx / d * r; gp.z = nz + dz / d * r; }
-      else { const l = gp.x - c.x0, rr = c.x1 - gp.x, tp = gp.z - c.z0, bt = c.z1 - gp.z, m = Math.min(l, rr, tp, bt);
-        if (m === l) gp.x = c.x0 - r; else if (m === rr) gp.x = c.x1 + r; else if (m === tp) gp.z = c.z0 - r; else gp.z = c.z1 + r; }
+  // atla gezerken at gövdesi uzun: baş/sağrı için ön-orta-arka üç daire (çitin içinden geçmesin)
+  const rid = !!window.__riding, offs = rid ? [-0.95, 0, 1.2] : [0], r = rid ? 0.58 : 0.45;
+  for (let pass = 0; pass < (rid ? 2 : 1); pass++) for (const so of offs) {
+    const fx = Math.sin(P.yaw) * so, fz = Math.cos(P.yaw) * so;
+    for (const c of colliders) {
+      if (c.active && !c.active()) continue;
+      const qx = gp.x + fx, qz = gp.z + fz;
+      const nx = clamp(qx, c.x0, c.x1), nz = clamp(qz, c.z0, c.z1); let dx = qx - nx, dz = qz - nz; const d2 = dx * dx + dz * dz;
+      if (d2 < r * r) {
+        if (d2 > 1e-8) { const d = Math.sqrt(d2); gp.x = nx + dx / d * r - fx; gp.z = nz + dz / d * r - fz; }
+        else { const l = qx - c.x0, rr = c.x1 - qx, tp = qz - c.z0, bt = c.z1 - qz, m = Math.min(l, rr, tp, bt);
+          if (m === l) gp.x = c.x0 - r - fx; else if (m === rr) gp.x = c.x1 + r - fx; else if (m === tp) gp.z = c.z0 - r - fz; else gp.z = c.z1 + r - fz; }
+      }
     }
   }
   const sp = Math.hypot(P.vel.x, P.vel.z);
@@ -3440,7 +3445,7 @@ function yardBlob(cx, cz, w, d, ell, base, dots, y) {
   const m = new THREE.Mesh(G.plane, LM({ map: blobTex(1024, Math.round(1024 * d / w), ell, base, dots), transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }));
   m.rotation.x = -Math.PI / 2; m.scale.set(w, d, 1); m.position.set(cx, y || 0.02, cz); m.receiveShadow = true; m.renderOrder = 1; world.add(m); return m;
 }
-const DIRTD = ['rgba(120,80,35,.18)', 'rgba(255,225,160,.2)', 'rgba(140,110,70,.5)', 'rgba(235,215,175,.6)'];
+const DIRTD = ['rgba(120,80,35,.07)', 'rgba(255,225,160,.07)', 'rgba(140,110,70,.5)', 'rgba(235,215,175,.6)'];
 /* ahşap çit yolu: noktalar [[x,z],...]; o: {closed, white, gaps:[[x,z,r]], collide, h} */
 function fencePath(pts, o) {
   o = o || {}; const wm = mat(o.white ? 0xf6f1e4 : 0xb07a40), dm = mat(o.white ? 0xe9e2d0 : 0x8a5a2a), h = o.h || 1.1, step = o.step || 1.9, list = pts.slice(); if (o.closed) list.push(list[0]);
@@ -3730,6 +3735,7 @@ function updateHorse(h, dt, t) {
     if (h.dm > 0.4) { const rc = RC.find(r => r.h === h); if (rc) finishRide(rc, h); }
     return;
   }
+  if (h.state === 'showWait') return; // updateShow yürütür
   if (h.state === 'show') { animHorse(h, dt, t, 1, 2, 'stand'); return; }
   animHorse(h, dt, t, 0, 0, 'stand');
 }
@@ -3789,22 +3795,31 @@ function updateShow(dt, t) {
   else if (SHOW.state === 'ready') { if (showZone.inside) { const hs = RH.filter(rideReady).sort((a, b) => b.love - a.love).slice(0, 3); if (hs.length) startShow(hs); } }
   else if (SHOW.state === 'run') {
     SHOW.t += dt; let alive = 0; const F = SHOWF(), f = RANCH.showF;
-    for (const e of SHOW.run) { const h = e.h; if (e.done) continue; alive++; if (SHOW.t < e.delay) continue;
-      if (!e.started) { e.started = true; h.state = 'show'; h.wp = null; h.love = Math.max(0, h.love); seatRider(h, e.c); h.x = RANCH.showZ[0] + 1.5; h.z = f.cz; h.group.position.set(h.x, 0, h.z); h.yaw = Math.PI / 2; e.i = 0; }
+    SHOW.run.forEach((e, ei) => { e.ei = ei; });
+    for (const e of SHOW.run) { const h = e.h; if (e.done) continue; alive++;
+      if (!e.started) { // atlar ahırdan parkura yürüyerek gelir (ışınlanma yok)
+        if (!e.arrived) { const w = h.wp && h.wp[0]; if (!w) { e.arrived = true; e.t0 = SHOW.t; continue; } const d = stepTo(h, w[0], w[1], 4.4, dt); animHorse(h, dt, SHOW.t, 1, 1, 'stand'); if (d < 0.35) { h.wp.shift(); if (!h.wp.length) { e.arrived = true; e.t0 = SHOW.t; } } continue; }
+        const aw = [RANCH.showZ[0] + 1.6, f.cz + (e.ei - 1) * 1.7]; const d0 = stepTo(h, aw[0], aw[1], 2.4, dt); animHorse(h, dt, SHOW.t, d0 > 0.2 ? 1 : 0, 0, 'stand'); if (d0 <= 0.2) h.yaw += angDiff(h.yaw, Math.PI / 2) * (1 - Math.exp(-5 * dt)), h.group.rotation.y = h.yaw;
+        if (SHOW.t - e.t0 < e.delay || d0 > 0.3) continue;
+        e.started = true; h.state = 'show'; seatRider(h, e.c); sparkles(h.x, 2, h.z, 6, 0xfff2a0, 0.4); e.i = 0; }
       if (e.out) { const d = stepTo(h, RANCH.showZ[0] - 0.5, f.cz, 4, dt); if (d < 0.5) { endShowHorse(e); } continue; }
       const tgt = F[e.i]; if (!tgt) { e.out = true; continue; }
-      // engel öncesi yaklaşma noktası
-      const d = stepTo(h, tgt[0], tgt[1], 6.2, dt);
-      if (d < 1.6 && !e.jt) e.jt = 0.001;
-      if (e.jt) { e.jt += dt / 0.8; const k = Math.min(1, e.jt); h.jump = Math.sin(k * Math.PI) * 1.1; h.jumpK = k; if (k >= 1) { e.jt = 0; h.jump = 0; e.i++; sparkles(h.x, 1, h.z, 5, 0xfff2a0, 0.4); sfx('pick'); } }
-      if (d < 0.2 && !e.jt) e.i++;
-      if (h.rider) h.rider.group.position.y = 2.1 + (h.jump || 0) * 0.15;
+      if (e.jt) { // havada: yön ve hız korunur (olduğu yerde asılı kalmaz)
+        stepTo(h, h.x + e.jd[0] * 6, h.z + e.jd[1] * 6, 6.2, dt); h.yaw = e.jy; h.group.rotation.y = h.yaw;
+        e.jt += dt / 0.8; const k = Math.min(1, e.jt); h.jump = Math.sin(k * Math.PI) * 1.1; h.jumpK = k;
+        if (k >= 1) { e.jt = 0; h.jump = 0; e.i++; sparkles(h.x, 1, h.z, 5, 0xfff2a0, 0.4); sfx('pick'); }
+      } else {
+        const d = stepTo(h, tgt[0], tgt[1], 6.2, dt);
+        if (tgt[2] === 1 && d < 2.5) { e.jt = 0.001; e.jd = [(tgt[0] - h.x) / Math.max(0.01, d), (tgt[1] - h.z) / Math.max(0.01, d)]; e.jy = Math.atan2(e.jd[0], e.jd[1]); }
+        else if (tgt[2] !== 1 && d < 0.9) e.i++;
+      }
+      if (h.rider) h.rider.group.position.y = 2.1 + (h.jump || 0) * 0.1;
     }
     if (!alive) finishShow();
   }
 }
 function startShow(hs) {
-  SHOW.state = 'run'; SHOW.t = 0; SHOW.run = hs.map((h, i) => ({ h, c: newRider(), delay: i * 3.2, started: false, i: 0, jt: 0, done: false, out: false })); SHOW.run.forEach(e => { scene.remove(e.c.group); e.h.state = 'showWait'; });
+  SHOW.state = 'run'; SHOW.t = 0; SHOW.run = hs.map((h, i) => ({ h, c: newRider(), delay: 0.6 + i * 2.6, started: false, arrived: false, i: 0, jt: 0, done: false, out: false })); SHOW.run.forEach(e => { scene.remove(e.c.group); e.h.state = 'showWait'; e.h.bub && (e.h.bub.visible = false); e.h.walkK = 0; e.h.wp = [[-4, -42], [2, -45], [6, -44], [RANCH.showZ[0] - 3, -43]]; });
   panReq('show1', RANCH.showF.cx, RANCH.showF.cz, 'İLK GÖSTERİ!'); praise('GÖSTERİ BAŞLADI!', true); sfx('up', true);
 }
 function endShowHorse(e) { const h = e.h; e.done = true; h.jump = 0; h.root.position.y = 0; unseatRider(h, e.c); rm(e.c.group); h.state = 'back'; h.rest = 6; h.wp = [[RANCH.showZ[0] - 3, -43], [6, -44], [-4, -42], [-9, -42]]; h.love = Math.max(0, h.love - 8); }
@@ -3945,16 +3960,16 @@ function updateFarm(dt, t) {
 }
 function finaleShow(gp) {
   praise('ÇİFTLİK TAMAMLANDI!', true); flash(); sfx('up', true); vib(60);
-  try { panReq('fin', RANCH.showF.cx, RANCH.showF.cz, 'ŞENLİK BAŞLASIN!'); } catch (e) {}
+  try { panReq('finpan', RANCH.showF.cx, RANCH.showF.cz, 'ŞENLİK BAŞLASIN!'); } catch (e) {}
   for (let k = 0; k < 16; k++) later(0.3 + k * 0.5, () => { const q = P.group.position; fireworks(q.x + rand(-9, 9), q.z + rand(-7, 7)); if (k % 4 === 0) { confetti(q.x + rand(-4, 4), 5, q.z + rand(-3, 3), 60); sfx('happy', true); } });
   later(4.5, () => finaleCard());
 }
 function finaleCard() {
   const n = (v) => fmt(Math.max(0, Math.floor(+v || 0)));
   chapShow('<div class="big">Tebrikler!</div><div class="ct">Çiftlik Şenliği başladı</div><div class="cs">Ayşe Teyze: "Üç bahçe, bir aile... Bu çiftliği sen büyüttün evladım."</div>' +
-    '<div class="cs">' + n(stats.sold) + ' müşteri, ' + n(stats.rides) + ' biniş, ' + n(stats.shows) + ' gösteri.</div>' +
+    ((stats.sold || stats.rides || stats.shows) ? '<div class="cs">' + [stats.sold ? n(stats.sold) + ' müşteri' : '', stats.rides ? n(stats.rides) + ' biniş' : '', stats.shows ? n(stats.shows) + ' gösteri' : ''].filter(Boolean).join(', ') + ' ağırladın.</div>' : '') +
     '<div class="cs"><b>Oynadığın için çok teşekkürler!</b><br>Yeni bölümler çok yakında.</div>',
-    [{ t: 'Oynamaya devam et' }, { t: 'Bölümler', cls: 'no', fn: () => chapMenu() }]);
+    [{ t: 'Devam' }, { t: 'Bölümler', cls: 'no', fn: () => chapMenu() }]);
 }
 function updateWorkshop(w, dt, t) {
   if (!w.on) return; const o = w;
@@ -4165,8 +4180,11 @@ function makeHorse(coatKey, o) {
 const GAIT = [{ f: 0.95, A: 0.42, K: 0.62, bob: 0.035 }, { f: 1.7, A: 0.55, K: 0.85, bob: 0.07 }, { f: 2.1, A: 0.78, K: 1.05, bob: 0.1 }];
 const _lag = [[0, 0.25, 0.5, 0.75], [0, 0.5, 0.5, 0], [0, 0.3, 0.3, 0.62]]; // [hl, fl, hr, fr] faz kayması: yürüyüş 4-vuruş, tırıs çapraz, dörtnala 3-vuruş
 function animHorse(h, dt, t, mv, gait, mode) {
-  h.moving = damp(h.moving, mv, 8, dt); const G_ = GAIT[gait | 0], P_ = h.parts, L = h.legs, m = h.moving;
-  h.phase += dt * G_.f * TAU * (0.25 + 0.75 * m) * (m > 0.03 ? 1 : 0);
+  // gerçek yer hızı: bacak salınımı zeminle eşleşir (kayma yok): f = v / (4 L sinA)
+  const gp_ = h.group.position, rawV = h._px === undefined || dt <= 0 ? 0 : Math.min(9, Math.hypot(gp_.x - h._px, gp_.z - h._pz) / dt); h._px = gp_.x; h._pz = gp_.z; h.sp = damp(h.sp || 0, rawV, 12, dt);
+  h.moving = damp(h.moving, mv * Math.min(1, h.sp / 0.6), 8, dt); const G_ = GAIT[gait | 0], P_ = h.parts, L = h.legs, m = h.moving;
+  const fEff = clamp(h.sp / (4 * 1.9 * (h.scale || 1) * Math.sin(G_.A)), 0.3, 3);
+  h.phase += dt * fEff * TAU * (m > 0.03 ? 1 : 0);
   const ph = h.phase / TAU, lag = _lag[gait | 0], keys = ['hl', 'fl', 'hr', 'fr'];
   for (let i = 0; i < 4; i++) {
     const lg = L[keys[i]], f = (ph + lag[i]) % 1, a = TAU * f; let hip = -Math.cos(a) * G_.A * m, kn = Math.max(0, -Math.sin(a)) * G_.K * m;
@@ -4422,6 +4440,7 @@ const ADMIN = (function () {
   return { open, tick, showPin, showPanel, close, setInf, get inf() { return inf; }, get isOpen() { return el.style.display === 'flex'; } };
 })();
 window.__game = {
+  get foal() { return foal; }, get PH() { return PH; },
   admin: ADMIN,
   padCheck() { const pads = allPads(); const hits = []; for (const p of pads) { const h = padHits(p, p.x, p.z, pads); if (h) hits.push([p.key || (p.o && p.o.id) || '?', h, +p.x.toFixed(1), +p.z.toFixed(1)]); } return hits; }, fixPads, allPads, PROPBOX, PROPALL, PANQ, nudge, padMeshHit, padViewBlock, walkOK: (x, z) => inRects(walkRects(), x, z), padOK: () => PADOK,
   get camera() { return camera; },
