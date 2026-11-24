@@ -220,6 +220,7 @@ const rand = (a, b) => a + Math.random() * (b - a);
 function angDiff(a, b) { let d = (b - a) % TAU; if (d > Math.PI) d -= TAU; if (d < -Math.PI) d += TAU; return d; }
 const easeOutBack = t => { const c = 1.70158; t = clamp(t, 0, 1); return 1 + (c + 1) * Math.pow(t - 1, 3) + c * Math.pow(t - 1, 2); };
 function rm(o) { if (o && o.parent) o.parent.remove(o); }
+function rmDispose(o) { if (!o) return; o.traverse(m => { if (m.userData && m.userData.merged && m.geometry) m.geometry.dispose(); }); rm(o); } // karakterin birleştirilmiş geometrileri sızmasın
 
 let fountainWater = null, clouds = [], butterflies = [];
 let LOADED_X = null, carpet1 = null, carpet2 = null;
@@ -2479,7 +2480,7 @@ function updateCustomers(dt, t) {
   }
 }
 function removeCustomer(i) {
-  const c = customers[i]; customers.splice(i, 1); rm(c.group);
+  const c = customers[i]; customers.splice(i, 1); rmDispose(c.group);
   if (c.bubble) { c.bubble.material.map.dispose(); c.bubble.material.dispose(); }
 }
 
@@ -3648,7 +3649,7 @@ function updateEatery(E, dt, t) {
         if (c.wait > 50 && c.got === 0 && c.pending === 0) { c.state = 'leave'; if (c.bubble) c.bubble.visible = false; c.path = o.leave.slice(); }
       }
     } else if (c.state === 'leave') {
-      const wp = c.path[0]; tx = wp[0]; tz = wp[1]; spd = CFG.leaveSpeed; if (Math.hypot(tx - cp.x, tz - cp.z) < 0.5) { c.path.shift(); if (!c.path.length) { const i1 = E.cs.indexOf(c); if (i1 >= 0) E.cs.splice(i1, 1); rm(c.group); if (c.bubble) { c.bubble.material.map.dispose(); c.bubble.material.dispose(); } continue; } }
+      const wp = c.path[0]; tx = wp[0]; tz = wp[1]; spd = CFG.leaveSpeed; if (Math.hypot(tx - cp.x, tz - cp.z) < 0.5) { c.path.shift(); if (!c.path.length) { const i1 = E.cs.indexOf(c); if (i1 >= 0) E.cs.splice(i1, 1); rmDispose(c.group); if (c.bubble) { c.bubble.material.map.dispose(); c.bubble.material.dispose(); } continue; } }
     }
     let mv = 0; if (tx !== null) { const dx = tx - cp.x, dz = tz - cp.z, d = Math.hypot(dx, dz); if (d > 0.02) { const st = Math.min(d, spd * dt); cp.x += dx / d * st; cp.z += dz / d * st; c.vel.set(dx / d * spd, 0, dz / d * spd); mv = 1; faceChar(c, dx, dz, dt); } } else c.vel.set(0, 0, 0);
     animChar(c, dt, mv, t);
@@ -3839,7 +3840,7 @@ function updateHall(dt, t) {
   for (let i = H.buyers.length - 1; i >= 0; i--) {
     const b = H.buyers[i], bp = b.group.position; let tx = null, tz = null, spd = 5.2;
     if (b.state === 'in') { tx = b.spot[0]; tz = b.spot[1]; if (Math.hypot(tx - bp.x, tz - bp.z) < 0.25) { b.atSpot = true; tx = null; faceChar(b, 0, 1, dt); } }
-    else if (b.state === 'leave') { const wp = b.path[0]; tx = wp[0]; tz = wp[1]; if (Math.hypot(tx - bp.x, tz - bp.z) < 0.5) { b.path.shift(); if (!b.path.length) { rm(b.group); H.buyers.splice(i, 1); continue; } } }
+    else if (b.state === 'leave') { const wp = b.path[0]; tx = wp[0]; tz = wp[1]; if (Math.hypot(tx - bp.x, tz - bp.z) < 0.5) { b.path.shift(); if (!b.path.length) { rmDispose(b.group); H.buyers.splice(i, 1); continue; } } }
     let mv = 0; if (tx !== null) { const dx = tx - bp.x, dz = tz - bp.z, d = Math.hypot(dx, dz); if (d > 0.02) { const st = Math.min(d, spd * dt); bp.x += dx / d * st; bp.z += dz / d * st; mv = 1; faceChar(b, dx, dz, dt); } }
     b.vel.set(0, 0, 0); animChar(b, dt, mv, t); if (b.state === 'in' && b.atSpot && H.state !== 'bid') b.armR.rotation.x = 0;
   }
