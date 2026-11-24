@@ -328,6 +328,7 @@ function sfx(name, force) {
     case 'cash': blip(880, 0.09, 'square', 0.04); blip(1320, 0.14, 'square', 0.04, 1, 0.07); break;
     case 'coin': blip(1000 + Math.random() * 200, 0.08, 'triangle', 0.08, 1.4); break;
     case 'up': [523, 659, 784, 1047, 1319, 1568].forEach((f, i) => blip(f, 0.2, 'triangle', 0.1, 1, i * 0.07)); break;
+    case 'moo': blip(170, 0.55, 'sawtooth', 0.05, 0.72); blip(176, 0.55, 'square', 0.025, 0.74); break;
     case 'happy': blip(660, 0.1, 'sine', 0.1, 1.5); blip(990, 0.15, 'sine', 0.1, 1, 0.09); break;
   }
 }
@@ -1036,8 +1037,8 @@ function cowStem() {
   P_.push(part(G.box, 0xe8283a, 0.24, 0.31, 0, 0.012, 0.03, 0.12));
   return P_;
 }
-function bucketBloom(c) { // süt bidonu (cow tarafında)
-  return [part(G.cyl, 0xe6edf4, 0.02, 0.07, 0.26, 0.075, 0.14, 0.075), part(G.cyl, 0xffffff, 0.02, 0.145, 0.26, 0.06, 0.01, 0.06), part(G.cyl, 0xe8283a, 0.02, 0.1, 0.26, 0.078, 0.03, 0.078), part(G.cyl, 0xaab4c0, 0.02, 0.16, 0.26, 0.085, 0.012, 0.085)];
+function bucketBloom(c) { // süt şişesi (ineğin yanında)
+  return [part(G.cyl, 0xf4f8ff, 0, 0.1, 0, 0.1, 0.2, 0.1), part(G.cyl, 0x7ec8ff, 0, 0.11, 0, 0.104, 0.07, 0.104), part(G.cyl, 0xf4f8ff, 0, 0.245, 0, 0.047, 0.09, 0.047), part(G.cyl, 0xe8283a, 0, 0.31, 0, 0.056, 0.04, 0.056)];
 }
 function sheepStem(c) { // kırkılmış koyun (gövde)
   const P_ = [], SK = 0xf2c7b0, DK = 0x4a4a54;
@@ -1610,7 +1611,7 @@ function writeFlower(f) {
   if (!f.sm) return;
   if (!f.vis) { _fM.makeScale(0, 0, 0); f.sm.setMatrixAt(f.si, _fM); f.bm.setMatrixAt(f.bi, _fM); return; }
   const kp = KEEP[f.type]; _fe.set(f.rx, f.ry || 0, f.rz, 'YXZ'); _fq.setFromEuler(_fe); const k = (kp ? 1 : f.gs) * 1.5; _fB.compose(_fp.set(f.x, f.y, f.z), _fq, _fs.set(k, k, k));
-  if (kp) { _fM.copy(_fB); f.sm.setMatrixAt(f.si, _fM); const bk = f.bs * Math.min(1, f.gs); _fM.copy(_fB).multiply(_fS.makeScale(bk, bk, bk)); f.bm.setMatrixAt(f.bi, _fM); return; }
+  if (kp) { if (f.type === 'orchid') _fM.makeScale(0, 0, 0); else _fM.copy(_fB); f.sm.setMatrixAt(f.si, _fM); const bk = f.bs * Math.min(1, f.gs); _fM.copy(_fB).multiply(_fS.makeScale(bk, bk, bk)); f.bm.setMatrixAt(f.bi, _fM); return; }
   _fM.copy(_fB).multiply(_fS.makeScale(1, f.ss, 1)); f.sm.setMatrixAt(f.si, _fM);
   const bk = f.bs * 1.75; _fM.copy(_fB).multiply(_fT.makeTranslation(0, STEM_H * f.ss, 0)).multiply(_fS.makeScale(bk, bk, bk)); f.bm.setMatrixAt(f.bi, _fM);
 }
@@ -1862,6 +1863,7 @@ function buildSera() {
     const ci = (r * 2 + c) % 4, fx = 28.5 + (c - 3) * 0.95, fz = -3 + (r - 2) * 0.98;
     bed.flowers.push(newFlower(bed, ci, 'orchid', fx, 0.3, fz, 0, 8));
   }
+  buildCows(bed);
   beds.push(bed); zone2.bed = bed;
   const sb = makeBoard('İNEKLER', 2.8, 0.9, 'chalk'); sb.rotation.x = -0.2; ad(gh, sb, 28.5, 5.6, -6.6);
   // ---- pottery workshop
@@ -1906,9 +1908,53 @@ function buildSeraZones() {
   potOutZone = new Zone({ x: 42.6, z: -0.4, w: 2.8, d: 2.4, color: '#ff8a1f', draw: drawZoneIcon(iconPot) });
   potZone.group.visible = potOutZone.group.visible = false;
 }
+/* ---- İNEK AHIRI: düşük poligonlu inekler (gövde/baş/kuyruk = 3 InstancedMesh, ineklerin tümü 3 çizim) ---- */
+const BARN = { cows: [], n: -1, body: null, head: null, tail: null, nextMoo: 12, bed: null };
+const COW_ORDER = [0, 5, 2, 7, 1, 4, 3, 6], COW_PIVH = [0.72, 1.18, 0], COW_PIVT = [-0.82, 1.25, 0];
+const cowCount = () => clamp(2 + (S.lv.cap || 0), 3, 7);
+function cowGeo() {
+  const W = 0xfffaf0, K = 0x2a2a30, PK = 0xffb4b4, HN = 0xf3e6c0, B = [], H = [], T_ = [];
+  B.push(part(G.sph6, W, 0.38, 0.98, 0, 0.5, 0.46, 0.4), part(G.sph6, W, -0.35, 0.98, 0, 0.5, 0.45, 0.4), part(G.sph6, W, 0, 0.92, 0, 0.6, 0.42, 0.4));
+  B.push(part(G.sph6, K, 0.15, 1.33, 0.05, 0.32, 0.12, 0.26), part(G.sph6, K, -0.35, 1.05, 0.36, 0.28, 0.24, 0.1), part(G.sph6, K, 0.3, 0.95, -0.36, 0.3, 0.26, 0.1), part(G.sph6, K, 0.35, 1.08, 0.37, 0.2, 0.16, 0.09), part(G.sph6, K, -0.42, 1.1, -0.37, 0.25, 0.2, 0.09), part(G.sph6, PK, -0.3, 0.55, 0, 0.2, 0.14, 0.18));
+  for (const sx of [0.5, -0.45]) for (const sz of [-0.24, 0.24]) B.push(part(G.cyl, W, sx, 0.3, sz, 0.08, 0.58, 0.08), part(G.cyl, K, sx, 0.04, sz, 0.09, 0.08, 0.09));
+  H.push(part(G.sph6, W, 0.12, -0.08, 0, 0.3, 0.26, 0.26), part(G.sph6, W, 0.45, -0.2, 0, 0.3, 0.24, 0.22), part(G.sph6, PK, 0.7, -0.27, 0, 0.14, 0.15, 0.19), part(G.sph6, K, 0.4, -0.08, 0.12, 0.14, 0.1, 0.1));
+  for (const sz of [-1, 1]) H.push(part(G.sph6, K, 0.82, -0.25, sz * 0.07, 0.03, 0.03, 0.03), part(G.sph6, K, 0.56, -0.1, sz * 0.18, 0.04, 0.04, 0.03), part(G.sph6, W, 0.3, 0.0, sz * 0.28, 0.13, 0.05, 0.1, 0, 0, 0.3), part(G.sph6, PK, 0.3, 0.0, sz * 0.31, 0.08, 0.03, 0.06, 0, 0, 0.3), part(G.cone, HN, 0.33, 0.1, sz * 0.12, 0.04, 0.2, 0.04, sz * 0.5, 0, 0));
+  T_.push(part(G.cyl, W, 0, -0.3, 0, 0.025, 0.6, 0.025), part(G.sph6, K, 0, -0.62, 0, 0.07, 0.14, 0.07));
+  return [mergeParts(B), mergeParts(H), mergeParts(T_)];
+}
+function buildCows(bed) {
+  const [gb, gh, gt] = cowGeo(), mkI = g => { const m = new THREE.InstancedMesh(g, vcMat, 7); m.frustumCulled = false; m.castShadow = true; m.userData.dyn = true; m.count = 0; m.visible = false; world.add(m); return m; };
+  BARN.body = mkI(gb); BARN.head = mkI(gh); BARN.tail = mkI(gt); BARN.bed = bed;
+  for (let i = 0; i < 7; i++) {
+    const st = COW_ORDER[i], c = st % 4, r = Math.floor(st / 4), cx = 28.5 + (c - 1.5) * 1.65, cz = -3 + (r ? 1.3 : -1.4);
+    BARN.cows.push({ x: cx, z: cz, yaw: (i % 2 ? Math.PI : 0) + rand(-0.25, 0.25), sc: 0.82 + rand(0, 0.12), ph: rand(0, 6), ang: 0, tgt: 0, graze: false, next: rand(1, 6), moo: 0 });
+  }
+  bed.flowers.forEach((f, j) => { const k = j % 5, cw = BARN.cows[Math.floor(j / 5)]; f.x = cw.x + (k - 2) * 0.36; f.z = cw.z + 0.85 + (k % 2) * 0.2; f.y = 0.3; });
+}
+function syncCows(instant) {
+  const bed = BARN.bed; if (!bed) return; const n = cowCount(); if (n === BARN.n) return; BARN.n = n;
+  bed.flowers.forEach((f, j) => { const on = j < n * 5; if (on && (!f.vis || f.t < 0)) { f.vis = !bed.locked; f.t = instant ? rand(0, f.gt) : 0; } else if (!on) { f.vis = false; f.t = -1e9; } writeFlower(f); });
+  BARN.body.count = BARN.head.count = BARN.tail.count = n; BARN.body.visible = BARN.head.visible = BARN.tail.visible = true;
+}
+const _kP = new THREE.Vector3(), _kQ = new THREE.Quaternion(), _kE = new THREE.Euler(), _kS = new THREE.Vector3(), _kM = new THREE.Matrix4(), _kH = new THREE.Matrix4(), _kR = new THREE.Matrix4();
+function updateCows(dt, t) {
+  if (!BARN.body || zone2.locked) return; syncCows(false);
+  const gp = P.group.position; if (BARN.drawn && (Math.abs(gp.x - 28.5) > 26 || Math.abs(gp.z + 3) > 22)) return; BARN.drawn = true; // uzaktayken animasyon yok
+  if (t > BARN.nextMoo) { BARN.nextMoo = t + rand(14, 30); const c = BARN.cows[Math.floor(Math.random() * BARN.n)]; c.moo = 1.4; c.graze = false; c.next = t + 2; sfx('moo'); }
+  for (let i = 0; i < BARN.n; i++) {
+    const c = BARN.cows[i];
+    if (c.moo > 0) { c.moo -= dt; c.tgt = 0.5; } else { if (t > c.next) { c.graze = !c.graze; c.next = t + (c.graze ? rand(3, 5) : rand(4, 9)); } c.tgt = c.graze ? -0.95 + Math.sin(t * 6 + c.ph) * 0.05 : 0.08 + Math.sin(t * 0.9 + c.ph) * 0.06; }
+    c.ang += (c.tgt - c.ang) * Math.min(1, dt * 3);
+    _kE.set(0, c.yaw, 0); _kQ.setFromEuler(_kE); const br = 1 + Math.sin(t * 1.6 + c.ph) * 0.012 + (c.moo > 0 ? 0.03 : 0);
+    _kM.compose(_kP.set(c.x, 0.3, c.z), _kQ, _kS.set(c.sc, c.sc * br, c.sc)); BARN.body.setMatrixAt(i, _kM);
+    _kH.copy(_kM).multiply(_kR.makeTranslation(COW_PIVH[0], COW_PIVH[1], 0)).multiply(_kR.makeRotationZ(c.ang)); BARN.head.setMatrixAt(i, _kH);
+    _kH.copy(_kM).multiply(_kR.makeTranslation(COW_PIVT[0], COW_PIVT[1], 0)).multiply(_kR.makeRotationX(Math.sin(t * 2.4 + c.ph) * 0.45)).multiply(_kR.makeRotationZ(Math.sin(t * 1.3 + c.ph) * 0.15)); BARN.tail.setMatrixAt(i, _kH);
+  }
+  BARN.body.instanceMatrix.needsUpdate = BARN.head.instanceMatrix.needsUpdate = BARN.tail.instanceMatrix.needsUpdate = true;
+}
 function unlockSera(instant) {
   zone2.locked = false; const bed = zone2.bed; bed.locked = false;
-  bed.flowers.forEach(f => { f.vis = true; f.t = instant ? rand(0, f.gt) : 0; });
+  BARN.n = -1; syncCows(instant);
   potZone.group.visible = potOutZone.group.visible = true;
   if (instant) { zone2.lockedGroup.visible = false; zone2.groups.forEach(g => { g[0].visible = true; g[0].scale.setScalar(1); }); return; }
   zone2.popT = 0; zone2.popFlags = []; zone2.lockedGroup.dropping = 0;
@@ -1916,6 +1962,7 @@ function unlockSera(instant) {
 }
 function updateSera(dt) {
   if (!zone2) return;
+  updateCows(dt, T);
   const lg = zone2.lockedGroup;
   if (lg.dropping !== undefined) { lg.dropping += dt; const k = Math.min(1, lg.dropping / 1.0); lg.position.y = -3.6 * k * k; if (k >= 1) { lg.visible = false; lg.position.y = 0; lg.dropping = undefined; for (let i = 0; i < 10; i++) dust(rand(22, 44), 0.3, rand(-11, 11), 1, 0.8); } }
   if (zone2.popT !== undefined) {
