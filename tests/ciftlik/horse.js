@@ -38,5 +38,10 @@ let sh=0;for(let k=0;k<60&&sh<6;k++){const info=await page.evaluate(()=>{const g
 const ap=await page.evaluate(()=>__game.RANCH.ata);
 await page.evaluate(([x,z])=>{__game.tp(x-4,z);__game.sim(0.3);__game.bot(1,0.0)},ap);
 for(let i=0;i<6;i++){await page.evaluate(()=>{const g=__game;g.bot(1,0.35);g.sim(0.6);const p=g.P().group.position;g.camAt(p.x,p.z);g.bot(1,0.35)});await shot('ata_'+i)}
+// süt ahırı: inekler (otlayan baş, süt şişeleri)
+await page.evaluate(()=>{__game.P().group.visible=true;if(window.__riding)__game.toggleRide(false)});
+await cam(27,-2,0.28);await simAt(27,-2,6);await shot('cows');
+await simAt(27,-2,5);await shot('cows_graze');
+await cam(28.5,-3,0.45);await simAt(28.5,-3,3);await shot('cows_wide');
 console.log('riding',await page.evaluate(()=>window.__riding));
 console.log(errs,await page.evaluate(()=>__game.RH.map(h=>h.state)));await b.close()})();
