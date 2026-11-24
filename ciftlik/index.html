@@ -68,7 +68,7 @@
   #fsBtn svg{width:24px;height:24px;display:block;margin:auto}
   #reset svg{width:24px;height:24px;display:block;margin:auto}
   #menu{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(10,20,40,.55);z-index:20;pointer-events:auto}
-  .mbox{background:linear-gradient(#fff,#e9f1ff);border-radius:22px;padding:18px 20px;width:min(300px,86vw);box-shadow:0 10px 0 rgba(0,0,0,.18),0 20px 40px rgba(0,0,0,.35);display:flex;flex-direction:column;gap:10px}
+  .mbox{max-height:calc(100% - 24px);overflow-y:auto;-webkit-overflow-scrolling:touch;background:linear-gradient(#fff,#e9f1ff);border-radius:22px;padding:18px 20px;width:min(300px,86vw);box-shadow:0 10px 0 rgba(0,0,0,.18),0 20px 40px rgba(0,0,0,.35);display:flex;flex-direction:column;gap:10px}
   .mt{font-weight:900;font-size:22px;color:#16324a;text-align:center}
   .mbox button{font:900 17px/1 inherit;font-family:inherit;border:0;border-radius:14px;padding:14px;color:#fff;background:linear-gradient(#4aa8ff,#2f7bff);box-shadow:0 4px 0 #1d4fb0}
   #mReset{background:linear-gradient(#ff6b6b,#e0243c);box-shadow:0 4px 0 #9c1426}
@@ -143,6 +143,7 @@
   <div id="joyBase"><div id="joyKnob"></div></div>
 </div>
 <div id="msg">Three.js yüklenemedi. İnternet bağlantınızı kontrol edip sayfayı yenileyin.</div>
+<script src="../safety.js"></script>
 <script src="../vendor/three.min.js"></script>
 <script src="../vendor/examples/js/shaders/CopyShader.js" onerror="void 0"></script>
 <script src="../vendor/examples/js/shaders/LuminosityHighPassShader.js" onerror="void 0"></script>
@@ -291,14 +292,21 @@ function writeSave() {
 }
 
 let AC = null; const sfxLast = {};
+/* Ayarlar: ayrı anahtar (kayıt dosyasına dokunmaz) */
+const SET_KEY = 'ciftlik_ayar';
+const SETT = { snd: true, vib: true };
+try { const o = JSON.parse(localStorage.getItem(SET_KEY) || '{}'); if (o && typeof o === 'object') { if (o.snd === false || o.snd === 0) SETT.snd = false; if (o.vib === false || o.vib === 0) SETT.vib = false; } } catch (e) {}
+function saveSett() { try { localStorage.setItem(SET_KEY, JSON.stringify({ snd: SETT.snd ? 1 : 0, vib: SETT.vib ? 1 : 0 })); } catch (e) {} }
 function initAudio() {
   try {
     if (!AC) { const C = window.AudioContext || window.webkitAudioContext; if (C) AC = new C(); }
     if (AC && AC.state === 'suspended') AC.resume();
   } catch (e) { AC = null; }
 }
+let SFXV = 1, SFXA = 0, SFXAMB = -99, SFXPL = 0;
 function blip(f, dur, type, vol, slide, delay) {
-  if (!AC) return;
+  if (!AC || !SETT.snd) return;
+  vol = (vol || 0.1) * SFXV;
   try {
     const t = AC.currentTime + (delay || 0), o = AC.createOscillator(), g = AC.createGain();
     o.type = type || 'sine'; o.frequency.setValueAtTime(f, t);
@@ -307,9 +315,12 @@ function blip(f, dur, type, vol, slide, delay) {
     o.connect(g); g.connect(AC.destination); o.start(t); o.stop(t + dur + 0.03);
   } catch (e) {}
 }
-function sfx(name) {
+function sfx(name, force) {
+  if (!SETT.snd) return;
   const now = performance.now();
   if (sfxLast[name] && now - sfxLast[name] < 45) return; sfxLast[name] = now;
+  // oyuncu bir şey yapmıyorken (işçi/müşteri/hayvan sesleri) ortak ses bütçesi: en çok 3 sn'de bir, kısık. Oyuncu eylemi (1 sn) ve force (pad satın alma) hep çalar.
+  SFXV = 1; if (!force && T - SFXA > 1.0) { if (T - SFXAMB < 3) return; SFXAMB = T; SFXV = 0.45; }
   switch (name) {
     case 'pick': blip(520 + Math.random() * 160, 0.09, 'sine', 0.11, 1.7); break;
     case 'drop': blip(330 + Math.random() * 60, 0.07, 'triangle', 0.1, 1.4); break;
@@ -900,7 +911,7 @@ function ring(x, z, color, size) {
   if (!r) { const m = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, depthWrite: false })); m.rotation.x = -Math.PI / 2; m.renderOrder = 4; scene.add(m); r = { m, on: false }; rings.push(r); }
   r.on = true; r.t = 0; r.size = size || 4; r.m.material.color.copy(lc(color)); r.m.position.set(x, 0.08, z); r.m.visible = true;
 }
-function vib(ms) { try { if (navigator.vibrate) navigator.vibrate(ms); } catch (e) {} }
+function vib(ms) { try { if (SETT.vib && navigator.vibrate) navigator.vibrate(ms); } catch (e) {} }
 function updateParticles(dt) {
   let anyOn = false;
   if (pAny) for (let i = 0; i < PMAX; i++) {
@@ -2068,7 +2079,7 @@ function updateVan(dt, t) {
     VAN.t += dt;
     if (VAN.t > VAN.k * 0.12 + 0.5 && VAN.k < vanCap()) { const it = vanLoad.takeLast(); VAN.k++; if (it) fly(it.mesh, out => { out.set(VAN.x - 0.2, 2.6, VAN.z); return 0; }, 0.4, 1.8, () => { rm(it.mesh); sfx('pick'); dust(VAN.x + 2.0, 1.5, VAN.z, 1, 0.3); }); }
     VAN.doors.forEach((d, i) => { d.rotation.y = damp(d.rotation.y, (i ? 1 : -1) * 0.1, 8, dt); });
-    if (VAN.k >= vanCap() && VAN.t > vanCap() * 0.12 + 1.3) { VAN.state = 'depart'; VAN.trip = 0; VAN.path = [[10, 24], [10, 70]]; VAN.seg = 0; VAN.speed = 0; sfx('up'); vib(15); }
+    if (VAN.k >= vanCap() && VAN.t > vanCap() * 0.12 + 1.3) { VAN.state = 'depart'; VAN.trip = 0; VAN.path = [[10, 24], [10, 70]]; VAN.seg = 0; VAN.speed = 0; sfx('up', true); vib(15); }
   } else if (VAN.state === 'depart') {
     VAN.trip += dt; if (vanDrive(dt, 9, 15, false)) { VAN.state = 'away'; VAN.group.visible = false; }
   } else if (VAN.state === 'away') {
@@ -2079,7 +2090,7 @@ function updateVan(dt, t) {
     if (vanDrive(dt, 8, 15, true)) {
       VAN.state = 'parked'; VAN.yaw = -Math.PI / 2; VAN.group.rotation.y = VAN.yaw; VAN.x = 16.2; VAN.z = 24; VAN.group.position.set(16.2, 0, 24);
       const total = Math.round(VAN.sum * (VAN.req ? VAN.req.k.mult : 2)), n = clamp(Math.round(total / CFG.billValue), 1, 14), bv = total / n; VAN.sum = 0; VAN.req = null; stats.vanRuns = (stats.vanRuns || 0) + 1;
-      confetti(16.2, 2.5, 24, 40); popText(16.2, 4.6, 24, '+' + fmt(total), '#6dff6a'); ring(16.2, 24, 0xffc21a, 6); sfx('up'); vib(20);
+      confetti(16.2, 2.5, 24, 40); popText(16.2, 4.6, 24, '+' + fmt(total), '#6dff6a'); ring(16.2, 24, 0xffc21a, 6); sfx('up', true); vib(20);
       for (let k = 0; k < n; k++) later(0.1 + k * Math.min(0.12, 1.2 / n), () => {
         const b = makeBill(); b.userData.v = bv; b.position.set(16.2, 2.2, 24); scene.add(b); const idx = vanPile.length + (vanPile.pend || 0); vanPile.pend = (vanPile.pend || 0) + 1;
         fly(b, out => { vanPile.slotFn(Math.min(idx, 59), out); return 0; }, 0.5, 1.8, () => { vanPile.pend--; if (vanPile.length >= 60) { vanPile.extra += bv; rm(b); } else vanPile.add(b, 'bill'); sfx('cash'); });
@@ -2422,7 +2433,7 @@ function finishCustomer(c) {
   const gp = c.group.position, total = Math.round(c.want * PRICE[c.prod] * (c.vip ? 3 : 1) * priceMul() * 1), n = clamp(Math.round(total / CFG.billValue), 1, 10), bv = total / n;
   hearts(gp.x, 3.4, gp.z, 5); coins(gp.x, 2.2, gp.z, 8); popText(gp.x, 4.2, gp.z, '+' + fmt(total), '#6dff6a'); vib(8);
   for (let k = 0; k < n; k++) later(0.15 + k * Math.min(0.16, 0.8 / n), () => spawnBill(c, bv));
-  if (c.vip) { confetti(gp.x, 2.5, gp.z, 40); sparkles(gp.x, 2, gp.z, 12, 0xffe36a, 0.6); popText(gp.x, 5.0, gp.z, 'VIP x3!', '#ffd400'); ring(gp.x, gp.z, 0xffc21a, 5); sfx('up'); vib(20); }
+  if (c.vip) { confetti(gp.x, 2.5, gp.z, 40); sparkles(gp.x, 2, gp.z, 12, 0xffe36a, 0.6); popText(gp.x, 5.0, gp.z, 'VIP x3!', '#ffd400'); ring(gp.x, gp.z, 0xffc21a, 5); sfx('up', true); vib(20); }
   else if (Math.random() < 0) { const tip = Math.max(15, Math.round(total * 0.2 * 1)); later(0.9, () => { popText(gp.x, 3.4, gp.z, 'Bahşiş +' + fmt(tip), '#ffd400'); coins(gp.x, 2.4, gp.z, 5); const tn = clamp(Math.round(tip / CFG.billValue), 1, 4); for (let k = 0; k < tn; k++) spawnBill(c, tip / tn); }); }
 }
 function spawnBill(c, v) {
@@ -2632,7 +2643,7 @@ function applyUpgrade(key, instant) {
 }
 function purchase(u) {
   const key = u.key; S.lv[key]++; u.paid = 0; stats.upgrades++; saveDirty = true; u.locked = true; u.pause = 0.3; u.off = false; u.hold = 0; u.pop = 0.6;
-  sfx('up'); confetti(u.x, 1.2, u.z, 44); sparkles(u.x, 0.8, u.z, 14, 0xfff2a0, 1.0); ring(u.x, u.z, 0xffc21a, 4.5);
+  sfx('up', true); confetti(u.x, 1.2, u.z, 44); sparkles(u.x, 0.8, u.z, 14, 0xfff2a0, 1.0); ring(u.x, u.z, 0xffc21a, 4.5);
   ring(P.group.position.x, P.group.position.z, 0x7dff7a, 3); sparkles(P.group.position.x, 0.6, P.group.position.z, 12, 0x9dffb0, 0.5); vib(18);
   popText(u.x, 2.6, u.z, '+ ' + UPG[key].name + '!', '#7dff7a');
   applyUpgrade(key, false);
@@ -2701,8 +2712,19 @@ mQ.textContent = qText();
 document.getElementById('reset').addEventListener('click', () => { window.__menuSync && window.__menuSync(); menuEl.style.display = 'flex'; });
 document.getElementById('mClose').addEventListener('click', () => { menuEl.style.display = 'none'; });
 mQ.addEventListener('click', () => { try { localStorage.setItem(QKEY, HQ ? 'low' : 'high'); } catch (e) {} writeSave(); location.reload(); });
+(function () { // Ses / Titreşim anahtarları + çift onaylı sıfırlama
+  const box = menuEl.querySelector('.mbox'), anchor = document.getElementById('mQ');
+  const mkT = (id, get, label, bg, sh, fn) => { const b = document.createElement('button'); b.id = id; b.style.cssText = 'background:' + bg + ';box-shadow:0 4px 0 ' + sh; const sync = () => { b.textContent = label + ': ' + (get() ? 'Açık' : 'Kapalı'); b.style.opacity = get() ? '1' : '.72'; }; sync(); b.addEventListener('click', () => { fn(); saveSett(); sync(); }); box.insertBefore(b, anchor); return b; };
+  mkT('mSnd', () => SETT.snd, 'Ses', 'linear-gradient(#58d68d,#27ae60)', '#146b38', () => { SETT.snd = !SETT.snd; if (SETT.snd) { initAudio(); sfx('pick', true); } });
+  mkT('mVib', () => SETT.vib, 'Titreşim', 'linear-gradient(#b48cff,#7a4de0)', '#4b2a99', () => { SETT.vib = !SETT.vib; if (SETT.vib) vib(30); });
+})();
 document.getElementById('mReset').addEventListener('click', () => {
-  if (window.confirm('Tüm ilerleme silinsin mi?')) { window.__resetting = true; try { localStorage.removeItem(SAVE_KEY); localStorage.removeItem(BAK_KEY); localStorage.removeItem(TMP_KEY); } catch (e) {} location.reload(); }
+  menuEl.style.display = 'none';
+  const doReset = () => { window.__resetting = true; try { localStorage.removeItem(SAVE_KEY); localStorage.removeItem(BAK_KEY); localStorage.removeItem(TMP_KEY); } catch (e) {} location.reload(); };
+  chapShow('<div class="ct">İlerleme sıfırlansın mı?</div><div class="cs">Çiftliğindeki her şey silinecek.</div>', [
+    { t: 'Vazgeç', cls: 'no' },
+    { t: 'Devam', fn: () => chapShow('<div class="ct">Emin misin?</div><div class="cs">Paran, hayvanların ve açtığın her bölge silinir. Bu işlem geri alınamaz.</div>', [{ t: 'Hayır, vazgeç', cls: 'no' }, { t: 'Evet, hepsini sil', fn: doReset, cls: 'dng' }]) }
+  ]);
 });
 window.addEventListener('beforeunload', () => writeSave());
 window.addEventListener('pagehide', () => writeSave());
@@ -2718,7 +2740,7 @@ const goalEl = document.getElementById('goal'), goalN = document.getElementById(
 const introEl = document.getElementById('intro'), praiseEl = document.getElementById('praise'), flashEl = document.getElementById('flash'), fxEl = document.getElementById('fx');
 const PRAISE = ['Harika!', 'Süper!', 'Müthiş!', 'Bravo!', 'Muhteşem!'], PRAISE_COL = ['#ffe14a', '#7dff7a', '#ff9ad0', '#8fe0ff', '#ffb04a'];
 function hideIntro() { try { if (window.__introCard && chapOpen) { chapEl.style.display = 'none'; chapOpen = false; } } catch (e) {} if (introDone) return; introDone = true; introEl.style.display = 'none'; }
-function praise(t, big) { praiseEl.textContent = t; praiseEl.style.color = pick(PRAISE_COL); praiseEl.className = 'txt' + (big ? ' big' : ''); void praiseEl.offsetWidth; praiseEl.classList.add('show'); sfx('happy'); }
+function praise(t, big) { praiseEl.textContent = t; praiseEl.style.color = pick(PRAISE_COL); praiseEl.className = 'txt' + (big ? ' big' : ''); void praiseEl.offsetWidth; praiseEl.classList.add('show'); sfx('happy', true); }
 function flash() { flashEl.classList.remove('on'); void flashEl.offsetWidth; flashEl.classList.add('on'); }
 const _v2 = new THREE.Vector3();
 function toScreen(x, y, z, o) { _v2.set(x, y, z).project(camera); o.x = (_v2.x * 0.5 + 0.5) * window.innerWidth; o.y = (-_v2.y * 0.5 + 0.5) * viewH(); return o; }
@@ -3017,6 +3039,7 @@ function updateZoneActions(dt) {
 function update(dt) {
   T += dt;
   movePlayer(dt);
+  { const pl = P.stack.length; let act = Math.abs(P.vel.x) + Math.abs(P.vel.z) > 0.3 || pl !== SFXPL; SFXPL = pl; if (!act) for (const z of zones) if (z.inside) { act = true; break; } if (act) SFXA = T; }
   updateBeds(dt);
   updateZoneActions(dt);
   updateGoalState(); updateUpgrades(dt); updateExpansion(dt, T);
@@ -3357,7 +3380,7 @@ function slab(z, g, col) { /* zemin: çim kalsın (derinlik çakışması yok) *
 function lamp(g, x, z) { GLOWS.push([x, z, 3.4]); const o = new THREE.Group(); o.add(mk(G.cyl, mat(0x2d3a45), 0.09, 3.2, 0.09, 0, 1.6, 0)); o.add(mk(G.sph, LAMPM, 0.26, 0.3, 0.26, 0, 3.3, 0)); if (g.userData.px === undefined) { o.position.set(x, 0, z); g.add(o); } else ad(g, o, x, 0, z); }
 let cafe = null, wed = null, city = null, tractor = null;
 function fireworks(x, z) {
-  const col = pick([0xff3d7f, 0xffd400, 0x7dff7a, 0x4dc3ff, 0xff9a3c, 0xc77dff]), cy = rand(7, 11); sfx('up');
+  const col = pick([0xff3d7f, 0xffd400, 0x7dff7a, 0x4dc3ff, 0xff9a3c, 0xc77dff]), cy = rand(7, 11); sfx('up', true);
   for (let i = 0; i < 46; i++) { const a = rand(0, TAU), b = rand(-1, 1), r = Math.sqrt(1 - b * b), s = rand(3.5, 6.5); emit({ x, y: cy, z, vx: Math.cos(a) * r * s, vy: b * s, vz: Math.sin(a) * r * s, life: rand(0.9, 1.5), size: rand(0.35, 0.6), c: col, type: 1, grav: 3, drag: 1.2 }); }
 }
 /* ---- garson ---- */
@@ -3748,7 +3771,7 @@ function updateFoal(dt, t) {
 /* ---- Ata Bin: oyuncu kendi atına biner ---- */
 function toggleRide() {
   const on = !window.__riding; window.__riding = on; PH.group.visible = true;
-  if (on) { PH.group.position.set(P.group.position.x, 0, P.group.position.z); PH.yaw = P.yaw; PH.rider = P; P.group.position.y = 2.1; P.legL.rotation.set(-1.2, 0, 0.5); P.legR.rotation.set(-1.2, 0, -0.5); sparkles(P.group.position.x, 1.5, P.group.position.z, 12, 0xfff2a0, 0.6); sfx('up'); popText(P.group.position.x, 5.5, P.group.position.z, 'Yeehaw!', '#ffd400'); const sh = P.group.children.find(o => o.renderOrder === 1); if (sh) sh.visible = false; }
+  if (on) { PH.group.position.set(P.group.position.x, 0, P.group.position.z); PH.yaw = P.yaw; PH.rider = P; P.group.position.y = 2.1; P.legL.rotation.set(-1.2, 0, 0.5); P.legR.rotation.set(-1.2, 0, -0.5); sparkles(P.group.position.x, 1.5, P.group.position.z, 12, 0xfff2a0, 0.6); sfx('up', true); popText(P.group.position.x, 5.5, P.group.position.z, 'Yeehaw!', '#ffd400'); const sh = P.group.children.find(o => o.renderOrder === 1); if (sh) sh.visible = false; }
   else { PH.rider = null; P.group.position.y = 0; P.legL.rotation.z = P.legR.rotation.z = 0; PH.group.position.set(P.group.position.x + 1.6, 0, P.group.position.z); const sh = P.group.children.find(o => o.renderOrder === 1); if (sh) sh.visible = true; sfx('drop'); }
 }
 function enableAta(instant) { ataZone.group.visible = true; ataZone.hidden = false; if (!instant) { PH.group.visible = true; panReq('ata1', RANCH.ata[0], RANCH.ata[1], 'ATA BİN!'); } else PH.group.visible = true; }
@@ -3762,7 +3785,7 @@ const SHOWF = () => { const f = RANCH.showF; return [[f.cx - 4.2, f.cz - 3.8, 1]
 function updateShow(dt, t) {
   if (S.lv.show <= 0) { showZone.group.visible = false; showZone.hidden = true; return; }
   showZone.hidden = SHOW.state !== 'ready'; showZone.group.visible = SHOW.state === 'ready';
-  if (SHOW.state === 'cd') { SHOW.cd -= dt; if (SHOW.cd <= 0) { SHOW.state = 'ready'; praise('PARKUR GÖSTERİSİ HAZIR!', true); sfx('up'); } }
+  if (SHOW.state === 'cd') { SHOW.cd -= dt; if (SHOW.cd <= 0) { SHOW.state = 'ready'; praise('PARKUR GÖSTERİSİ HAZIR!', true); sfx('up', true); } }
   else if (SHOW.state === 'ready') { if (showZone.inside) { const hs = RH.filter(rideReady).sort((a, b) => b.love - a.love).slice(0, 3); if (hs.length) startShow(hs); } }
   else if (SHOW.state === 'run') {
     SHOW.t += dt; let alive = 0; const F = SHOWF(), f = RANCH.showF;
@@ -3782,7 +3805,7 @@ function updateShow(dt, t) {
 }
 function startShow(hs) {
   SHOW.state = 'run'; SHOW.t = 0; SHOW.run = hs.map((h, i) => ({ h, c: newRider(), delay: i * 3.2, started: false, i: 0, jt: 0, done: false, out: false })); SHOW.run.forEach(e => { scene.remove(e.c.group); e.h.state = 'showWait'; });
-  panReq('show1', RANCH.showF.cx, RANCH.showF.cz, 'İLK GÖSTERİ!'); praise('GÖSTERİ BAŞLADI!', true); sfx('up');
+  panReq('show1', RANCH.showF.cx, RANCH.showF.cz, 'İLK GÖSTERİ!'); praise('GÖSTERİ BAŞLADI!', true); sfx('up', true);
 }
 function endShowHorse(e) { const h = e.h; e.done = true; h.jump = 0; h.root.position.y = 0; unseatRider(h, e.c); rm(e.c.group); h.state = 'back'; h.rest = 6; h.wp = [[RANCH.showZ[0] - 3, -43], [6, -44], [-4, -42], [-9, -42]]; h.love = Math.max(0, h.love - 8); }
 function finishShow() {
@@ -3918,7 +3941,20 @@ function updateFarm(dt, t) {
   if (introDone && !chapOpen) { const st_ = (k, tx) => { if (!S.seen[k]) { S.seen[k] = 1; saveDirty = true; toast(tx); return true; } return false; };
     if (S.lv.ranch && st_('st_ranch', 'Ayşe Teyze: Atlar artık senin, binicilere iyi bak!')) { } else if ((stats.rides || 0) >= 1 && st_('st_ride', 'Ayşe Teyze: İlk bileti kestin, aferin!')) { } else if (S.lv.sheep && st_('st_sheep', 'Ayşe Teyze: Koyunları kırk, yünden kazak ör!')) { } else if ((stats.shows || 0) >= 1 && st_('st_show', 'Ayşe Teyze: Harika bir gösteri oldu!')) { } else if (S.lv.zoo && st_('st_zoo', 'Ayşe Teyze: Çocuklar minik hayvanlara bayılıyor!')) { } }
   // final kutlama
-  if (!S.seen.fin && S.lv.ranch && S.lv.show && S.lv.sheep && S.lv.knit && S.lv.cheese && S.lv.zoo && S.lv.orchard && S.lv.foal && S.lv.ata && S.lv.horse >= 4) { S.seen.fin = 1; saveDirty = true; praise('ÇİFTLİK TAMAMLANDI!', true); flash(); for (let k = 0; k < 10; k++) later(k * 0.4, () => fireworks(gp.x + rand(-8, 8), gp.z + rand(-6, 6))); confetti(gp.x, 4, gp.z, 120); later(2.5, () => chapShow('<div class="big">Tebrikler!</div><div class="ct">Çiftlik tamamlandı</div><div class="cs">Yeni bölümler yakında!</div>', [{ t: 'Devam' }])); }
+  if (!S.seen.fin && S.lv.ranch && S.lv.show && S.lv.sheep && S.lv.knit && S.lv.cheese && S.lv.zoo && S.lv.orchard && S.lv.foal && S.lv.ata && S.lv.horse >= 4) { S.seen.fin = 1; saveDirty = true; writeSave(); finaleShow(gp); }
+}
+function finaleShow(gp) {
+  praise('ÇİFTLİK TAMAMLANDI!', true); flash(); sfx('up', true); vib(60);
+  try { panReq('fin', RANCH.showF.cx, RANCH.showF.cz, 'ŞENLİK BAŞLASIN!'); } catch (e) {}
+  for (let k = 0; k < 16; k++) later(0.3 + k * 0.5, () => { const q = P.group.position; fireworks(q.x + rand(-9, 9), q.z + rand(-7, 7)); if (k % 4 === 0) { confetti(q.x + rand(-4, 4), 5, q.z + rand(-3, 3), 60); sfx('happy', true); } });
+  later(4.5, () => finaleCard());
+}
+function finaleCard() {
+  const n = (v) => fmt(Math.max(0, Math.floor(+v || 0)));
+  chapShow('<div class="big">Tebrikler!</div><div class="ct">Çiftlik Şenliği başladı</div><div class="cs">Ayşe Teyze: "Üç bahçe, bir aile... Bu çiftliği sen büyüttün evladım."</div>' +
+    '<div class="cs">' + n(stats.sold) + ' müşteri, ' + n(stats.rides) + ' biniş, ' + n(stats.shows) + ' gösteri.</div>' +
+    '<div class="cs"><b>Oynadığın için çok teşekkürler!</b><br>Yeni bölümler çok yakında.</div>',
+    [{ t: 'Oynamaya devam et' }, { t: 'Bölümler', cls: 'no', fn: () => chapMenu() }]);
 }
 function updateWorkshop(w, dt, t) {
   if (!w.on) return; const o = w;
@@ -4178,7 +4214,7 @@ bolWrite(o => { o.last = CHAP_THIS; });
     '#chapCard .ct{font-weight:900;font-size:25px;color:#0d4a6e;line-height:1.15}#chapCard .cs{font-weight:900;font-size:16px;color:#4a6a82}' +
     '#chapCard .cr{display:flex;gap:10px}#chapCard button{flex:1;font:900 20px/1 inherit;font-family:inherit;border:0;border-radius:16px;padding:16px 8px;color:#fff;background:linear-gradient(#2fd45a,#1e9e3e);box-shadow:0 5px 0 #146b2a}' +
     '#chapCard button.no{background:linear-gradient(#aab6c8,#8393ab);box-shadow:0 5px 0 #5b6b82}#chapCard button.dis{background:#c5cfdc;box-shadow:0 5px 0 #9aa8ba;color:#fff}' +
-    '#chapCard .big{font-size:40px;font-weight:900;color:#ff8a1f;-webkit-text-stroke:0;text-shadow:0 3px 0 #b85a00}';
+    '#chapCard button.dng{background:linear-gradient(#ff6b6b,#e0243c);box-shadow:0 5px 0 #9c1426}#chapCard .big{font-size:40px;font-weight:900;color:#ff8a1f;-webkit-text-stroke:0;text-shadow:0 3px 0 #b85a00}';
   document.head.appendChild(st);
   const d = document.createElement('div'); d.id = 'chapCard'; d.innerHTML = '<div class="cb"></div>'; document.getElementById('app').appendChild(d);
 })();

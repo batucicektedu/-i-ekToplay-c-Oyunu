@@ -143,6 +143,7 @@
   <div id="joyBase"><div id="joyKnob"></div></div>
 </div>
 <div id="msg">Three.js yüklenemedi. İnternet bağlantınızı kontrol edip sayfayı yenileyin.</div>
+<script src="../safety.js"></script>
 <script src="../vendor/three.min.js"></script>
 <script src="../vendor/examples/js/shaders/CopyShader.js" onerror="void 0"></script>
 <script src="../vendor/examples/js/shaders/LuminosityHighPassShader.js" onerror="void 0"></script>
@@ -182,7 +183,7 @@ const UPG = {
   carCap: { name: 'Taşıyıcı Kapasite', costs: geo(160, 5) }, helpSpd: { name: 'Balıkçı Hızı', costs: geo(120, 5) },
   cap:    { name: 'Kapasite',       costs: geo(50, 5) },
   speed:  { name: 'Hız',            costs: geo(25, 5) },
-  pack:   { name: 'Paketleme Hızı', costs: geo(40, 5) },
+  pack:   { name: 'Temizleme Hızı', costs: geo(40, 5) },
   bed:    { name: 'Yeni Nokta',     costs: [150] },
   helper: { name: 'Yardımcı',       costs: [220] }
 };
@@ -1424,16 +1425,15 @@ function makeBoatModel(col) {
   g.add(mk(G.box, mat(0x2d3a45), 0.4, 0.6, 0.4, 0, 0.5, -2.0));
   shadowAll(g, true, false); g.scale.setScalar(1 / CHAR_S); return { g, wheels: [] };
 }
-function grassTex() { // kum
+function grassTex() { // kum: açık altın tonu, yumuşak lekeler (sert daire yok)
   const c = cv(256, 256), x = c.getContext('2d');
-  x.fillStyle = '#8e683c'; x.fillRect(0, 0, 256, 256);
-  for (let i = 0; i < 60; i++) {
-    const px = rand(0, 256), py = rand(0, 256), r = rand(14, 44); x.fillStyle = Math.random() < 0.5 ? 'rgba(214,184,128,.26)' : 'rgba(120,84,40,.22)';
-    for (const ox of [-256, 0, 256]) for (const oy of [-256, 0, 256]) { x.beginPath(); x.arc(px + ox, py + oy, r, 0, TAU); x.fill(); }
+  x.fillStyle = '#96753c'; x.fillRect(0, 0, 256, 256);
+  for (let i = 0; i < 46; i++) {
+    const px = rand(0, 256), py = rand(0, 256), r = rand(18, 52), warm = Math.random() < 0.5;
+    for (const ox of [-256, 0, 256]) for (const oy of [-256, 0, 256]) { const g = x.createRadialGradient(px + ox, py + oy, 0, px + ox, py + oy, r); g.addColorStop(0, warm ? 'rgba(236,208,146,.30)' : 'rgba(150,112,58,.16)'); g.addColorStop(1, 'rgba(0,0,0,0)'); x.fillStyle = g; x.fillRect(px + ox - r, py + oy - r, r * 2, r * 2); }
   }
-  x.lineCap = 'round';
-  for (let i = 0; i < 220; i++) { const px = rand(0, 256), py = rand(0, 256); x.fillStyle = Math.random() < 0.5 ? 'rgba(110,78,40,.35)' : 'rgba(236,218,176,.4)'; x.beginPath(); x.arc(px, py, rand(0.8, 1.8), 0, TAU); x.fill(); }
-  for (let i = 0; i < 14; i++) { const px = rand(0, 256), py = rand(0, 256); x.fillStyle = 'rgba(236,222,190,.4)'; x.beginPath(); x.ellipse(px, py, 3.0, 1.8, rand(0, 3), 0, TAU); x.fill(); }
+  for (let i = 0; i < 260; i++) { const px = rand(0, 256), py = rand(0, 256); x.fillStyle = Math.random() < 0.5 ? 'rgba(128,94,48,.30)' : 'rgba(246,230,190,.42)'; x.beginPath(); x.arc(px, py, rand(0.7, 1.6), 0, TAU); x.fill(); }
+  for (let i = 0; i < 12; i++) { const px = rand(0, 256), py = rand(0, 256); x.fillStyle = 'rgba(244,232,204,.4)'; x.beginPath(); x.ellipse(px, py, 3.0, 1.8, rand(0, 3), 0, TAU); x.fill(); }
   return canvasTex(c, [40, 40]);
 }
 function cobbleTex() { // beyaz kireç taşı yürüyüş yolu (mavi derzli)
@@ -1447,10 +1447,21 @@ function cobbleTex() { // beyaz kireç taşı yürüyüş yolu (mavi derzli)
   }
   return canvasTex(c, [7, 9.5]);
 }
+function aegeanTex(rx, ry) { // lacivert-beyaz çizgili Ege halısı (kenarlı)
+  const c = cv(128, 128), x = c.getContext('2d');
+  x.fillStyle = '#d9cfb0'; x.fillRect(0, 0, 128, 128); x.fillStyle = '#356aa4'; x.fillRect(0, 0, 64, 128);
+  x.fillStyle = 'rgba(20,50,90,.18)'; x.fillRect(60, 0, 4, 128); x.fillRect(124, 0, 4, 128);
+  return canvasTex(c, [rx, ry]);
+}
+function plankTex() { // açık, ince ahşap iskele tahtası (boyuna)
+  const c = cv(256, 256), x = c.getContext('2d'); const cols = ['#c4965c', '#b98a52', '#cda06a', '#bf9156'];
+  for (let i = 0; i < 8; i++) { x.fillStyle = cols[i % 4]; x.fillRect(0, i * 32, 256, 32); x.fillStyle = 'rgba(70,44,18,.55)'; x.fillRect(0, i * 32, 256, 2.5); for (let k = 0; k < 6; k++) { x.fillStyle = 'rgba(90,60,28,.16)'; x.fillRect(rand(0, 256), i * 32 + rand(4, 28), rand(20, 70), 1.4); } x.fillStyle = 'rgba(70,44,18,.5)'; x.fillRect((i * 83) % 256, i * 32 + 2, 2.5, 30); }
+  return canvasTex(c, [3, 1.4]);
+}
 function dirtTex() { // ıslak kum
   const c = cv(128, 128), x = c.getContext('2d');
-  x.fillStyle = '#785a32'; x.fillRect(0, 0, 128, 128);
-  for (let i = 0; i < 160; i++) { x.fillStyle = Math.random() < 0.5 ? 'rgba(90,62,28,.28)' : 'rgba(210,184,130,.25)'; x.beginPath(); x.arc(rand(0, 128), rand(0, 128), rand(1, 4), 0, TAU); x.fill(); }
+  x.fillStyle = '#ab8650'; x.fillRect(0, 0, 128, 128);
+  for (let i = 0; i < 160; i++) { x.fillStyle = Math.random() < 0.5 ? 'rgba(110,78,36,.22)' : 'rgba(226,202,150,.25)'; x.beginPath(); x.arc(rand(0, 128), rand(0, 128), rand(1, 4), 0, TAU); x.fill(); }
   return canvasTex(c, [6, 20]);
 }
 function decorTree(g, x, z, sc) { palm(g, x, z, sc * 0.95); }
@@ -1467,7 +1478,7 @@ function buildGround() {
   const strip = (x0, x1, z0, z1, y) => {
     const m = new THREE.Mesh(G.plane, dm); m.rotation.x = -Math.PI / 2; m.scale.set(x1 - x0, z1 - z0, 1); m.position.set((x0 + x1) / 2, y, (z0 + z1) / 2); m.receiveShadow = true; world.add(m);
   };
-  const edgeM = mat(0x9a6a30);
+  const edgeM = mat(0xb48a4c);
   const edged = (x0, x1, z0, z1) => { const m = new THREE.Mesh(G.plane, edgeM); m.rotation.x = -Math.PI / 2; m.scale.set(x1 - x0 + 0.5, z1 - z0 + 0.5, 1); m.position.set((x0 + x1) / 2, 0.006, (z0 + z1) / 2); m.receiveShadow = true; world.add(m); strip(x0, x1, z0, z1, 0.012); };
   // plaza
   const cm = LM({ map: cobbleTex() });
@@ -1735,7 +1746,7 @@ function buildStations() {
   const roof = new THREE.Mesh(new THREE.BoxGeometry(bw + 0.8, 0.14, 2.4), LM({ map: awningTex('#1d6fb8', '#ffffff') }));
   roof.material.map.repeat.set(2, 1); roof.material.map.wrapS = THREE.RepeatWrapping;
   roof.position.set(bcx, 4.15, -3.95); roof.rotation.x = -0.1; roof.castShadow = true; world.add(roof);
-  const sgn = makeBoard('TEMİZLEME TEZGAHI', 5.6, 1.0, 'wood'); sgn.position.set(bcx, 5.05, -2.95); sgn.rotation.x = -0.25; world.add(sgn); roof.userData.dyn = sgn.userData.dyn = true; STREF.pack = [roof, sgn];
+  const sgn = makeBoard('TEMİZLEME TEZGÂHI', 5.6, 1.0, 'wood'); sgn.position.set(bcx, 5.05, -2.95); sgn.rotation.x = -0.25; world.add(sgn); roof.userData.dyn = sgn.userData.dyn = true; STREF.pack = [roof, sgn];
   // ---- machine / wrapping area
   const mg = new THREE.Group(); mg.position.set(machine.x, TABLE_Y, machine.z); world.add(mg); machine.group = mg;
   mg.add(mk(G.box, mat(0xe0a868), 1.5, 0.03, 1.0, 0, 0.02, 0.15));
@@ -1788,7 +1799,7 @@ function buildStations() {
   const aw = new THREE.Mesh(new THREE.BoxGeometry(5.4, 0.12, 2.3), LM({ map: awningTex('#ff6f61', '#ffffff') }));
   aw.position.set(ct.x, 3.15, ct.z - 0.3); aw.rotation.x = -0.12; aw.castShadow = true; world.add(aw);
   for (const sx of [-1, 1]) { const po = mk(G.cyl, mat(0xffffff), 0.08, 3.1, 0.08, ct.x + sx * 2.6, 1.55, ct.z + 0.8); po.castShadow = true; world.add(po); }
-  const cs = makeBoard('BALIK TEZGAHI', 3.6, 0.9, 'wood'); cs.position.set(ct.x, 4.2, ct.z - 0.55); cs.rotation.x = -0.25; world.add(cs); aw.userData.dyn = cs.userData.dyn = true; STREF.flo = [aw, cs];
+  const cs = makeBoard('BALIK TEZGÂHI', 3.6, 0.9, 'wood'); cs.position.set(ct.x, 4.2, ct.z - 0.55); cs.rotation.x = -0.25; world.add(cs); aw.userData.dyn = cs.userData.dyn = true; STREF.flo = [aw, cs];
   addCollider(ct.x - 2.7, ct.x + 2.7, ct.z - 1.2, ct.z + 0.95);
   // queue stanchions with rope along the street side
   const stan = (x, z) => { const g = new THREE.Group(); g.position.set(x, 0, z); g.add(mk(G.cyl, mat(0xc9a227), 0.2, 0.05, 0.2, 0, 0.03, 0)); g.add(mk(G.cyl, mat(0xe8c64a), 0.05, 0.95, 0.05, 0, 0.5, 0)); g.add(mk(G.sph, mat(0xe8c64a), 0.1, 0.1, 0.1, 0, 1.0, 0)); g.traverse(m => { if (m.isMesh) m.castShadow = true; }); world.add(g); };
@@ -1988,8 +1999,9 @@ function buildVan() {
   addCollider(VZ.x0 - 0.2, VZ.x1 + 0.2, VZ.z0 - 0.3, VZ.z1 + 0.4, () => zone3.locked);
   // content: road / pallet / van
   const rd = pivotGroup(18, 24); rd.visible = false; world.add(rd); zone3.groups.push([rd, 0]);
-  const asph = new THREE.Mesh(G.plane, LM({ color: lc(0x3a3f4a) })); asph.rotation.x = -Math.PI / 2; asph.scale.set(13, 5.4, 1); asph.receiveShadow = true; ad(rd, asph, 18, 0.035, 24);
-  for (let i = 0; i < 6; i++) ad(rd, mk(G.box, mat(0xfff4c0), 1.0, 0.02, 0.14), 12.8 + i * 1.9, 0.05, 24);
+  const asph = new THREE.Mesh(G.plane, LM({ map: plankTex() })); asph.rotation.x = -Math.PI / 2; asph.scale.set(13, 5.4, 1); asph.receiveShadow = true; ad(rd, asph, 18, 0.035, 24);
+  for (const dz of [-2.75, 2.75]) ad(rd, mk(G.box, mat(0xf2ead4), 13.2, 0.1, 0.16), 18, 0.06, 24 + dz); // beyaz kenar şeridi: yükleme iskelesi
+  for (let i = 0; i < 6; i++) ad(rd, mk(G.box, mat(0xfff4c0), 1.0, 0.02, 0.14), 12.8 + i * 1.9, 0.06, 24);
   const pal = rbox(1.9, 0.14, 3.7, 0.04, woodM()); pal.receiveShadow = true; ad(rd, pal, 19.9, 0.1, 24);
   const bd = makeBoard('TESLİMAT', 2.6, 0.7, 'wood'); bd.rotation.y = CFG.yaw; bd.scale.setScalar(0.85); ad(rd, bd, 22.8, 2.2, 27); ad(rd, mk(G.cyl, mat(0x5a2f12), 0.07, 2.2, 0.07), 21.9, 1.1, 27);
   for (const [cx2, cz2] of [[22.9, 21.5], [22.9, 26.6]]) { const co = new THREE.Group(); co.add(mk(G.cone, mat(0xff7a00), 0.28, 0.7, 0.28, 0, 0.4, 0)); co.add(mk(G.box, mat(0xffffff), 0.5, 0.1, 0.5, 0, 0.05, 0)); ad(rd, co, cx2, 0, cz2); }
@@ -2126,9 +2138,9 @@ function buildDecor() {
   const bench = (x, z, ry) => { const g = new THREE.Group(); g.position.set(x, 0, z); g.rotation.y = ry; g.add(mk(G.box, woodM(), 2.0, 0.1, 0.6, 0, 0.5, 0)); g.add(mk(G.box, woodM(), 2.0, 0.5, 0.08, 0, 0.85, -0.28)); for (const sx of [-0.85, 0.85]) g.add(mk(G.box, mat(0x2d3a45), 0.08, 0.5, 0.5, sx, 0.25, 0)); g.traverse(m => { if (m.isMesh) m.castShadow = true; }); world.add(g); };
   bench(15.0, 6.2, -Math.PI / 2); bench(-1.5, 11.6, Math.PI);
   addCollider(14.4, 15.6, 5.1, 7.3);
-  const cp2 = carpet2 = new THREE.Mesh(G.plane, LM({ color: lc(0x275a6a) })); cp2.rotation.x = -Math.PI / 2; cp2.scale.set(10.6, 3.5, 1); cp2.position.set(0.4, 0.03, POS.upgradeZ2); cp2.receiveShadow = true; world.add(cp2);
+  const cp2 = carpet2 = new THREE.Mesh(G.plane, LM({ map: aegeanTex(10.6 / 1.3, 3.5 / 3.5) })); cp2.rotation.x = -Math.PI / 2; cp2.scale.set(10.6, 3.5, 1); cp2.position.set(0.4, 0.03, POS.upgradeZ2); cp2.receiveShadow = true; world.add(cp2);
   // upgrade area carpet
-  const cp = carpet1 = new THREE.Mesh(G.plane, LM({ color: lc(0x275a6a), transparent: true, opacity: 1 })); cp.rotation.x = -Math.PI / 2; cp.scale.set(16.2, 3.7, 1); cp.position.set(1.2, 0.03, POS.upgradeZ); cp.receiveShadow = true; world.add(cp);
+  const cp = carpet1 = new THREE.Mesh(G.plane, LM({ map: aegeanTex(16.2 / 1.3, 3.7 / 3.7), transparent: true, opacity: 1 })); cp.rotation.x = -Math.PI / 2; cp.scale.set(16.2, 3.7, 1); cp.position.set(1.2, 0.03, POS.upgradeZ); cp.receiveShadow = true; world.add(cp);
 }
 function dark2() { return mat(0x8a5a30); }
 
@@ -2716,7 +2728,7 @@ const TUT = [
   { done: () => stats.harvested >= 4 }, { done: () => stats.dropped >= 3 }, { done: () => stats.picked >= 1 },
   { done: () => (stats.delivered || 0) >= 1 }, { done: () => stats.collected >= 1 }, { done: () => stats.upgrades >= 1 }
 ];
-const LABELS = { dock: 'Kasaları al', eat: 'Balığı ver', hall: 'Mezata ver', cage: 'Kafesten al', comb: 'Tuzu al', ship: 'Gemiye yükle', drop: 'Bırak', take: 'Al', tea: 'Izgarayı ver', wed: 'Siparişi ver', city: 'Büfeye sat', harvest: 'Balık tut', pack: 'Paketle', out: 'Paketleri al', counter: 'Müşteriye sat', money: 'Parayı topla', pad: 'Geliştir!', pot: 'Midyeyi bırak', potOut: 'Tabakları al' };
+const LABELS = { dock: 'Kasaları al', eat: 'Balığı ver', hall: 'Mezata ver', cage: 'Kafesten al', comb: 'Tuzu al', ship: 'Gemiye yükle', drop: 'Bırak', take: 'Al', tea: 'Izgarayı ver', wed: 'Siparişi ver', city: 'Büfeye sat', harvest: 'Balık tut', pack: 'Balığı temizle', out: 'Temiz balığı al', counter: 'Müşteriye sat', money: 'Parayı topla', pad: 'Geliştir!', pot: 'Midyeyi bırak', potOut: 'Tabakları al' };
 const goalEl = document.getElementById('goal'), goalN = document.getElementById('goalN'), goalF = document.getElementById('goalF'), goalP = document.getElementById('goalP'), goalIc = document.getElementById('goalIc');
 const introEl = document.getElementById('intro'), praiseEl = document.getElementById('praise'), flashEl = document.getElementById('flash'), fxEl = document.getElementById('fx');
 const PRAISE = ['Harika!', 'Süper!', 'Müthiş!', 'Bravo!', 'Muhteşem!'], PRAISE_COL = ['#ffe14a', '#7dff7a', '#ff9ad0', '#8fe0ff', '#ffb04a'];
@@ -2829,6 +2841,7 @@ function objective(out) {
   out.ok = false; if (!introDone) return out;
   const st = P.stack, nF = st.count('flower'), nB = st.count('bouquet'), nO = st.count('orchid'), nP = st.count('pot');
   const set = (x, y, z, kind) => { out.x = x; out.y = y; out.z = z; out.kind = kind; out.ok = true; return out; };
+  const setPier = f => { const pg = P.group.position; if (f.x === pg.x && f.z === pg.z) return set(f.x, 0.4, f.z, 'harvest'); return set(clamp(f.x, -27.5, -10.9), 0.4, clamp(f.z, -1.15, 1.15), 'harvest'); }; // ok denizi değil, balığa en yakın iskele noktasını gösterir
   const gp = curGoal ? upPads[curGoal.key] : null;
   if (gp && gp.group.visible && !gp.done && S.money + gp.paid >= gp.cost()) return set(gp.x, 0.4, gp.z, 'pad');
   if (DOCK.stack && DOCK.zone.group.visible && DOCK.stack.length >= 6 && !HAMALS.length && P.free() > 0 && nF < 10) return set(DOCK.zone.x, 0.4, DOCK.zone.z, 'dock');
@@ -2854,12 +2867,12 @@ function objective(out) {
   const thr = Math.min(P.capFn(), 20), fl = P.free() > 0 && nF < thr ? ripe() : null, canPack = nF > 0 && inputPile.length + (inputPile.pend || 0) < CFG.inputCap;
   if (canPack && (nF >= thr || (!fl && nF > 0))) return set(packZone.x, 0.4, packZone.z, 'pack');
   if (outputPile.length >= 3 && P.free() > 0 && nB < 12) return set(outZone.x, 0.4, outZone.z, 'out');
-  if (fl) return set(fl.x, 1.2, fl.z, 'harvest');
+  if (fl) return setPier(fl);
   if (canPack) return set(packZone.x, 0.4, packZone.z, 'pack');
   if (nO > 0 && zone2 && !zone2.locked && potInput.length + (potInput.pend || 0) < CFG.inputCap) return set(potZone.x, 0.4, potZone.z, 'pot');
   if (outputPile.length > 0 && P.free() > 0) return set(outZone.x, 0.4, outZone.z, 'out');
   if (zone2 && !zone2.locked && potOutput.length > 0 && P.free() > 0) return set(potOutZone.x, 0.4, potOutZone.z, 'potOut');
-  if (P.free() > 0) { const f = ripe(); if (f) return set(f.x, 1.2, f.z, 'harvest'); }
+  if (P.free() > 0) { const f = ripe(); if (f) return setPier(f); }
   return out;
 }
 function updateTutorial(dt, t) {
@@ -4005,7 +4018,7 @@ initGatePad();
 /* ---- C6: pad alt yazıları (etkisi belli olmayan her pad) ---- */
 { const L = k => S.lv[k] || 0, T = x => () => x, N = (k, w) => () => 'Şu an ' + (1 + L(k)) + ' ' + w, PC = (k, v) => () => '%' + v * (L(k) + 1);
   const PADSUB = { sera: T('Midye tabağı yapar'), van: T('Sipariş teslim eder'), cashier: T('Satışı yapar'), carrier: T('Ürün taşır'), cashSpd: T('Daha hızlı satış'), carSpd: T('Daha hızlı taşır'), carCap: () => 'Taşıma ' + (6 + 4 * L('carCap')) + ' → ' + (10 + 4 * L('carCap')),
-    cap: () => 'Taşıma ' + (CFG.capBase + CFG.capStep * L('cap')) + ' → ' + (CFG.capBase + CFG.capStep * (L('cap') + 1)), speed: T('Daha hızlı yürü'), pack: T('Daha hızlı paket'), bed: T('Yeni balık noktası'), helper: T('Balık tutar'), helpSpd: T('Daha hızlı toplar'),
+    cap: () => 'Taşıma ' + (CFG.capBase + CFG.capStep * L('cap')) + ' → ' + (CFG.capBase + CFG.capStep * (L('cap') + 1)), speed: T('Daha hızlı yürü'), pack: T('Daha hızlı temizler'), bed: T('Yeni balık noktası'), helper: T('Balık tutar'), helpSpd: T('Daha hızlı toplar'),
     potSpd: T('Daha hızlı midye'), stars: () => 'Tüm satışlar +%' + (20 * (L('stars') + 1)) };
   for (const k in PADSUB) if (UPG[k] && !UPG[k].sub) UPG[k].sub = PADSUB[k]; }
 if (S.lv.gate > 0) { S.lv.bridge = Math.max(S.lv.bridge, 1); S.lv.fener = Math.max(S.lv.fener, 1); }

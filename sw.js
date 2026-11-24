@@ -1,11 +1,11 @@
 // Çevrimdışı çalışma: tüm bölümler + vendor + ikonlar kurulumda önbelleğe alınır.
 // Gezinme: önce ağ (güncellemeler hemen görünür), ağ yoksa AYNI yolun kopyası. Hiçbir bölüm
 // başka bir bölümün index.html'i ile karşılanmaz. Yalnızca aynı origin.
-const C = 'cicek-v4';
+const C = 'cicek-v5';
 const FILES = [
   './', 'index.html', 'sahil/', 'sahil/index.html', 'ciftlik/', 'ciftlik/index.html', 'privacy.html',
   'manifest.webmanifest',
-  'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-512-maskable.png', 'icons/apple-touch-icon.png',
+  'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-512-maskable.png', 'icons/apple-touch-icon.png', 'safety.js',
   'vendor/three.min.js',
   'vendor/examples/js/shaders/CopyShader.js', 'vendor/examples/js/shaders/LuminosityHighPassShader.js', 'vendor/examples/js/shaders/FXAAShader.js',
   'vendor/examples/js/postprocessing/EffectComposer.js', 'vendor/examples/js/postprocessing/RenderPass.js',

@@ -34,7 +34,7 @@ const CH = [['', 'Çiçek Bahçesi'], ['sahil/', 'Sahil Balıkçısı'], ['ciftl
   const pg0 = await ctx.newPage(); watch(pg0); await pg0.goto(base);
   await pg0.evaluate(() => navigator.serviceWorker.ready.then(() => 1)); await pg0.waitForTimeout(2500);
   const keys = await pg0.evaluate(async () => { const out = {}; for (const k of await caches.keys()) out[k] = (await (await caches.open(k)).keys()).length; return out; });
-  console.log('caches', JSON.stringify(keys)); if (!keys['cicek-v4'] || keys['cicek-v4'] < 18) bad.push('precache incomplete'); if (Object.keys(keys).length !== 1) bad.push('old caches');
+  console.log('caches', JSON.stringify(keys)); if (!keys['cicek-v5'] || keys['cicek-v5'] < 18) bad.push('precache incomplete'); if (Object.keys(keys).length !== 1) bad.push('old caches');
   await pg0.close();
   // 3) cevrimdisi
   await ctx.setOffline(true);
@@ -45,6 +45,14 @@ const CH = [['', 'Çiçek Bahçesi'], ['sahil/', 'Sahil Balıkçısı'], ['ciftl
     catch (e) { bad.push('offline goto ' + p + suffix + ' ' + e.message.split('\n')[0]); }
     await pg.close();
   }
+  // 4) WebGL yok -> dostca mesaj
+  const b2 = await chromium.launch({ args: ['--disable-gpu', '--disable-3d-apis', '--disable-software-rasterizer'] });
+  for (const [p] of CH) {
+    const pg = await (await b2.newContext()).newPage(); await pg.goto(base + p); await pg.waitForTimeout(1200);
+    const t = await pg.evaluate(() => (document.getElementById('fatalBox') || {}).textContent || '');
+    console.log('nogl', p || '/', t.slice(0, 60)); if (!/3D desteklemiyor/.test(t) || !/Yeniden dene/.test(t)) bad.push('no friendly webgl msg ' + p);
+  }
+  await b2.close();
   console.log('errors', errs.slice(0, 5)); if (errs.length) bad.push('errors: ' + errs.length);
   console.log(bad.length ? 'FAIL ' + bad.join(' | ') : 'PASS'); await b.close(); srv.close(); process.exit(bad.length ? 1 : 0);
 })();
