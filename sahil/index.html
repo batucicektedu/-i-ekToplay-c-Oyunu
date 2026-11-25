@@ -1282,10 +1282,19 @@ function seaTex(base, line, rep, ln) {
   for (let i = 0; i < (ln || 10); i++) { const y = i * 13 + 4; x.beginPath(); x.moveTo(0, y); x.bezierCurveTo(30, y - 6, 60, y + 6, 128, y); x.stroke(); }
   return canvasTex(c, rep);
 }
-function seaMat(base, line, rx, ry, amp, op) {
-  const m = LM({ map: seaTex(base, line, [rx, ry]), transparent: true, opacity: op || 0.95 }); m.customProgramCacheKey = () => 'seaB' + amp;
+// Derinlik gradyani (kiyida acik turkuaz -> acikta lacivert) + yumusak, seyrek parlamalar. vUv = uv*110 (700 birimlik duzlem, merkez -30,0)
+const SEA_DEPTH_GLSL = `
+ vec2 wp = vec2(-30.0 + (vUv.x / 110.0 - 0.5) * 700.0, -(vUv.y / 110.0 - 0.5) * 700.0);
+ float dLand = length(vec2(max(max(-28.5 - wp.x, wp.x - 48.0), 0.0), max(wp.y - 44.0, 0.0)));
+ float dIsl = max(length(wp - vec2(-60.0, 0.0)) - 11.5, 0.0);
+ float dk = smoothstep(1.0, 40.0, min(dLand, dIsl));
+ diffuseColor.rgb *= mix(vec3(0.98, 1.13, 1.07), vec3(0.74, 0.82, 0.96), dk);
+ float sp = sin(wp.x * 2.3 + uT * 0.9) * sin(wp.y * 2.1 - uT * 0.7) * sin((wp.x + wp.y) * 3.1 + uT * 1.3);
+ diffuseColor.rgb += vec3(0.06, 0.07, 0.07) * smoothstep(0.78, 0.98, sp) * (1.0 - 0.5 * dk);`;
+function seaMat(base, line, rx, ry, amp, op, big) {
+  const m = LM({ map: seaTex(base, line, [rx, ry]), transparent: true, opacity: op || 0.95 }); m.customProgramCacheKey = () => 'seaB' + amp + (big ? 'G' : '');
   m.onBeforeCompile = sh => { sh.uniforms.uT = SEAT; sh.vertexShader = 'uniform float uT;\n' + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n transformed.z += sin(position.x * 44.0 + uT * 1.5) * ' + (0.05 * amp).toFixed(4) + ' + sin(position.y * 17.0 + position.x * 30.0 + uT * 1.2) * ' + (0.04 * amp).toFixed(4) + ';');
-    sh.fragmentShader = 'uniform float uT;\n' + sh.fragmentShader.replace('#include <map_fragment>', '#include <map_fragment>\n float w1 = sin(vUv.x * 3.0 + uT * 1.7) * sin(vUv.y * 6.0 - uT * 1.3); diffuseColor.rgb += vec3(0.04, 0.07, 0.08) * smoothstep(0.3, 0.9, w1); diffuseColor.rgb *= 0.93 + 0.07 * sin(vUv.y * 2.0 + uT);'); };
+    sh.fragmentShader = 'uniform float uT;\n' + sh.fragmentShader.replace('#include <map_fragment>', '#include <map_fragment>\n float w1 = sin(vUv.x * 3.0 + uT * 1.7) * sin(vUv.y * 6.0 - uT * 1.3); diffuseColor.rgb += vec3(0.04, 0.07, 0.08) * smoothstep(0.3, 0.9, w1); diffuseColor.rgb *= 0.93 + 0.07 * sin(vUv.y * 2.0 + uT);' + (big ? SEA_DEPTH_GLSL : '')); };
   return m;
 }
 let _poolM = null; const _poolG = new THREE.PlaneGeometry(1, 1, 10, 8);
@@ -1302,6 +1311,8 @@ function poolRim(parent, cx, cz, w, d, yTop) { // içi boş kenar çerçevesi + 
   if (parent === world) { r.position.set(cx, yTop - 0.4, cz); fl.position.set(cx, yTop - 0.17, cz); world.add(r, fl); } else { ad(parent, r, cx, yTop - 0.4, cz); ad(parent, fl, cx, yTop - 0.17, cz); } return r;
 }
 /* palmiye */
+const palmMat = LM({ vertexColors: true }); palmMat.customProgramCacheKey = () => 'palmSway';
+palmMat.onBeforeCompile = sh => { sh.uniforms.uT = SEAT; sh.vertexShader = 'uniform float uT;\n' + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n float sk = clamp((position.y - 1.0) / 5.0, 0.0, 1.0); sk *= sk; transformed.x += (sin(uT * 1.15 + position.x * 0.6 + position.z * 0.45) * 0.15 + sin(uT * 2.6 + position.x * 2.0) * 0.03) * sk; transformed.z += cos(uT * 0.95 + position.z * 0.5) * 0.08 * sk;'); };
 let _palmG = null;
 function palmGeo() {
   if (_palmG) return _palmG;
@@ -1315,7 +1326,7 @@ function palmGeo() {
   for (const [x, z] of [[0.15, 0.12], [-0.12, 0.1], [0.02, -0.16]]) P_.push(part(G.sph5, 0x6a4a2a, cx + x, cy - 0.2, z, 0.17, 0.17, 0.17));
   return (_palmG = mergeParts(P_));
 }
-function palm(g, x, z, s, ry) { const m = new THREE.Mesh(palmGeo(), vcMat); m.scale.setScalar(s); m.rotation.y = ry === undefined ? (x * 7.3 + z * 3.1) % TAU : ry; m.castShadow = true; if (g === world || g.userData.px === undefined) { m.position.set(x, 0, z); g.add(m); } else ad(g, m, x, 0, z); return m; }
+function palm(g, x, z, s, ry) { const m = new THREE.Mesh(palmGeo(), palmMat); m.scale.setScalar(s); m.rotation.y = ry === undefined ? (x * 7.3 + z * 3.1) % TAU : ry; m.castShadow = true; if (g === world || g.userData.px === undefined) { m.position.set(x, 0, z); g.add(m); } else ad(g, m, x, 0, z); return m; }
 /* şemsiye + şezlong */
 let _umbG = null;
 function umbGeo(c1, c2) {
@@ -1365,7 +1376,7 @@ function buildIsland() { /* Fener Adası: kumsal gibi - ana kıyıyla aynı kum 
 }
 function buildBeach() {
   // deniz + köpük
-  { const m = new THREE.Mesh(new THREE.PlaneGeometry(1, 1, 70, 70), seaMat('#1f6b8f', 'rgba(255,255,255,.26)', 110, 110, 1, 0.97)); m.rotation.x = -Math.PI / 2; m.scale.set(700, 700, 1); m.position.set(-30, WATER_Y, 0); m.userData.dyn = true; m.renderOrder = 1; world.add(m); }
+  { const m = new THREE.Mesh(new THREE.PlaneGeometry(1, 1, 70, 70), seaMat('#1f6b8f', 'rgba(255,255,255,.26)', 110, 110, 1, 0.97, true)); m.rotation.x = -Math.PI / 2; m.scale.set(700, 700, 1); m.position.set(-30, WATER_Y, 0); m.userData.dyn = true; m.renderOrder = 1; world.add(m); }
   const foamT = (() => { const fc = cv(256, 32), fx = fc.getContext('2d'); fx.fillStyle = '#e4f0ee'; for (let i = 0; i < 9; i++) { fx.beginPath(); fx.ellipse(14 + i * 28 + (i % 2) * 5, 16 + Math.sin(i * 1.7) * 5, 13 + (i % 3) * 3, 4, 0, 0, TAU); fx.fill(); } return fc; })();
   const foam = (x, z, w, d) => { const t = canvasTex(foamT, [Math.max(1, w / 6), Math.max(1, d / 6)]); const f = new THREE.Mesh(G.plane, new THREE.MeshBasicMaterial({ map: t, transparent: true, opacity: 0.5, depthWrite: false, fog: false })); f.rotation.x = -Math.PI / 2; f.scale.set(w, d, 1); f.position.set(x, WATER_Y + 0.012, z); f.userData.dyn = true; f.renderOrder = 2; world.add(f); BEACH.foam.push(f); };
   foam(-29.3, -106, 1.7, 187); foam(-29.3, 28.6, 1.7, 30.8); foam(-19.4, -13.4, 18.2, 1.6); foam(-11.2, 0.3, 1.6, 25.8); foam(-19.4, 12.4, 18.2, 1.6); foam(48.9, -78, 1.7, 244); foam(10, 44.9, 77, 1.7);
@@ -1387,6 +1398,7 @@ function aegeanHouse(P_, x, z, w, d, h, ry, door, face) { // beyaz küp ev, mavi
   P_.push(part(G.box, W, x, h / 2, z, w, h, d, 0, ry, 0)); P_.push(part(G.box, 0xe9f3fb, x, h + 0.08, z, w + 0.3, 0.16, d + 0.3, 0, ry, 0));
   const fz = (d / 2 + 0.02) * (face || 1); let [dx, dz] = T(-w * 0.18, fz); P_.push(part(G.box, B, dx, 0.85, dz, 0.9, 1.7, 0.08, 0, ry, 0));
   for (const wx of [w * 0.26]) { const [wx2, wz2] = T(wx, fz); P_.push(part(G.box, 0x8fd0ee, wx2, h * 0.58, wz2, 0.7, 0.8, 0.08, 0, ry, 0)); const [a1, a2] = T(wx - 0.5, fz); P_.push(part(G.box, B, a1, h * 0.58, a2, 0.26, 0.9, 0.1, 0, ry, 0)); const [b1, b2] = T(wx + 0.5, fz); P_.push(part(G.box, B, b1, h * 0.58, b2, 0.26, 0.9, 0.1, 0, ry, 0)); }
+  { const [vx, vz] = T(-w * 0.5 + 0.12, fz + 0.12 * (face || 1)), vc = [0xe0307a, 0xff5aa8, 0xc2185b]; for (let i = 0; i < 5; i++) P_.push(part(G.sph6, vc[i % 3], vx + (i % 2) * 0.12, 0.5 + i * (h - 0.9) / 4, vz, 0.34 - i * 0.02, 0.3, 0.3), part(G.sph6, 0x2f9a4a, vx - 0.08, 0.35 + i * (h - 0.9) / 4, vz + 0.04, 0.22, 0.2, 0.2)); const [bx, bz] = T(w * 0.26, fz + 0.14 * (face || 1)); P_.push(part(G.box, 0x6b4a2a, bx, h * 0.58 - 0.5, bz, 0.9, 0.16, 0.22, 0, ry, 0), part(G.sph6, 0xff5aa8, bx - 0.25, h * 0.58 - 0.36, bz, 0.16, 0.12, 0.14), part(G.sph6, 0xffffff, bx, h * 0.58 - 0.36, bz, 0.16, 0.12, 0.14), part(G.sph6, 0xe8272f, bx + 0.25, h * 0.58 - 0.36, bz, 0.16, 0.12, 0.14)); }
   const [pk1, pk2] = T(w * 0.38, fz + 0.3 * (face || 1)); P_.push(part(G.sph, 0xe0307a, pk1, h + 0.35, pk2, 0.55, 0.4, 0.5), part(G.sph, 0xff5aa8, pk1 + 0.3, h * 0.55, pk2, 0.4, 0.5, 0.35), part(G.sph, 0x2f9a4a, pk1 - 0.2, h + 0.15, pk2, 0.4, 0.3, 0.4));
 }
 function sailboatParts(P_, x, z, ry, sc, col) {
@@ -1416,8 +1428,75 @@ function buildBayHub() {
   const S_ = []; [[-92, 12, 0.6, 0xff6f61], [-93, -14, 2.3, 0x1d6fb8], [-84, 18, 1.2, 0x1d6fb8], [-68, 28, 0.2, 0xff6f61], [-96, -2, 0.9, 0xff6f61], [-60, -33, 1.9, 0x1d6fb8]].forEach(a => sailboatParts(S_, a[0], a[1], a[2], 0.9, a[3]));
   const sb = new THREE.Mesh(mergeParts(S_), vcMat); sb.userData.dyn = false; sb.position.y = WATER_Y + 0.1; world.add(sb);
 }
+/* ---- Gorsel cila: sahil kartpostali (cicek saksilari, bayrak/fener girlandi, kedi, martilar) ---- */
+const POL = { cats: [], gulls: [], rip: null, ripM: null };
+function polPot(P_, x, z, c, s) { // terrakota saksi + begonvil/sardunya tepesi
+  s = (s || 1) * 1.4; P_.push(part(G.cyl, 0xc4673a, x, 0.17 * s, z, 0.2 * s, 0.34 * s, 0.2 * s), part(G.cyl, 0xa9522c, x, 0.36 * s, z, 0.24 * s, 0.07 * s, 0.24 * s), part(G.sph6, c, x, 0.5 * s, z, 0.27 * s, 0.2 * s, 0.27 * s), part(G.sph6, shade(c, 0.28), x + 0.07 * s, 0.6 * s, z - 0.04 * s, 0.14 * s, 0.11 * s, 0.14 * s), part(G.sph6, 0x2f9a4a, x - 0.1 * s, 0.42 * s, z + 0.1 * s, 0.1 * s, 0.08 * s, 0.1 * s));
+}
+function polGarland(P_, x0, y0, z0, x1, y1, z1, sag, n) { // ip + ucgen bayrak + kucuk fener
+  const cols = [0xffffff, 0x1d6fb8, 0xff6f9a, 0xffd23f, 0xffffff, 0x3fb6c9], mid = (a, b, t) => a + (b - a) * t;
+  let px = x0, py = y0, pz = z0;
+  for (let i = 1; i <= n * 2; i++) { const t = i / (n * 2), x = mid(x0, x1, t), z = mid(z0, z1, t), y = mid(y0, y1, t) - sag * Math.sin(Math.PI * t);
+    const dx = x - px, dy = y - py, dz = z - pz, L = Math.hypot(dx, dy, dz), ry = Math.atan2(dx, dz);
+    P_.push(part(G.box, 0xf3ead8, (x + px) / 2, (y + py) / 2, (z + pz) / 2, 0.025, 0.025, L + 0.02, -Math.asin(dy / L), ry, 0)); px = x; py = y; pz = z; }
+  for (let i = 0; i < n; i++) { const t = (i + 0.5) / n, x = mid(x0, x1, t), z = mid(z0, z1, t), y = mid(y0, y1, t) - sag * Math.sin(Math.PI * t) - 0.02;
+    if (i % 3 === 1) { P_.push(part(G.sph6, [0xff5a3a, 0xffc21a][i % 2], x, y - 0.3, z, 0.17, 0.22, 0.17), part(G.cyl8, 0x4a3a2a, x, y - 0.1, z, 0.015, 0.2, 0.015)); }
+    else P_.push(part(new THREE.ConeGeometry(1, 1, 3), cols[i % cols.length], x, y - 0.28, z, 0.26, 0.55, 0.04, 0, Math.PI / 2, Math.PI)); }
+}
+function polCat(x, z, ry, col, sit) {
+  const P_ = [part(G.sph6, col, 0, 0.3, 0, 0.26, 0.28, 0.34), part(G.sph6, col, 0, 0.55, 0.22, 0.2, 0.19, 0.18), part(G.cone, col, -0.11, 0.74, 0.22, 0.06, 0.14, 0.05), part(G.cone, col, 0.11, 0.74, 0.22, 0.06, 0.14, 0.05), part(G.sph5, 0xf4efe6, 0, 0.5, 0.38, 0.09, 0.07, 0.06), part(G.sph5, 0x222222, -0.07, 0.6, 0.38, 0.025, 0.025, 0.02), part(G.sph5, 0x222222, 0.07, 0.6, 0.38, 0.025, 0.025, 0.02)];
+  const m = new THREE.Mesh(mergeParts(P_), vcMat); m.castShadow = true; m.position.set(x, sit || 0, z); m.rotation.y = ry; m.userData.dyn = true; world.add(m);
+  const tl = new THREE.Mesh(mergeParts([part(G.cyl8, col, 0, 0.2, 0, 0.045, 0.4, 0.045, 0.2, 0, 0)]), vcMat); tl.position.set(0, 0.12, -0.3); tl.userData.dyn = true; m.add(tl);
+  POL.cats.push({ m, tl, ph: rand(0, 6) });
+}
+function polGull(x, y, z, ry) {
+  const P_ = [part(G.sph6, 0xfafafa, 0, 0.2, 0, 0.17, 0.15, 0.3), part(G.sph6, 0xfafafa, 0, 0.38, 0.22, 0.1, 0.1, 0.1), part(G.cone, 0xffa21a, 0, 0.37, 0.34, 0.035, 0.12, 0.035, Math.PI / 2, 0, 0), part(G.sph6, 0x8d98a4, -0.14, 0.26, -0.02, 0.05, 0.1, 0.26, 0, 0, 0.2), part(G.sph6, 0x8d98a4, 0.14, 0.26, -0.02, 0.05, 0.1, 0.26, 0, 0, -0.2), part(G.cone, 0xfafafa, 0, 0.2, -0.3, 0.07, 0.2, 0.03, -Math.PI / 2, 0, 0)];
+  const m = new THREE.Mesh(mergeParts(P_), vcMat); m.scale.setScalar(1.15); m.position.set(x, y, z); m.rotation.y = ry; m.castShadow = true; m.userData.dyn = true; world.add(m); POL.gulls.push({ m, ph: rand(0, 6), y }); return m;
+}
+function buildPolishPlaza() {
+  const P_ = [], pk = [0xe0307a, 0xff5aa8, 0xe8272f, 0xf7f2e8, 0xffc21a];
+  // beyaz evlerin onunde saksi ritmi
+  [-7.6, -4.0, 1.9, 4.6, 10.2, 14.0, 16.4, 20.8].forEach((x, i) => polPot(P_, x, x > 8 ? -13.1 : (x < 0 ? -7.5 : -7.75), pk[i % 5], 1 + (i % 2) * 0.1));
+  // plaza kenari / kaldirim saksilari
+  for (const [x, z, i] of [[-8.9, -4.2, 0], [-8.9, 12.8, 3], [16.0, -4.4, 1], [16.0, 12.8, 2], [14.0, 12.8, 4], [-6.2, 12.8, 0]]) polPot(P_, x, z, pk[i], 1.05);
+  // bank yanlarinda/duvar dibinde ikili sardunya
+  for (const x of [-1.7, 6.2]) polPot(P_, x, -7.6, pk[(x * 3 | 0) & 3], 0.9);
+  // girlandlar: ev catilari arasi
+  polGarland(P_, -7.4, 3.3, -8.0, 3.2, 2.9, -8.0, 0.55, 10); polGarland(P_, 3.2, 2.9, -8.0, 12.0, 3.4, -8.4, 0.5, 9);
+  const m = new THREE.Mesh(mergeParts(P_), vcMat); m.castShadow = true; world.add(m);
+  // kediler (kuyruk sallanir) + iskele direklerinde martilar
+  polCat(-2.4, -7.3, 0.5, 0xe99a4a, 0); polCat(15.2, -12.6, -0.4, 0x8d8d96, 0);
+  polGull(-12.4, 1.05, 1.65, 1.2); polGull(-16.4, 1.05, -1.65, -2.0); polGull(-24.4, 1.05, 1.65, 0.6);
+}
+function updatePolish(t) {
+  if (POL.ripM) POL.ripM.opacity = 0.34 + 0.12 * Math.sin(t * 1.8);
+  for (const c of POL.cats) { c.tl.rotation.z = Math.sin(t * 2.2 + c.ph) * 0.45; c.tl.rotation.x = 0.35 + Math.sin(t * 1.3 + c.ph) * 0.12; c.m.scale.y = 1 + Math.sin(t * 1.6 + c.ph) * 0.015; }
+  for (const g of POL.gulls) { g.m.rotation.x = Math.max(0, Math.sin(t * 1.4 + g.ph * 3)) > 0.93 ? 0.5 : 0; g.m.position.y = g.y + Math.max(0, Math.sin(t * 0.7 + g.ph)) * 0.015; g.m.rotation.y += Math.sin(t * 0.3 + g.ph) * 0.0015; }
+}
+function polRope(P_, x, z, s) { P_.push(part(G.torus, 0xc8a46a, x, 0.11, z, 0.3 * s, 0.3 * s, 0.3 * s, Math.PI / 2, 0, 0), part(G.torus, 0xb4905a, x, 0.2, z, 0.24 * s, 0.24 * s, 0.24 * s, Math.PI / 2, 0, 0), part(G.torus, 0xc8a46a, x, 0.29, z, 0.17 * s, 0.17 * s, 0.17 * s, Math.PI / 2, 0, 0)); }
+function polBarrel(P_, x, z, c) { P_.push(part(G.cyl, c, x, 0.4, z, 0.3, 0.8, 0.3), part(G.cyl, 0x2d3a45, x, 0.2, z, 0.315, 0.06, 0.315), part(G.cyl, 0x2d3a45, x, 0.62, z, 0.315, 0.06, 0.315), part(G.cyl, shade(c, -0.25), x, 0.81, z, 0.26, 0.03, 0.26)); }
+function polBuoy(P_, x, y, z, ry) { P_.push(part(G.torus, 0xe8142e, x, y, z, 0.3, 0.3, 0.3, 0, ry, 0)); for (let i = 0; i < 4; i++) { const a = i * Math.PI / 2 + 0.78, ca = Math.cos(a) * 0.3, sa = Math.sin(a) * 0.3, c = Math.cos(ry), sn = Math.sin(ry); P_.push(part(G.box, 0xffffff, x + ca * c, y + sa, z - ca * sn, 0.14, 0.14, 0.12, 0, ry, a)); } }
+function polNet(P_, x, z, s) { P_.push(part(G.sph6, 0x4a9a9a, x, 0.08, z, 0.5 * s, 0.1, 0.38 * s), part(G.sph6, 0x2f7a7a, x + 0.15 * s, 0.13, z - 0.05, 0.3 * s, 0.07, 0.25 * s), part(G.sph6, 0xd96a3a, x - 0.2 * s, 0.14, z + 0.1, 0.07, 0.05, 0.07), part(G.sph6, 0xf2d27a, x + 0.3 * s, 0.17, z + 0.06, 0.06, 0.05, 0.06)); }
+function polCrate(P_, x, y, z, c, ry) { P_.push(part(G.box, c, x, y + 0.2, z, 0.5, 0.36, 0.5, 0, ry, 0), part(G.box, shade(c, -0.2), x, y + 0.32, z, 0.4, 0.06, 0.4, 0, ry, 0), part(G.sph6, 0xb8c6d4, x, y + 0.4, z, 0.2, 0.07, 0.1, 0, ry, 0)); }
+function buildPolishPier() {
+  const P_ = [], R_ = [], pts = POL.pts = POL.pts || [];
+  // iskele: halat, can simidi, varil, ag, kasalar (kenarlarda; yürüyüs seridi bos)
+  polRope(P_, -13.0, 1.2, 1); polRope(P_, -21.3, -1.2, 1.1); polBarrel(P_, -24.6, 1.2, 0x7a5230); polBarrel(P_, -25.3, 1.0, 0x8a6a3a); polNet(P_, -17.4, -1.15, 1.1);
+  polCrate(P_, -15.2, 0.04, -1.2, 0xc99a5a, 0.3); polCrate(P_, -15.35, 0.4, -1.25, 0xb98040, 0.5); polCrate(P_, -22.8, 0.04, 1.2, 0xb98040, -0.2);
+  polBuoy(P_, -15.2, 0.72, 1.68, 0); polBuoy(P_, -23.2, 0.72, -1.68, Math.PI);
+  // rıhtım: halat, varil, ag, can simidi
+  const qz = QUAY.z; polRope(P_, -13.4, qz + 0.55, 1); polRope(P_, -24.0, qz + 0.5, 1.1); polBarrel(P_, -27.6, qz + 0.5, 0x7a5230); polNet(P_, -11.7, qz + 0.45, 1.2); polBuoy(P_, -28.3, 1.9, qz + 1.4, 0);
+  polCrate(P_, -10.9, 0.2, qz - 0.2, 0xc99a5a, 0.2);
+  for (const q of P_) void q;
+  const m = new THREE.Mesh(mergeParts(P_), vcMat); m.castShadow = true; world.add(m);
+  // direk diplerinde hafif kopuk/dalga halkalari (tek birlesik, tek cizim; opacity ile nefes alir)
+  const posts = []; for (let i = 0; i < 9; i++) for (const sz of [-1.65, 1.65]) posts.push([-11.2 - i * 2.0, sz]); posts.push([-28.2, 0]); for (let i = 0; i < 11; i++) posts.push([QUAY.x0 + 0.4 + i * 1.9, QUAY.z - 1.05]);
+  for (const [x, z] of posts) { R_.push(part(new THREE.RingGeometry(0.34, 0.55, 14), 0xeaffff, x, WATER_Y + 0.035, z, 1, 1, 1, -Math.PI / 2, 0, 0), part(new THREE.RingGeometry(0.62, 0.74, 14), 0xdaf6fb, x, WATER_Y + 0.03, z, 1, 1, 1, -Math.PI / 2, 0, 0)); }
+  POL.ripM = new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.4, depthWrite: false, fog: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
+  const rm = new THREE.Mesh(mergeParts(R_), POL.ripM); rm.renderOrder = 2; rm.userData.dyn = true; rm.userData.nopb = true; world.add(rm); POL.rip = rm;
+}
 const BEACH = { foam: [] };
-function updateBeach(dt, t) { SEAT.value = t; for (const f of BEACH.foam) f.material.map.offset.x -= dt * 0.03; updateGulls(t); }
+function updateBeach(dt, t) { SEAT.value = t; for (const f of BEACH.foam) f.material.map.offset.x -= dt * 0.03; updateGulls(t); updatePolish(t); }
 /* balıkçı teknesi (traktör yerine) */
 function makeBoatModel(col) {
   const g = new THREE.Group(), white = mat(0xffffff), navy = mat(0x1d3b66);
@@ -2655,7 +2734,7 @@ function applyUpgrade(key, instant) {
   else if (key === 'carrier') spawnCarrier(instant);
   else if (EXTAPPLY[key]) EXTAPPLY[key](instant);
 }
-const RIZA = { sera: 'Gelgit çekilince midyeler ortaya çıkar. Acele et!', boat: 'Tekneler denize açıldı! Kasaları rıhtımdan al ya da hamal tut.', gboat: 'Balık-ekmek en sevilen yemek. Buzlu kasaları tekneye getir!', cage: 'Kafeslerde karides ve yengeç var. Tabak yap, kalabalık yığılsın!', hall: 'Hal açıldı! Temiz balık kasalarını sarı alana bırak; zil çalınca tüccarlar x1.5–2 fiyata alır.', bridge: 'Eski fenere giden yol açıldı. Gün batımı orada daha güzel...', fener: 'Fener Kafe senin. Artık sahil seninle anılacak!', gate: 'Yeni ufuklar seni bekliyor, evlat. Çiftlikte görüşürüz!' };
+const RIZA = { sera: 'Gelgit çekilince midyeler ortaya çıkar. Acele et!', boat: 'Tekneler denize açıldı! Kasaları rıhtımdan al ya da hamal tut.', gboat: 'Balık-ekmek en sevilen yemek. Buzlu kasaları tekneye getir!', cage: 'Kafeslerde karides ve yengeç var. Tabak yap, kalabalık yığılsın!', hall: 'Hal açıldı! Temiz balık kasalarını sarı alana bırak; Yarım dakikada bir zil çalar; tüccarlar normalin 2-3 katına alır, VIP alıcı bonus verir.', bridge: 'Eski fenere giden yol açıldı. Gün batımı orada daha güzel...', fener: 'Fener Kafe senin. Artık sahil seninle anılacak!', gate: 'Yeni ufuklar seni bekliyor, evlat. Çiftlikte görüşürüz!' };
 function purchase(u) {
   const key = u.key; S.lv[key]++; u.paid = 0; stats.upgrades++; saveDirty = true; u.locked = true; u.pause = 0.3; u.off = false; u.hold = 0; u.pop = 0.6;
   sfx('up', true); confetti(u.x, 1.2, u.z, 44); sparkles(u.x, 0.8, u.z, 14, 0xfff2a0, 1.0); ring(u.x, u.z, 0xffc21a, 4.5);
@@ -3798,8 +3877,8 @@ function iconHall(ctx, cx, cy, s) {
   ctx.beginPath(); ctx.arc(cx, cy - s * 0.05, s * 0.3, Math.PI, 0); ctx.lineTo(cx + s * 0.34, cy + s * 0.22); ctx.lineTo(cx - s * 0.34, cy + s * 0.22); ctx.closePath(); ctx.fill(); ctx.stroke();
   ctx.fillStyle = '#6a4a00'; ctx.beginPath(); ctx.arc(cx, cy + s * 0.3, s * 0.07, 0, TAU); ctx.fill(); ctx.fillStyle = '#fff'; ctx.fillRect(cx - s * 0.04, cy - s * 0.42, s * 0.08, s * 0.12);
 }
-function hallPeriod() { return 45 * Math.pow(0.88, S.lv.hallSpd || 0); }
-function hallMult() { return Math.min(2.6, 1.5 + 0.5 * Math.random() + 0.12 * (S.lv.hallBonus || 0)); }
+function hallPeriod() { return 30 * Math.pow(0.9, S.lv.hallSpd || 0); }
+function hallMult() { return Math.min(3.6, 1.5 + 0.5 * Math.random() + 0.2 * (S.lv.hallBonus || 0)); }
 function buildHallBody(g) {
   const cx = HALL.cx, cz = HALL.cz, P_ = [];
   P_.push(part(G.box, 0xf4ead0, cx, 0.06, cz, 18.4, 0.12, 12.4), part(G.box, 0xdbeaf5, cx, 0.13, cz, 17.2, 0.02, 11.2));
@@ -3810,7 +3889,7 @@ function buildHallBody(g) {
   for (let i = 0; i < 6; i++) P_.push(part(G.box, 0xe8f6fc, cx - 6.5 + i * 2.6, 0.6, cz + 4.9, 2.2, 1.0, 1.0), part(G.box, 0xcfeeff, cx - 6.5 + i * 2.6, 1.15, cz + 4.9, 2.0, 0.12, 0.8));
   P_.push(part(G.box, 0x8a5a30, cx, 0.7, cz - 2.6, 8.0, 0.14, 2.0), part(G.box, 0xb98040, cx, 0.35, cz - 2.6, 7.6, 0.6, 1.7));
   const m = new THREE.Mesh(mergeParts(P_), vcMat); m.castShadow = m.receiveShadow = true; g.add(m); m.position.set(-g.userData.px, 0, -g.userData.pz);
-  const sg = makeBoard('BALIK HALİ', 6.0, 1.1, 'wood'); ad(g, sg, cx, 6.0, cz - 6.2); sg.rotation.x = -0.15;
+  const sg = makeBoard('BALIK HALİ', 9.0, 1.7, 'wood'); ad(g, sg, cx, 7.0, cz - 6.2); sg.rotation.x = -0.15;
   const mt = rbox(3.0, 0.75, 1.9, 0.08, woodM()); ad(g, mt, -8.6, 0.38, 33.0); addCollider(-10.1, -7.1, 32, 34); const tr = rbox(3.1, 0.1, 2.0, 0.04, mat(0x12a04a)); ad(g, tr, -8.6, 0.78, 33.0);
   const ms = makeBoard('PARA', 1.1, 0.4, 'wood'); ad(g, ms, -8.6, 1.9, 31.8); ms.scale.setScalar(0.9);
   // zil direği
@@ -3822,18 +3901,21 @@ function initHall() {
   const g0 = mkGroup(z, 0.1); buildHallBody(g0);
   HALL.stock = new Stack(scene, (i, out) => out.set(HALL.cx - 3.3 + (i % 10) * 0.74, 1.0 + Math.floor(i / 20) * 0.26, HALL.cz - 3.1 + (Math.floor(i / 10) % 2) * 1.0), 40); HALL.stock.pend = 0; EXTSTACKS.push(HALL.stock);
   HALL.pile = new Stack(scene, (i, out) => { const r = i % 6, l = Math.floor(i / 6); out.set(-8.6 + ((r % 3) - 1) * 0.9, 0.95 + l * 0.14, 33.0 + (Math.floor(r / 3) - 0.5) * 0.6); }, 36); HALL.pile.extra = 0; HALL.pile.jitter = 0.07; EXTSTACKS.push(HALL.pile);
-  HALL.zone = new Zone({ x: HALL.cx, z: 29.0, w: 3.4, d: 2.2, color: '#ffd23f', draw: drawZoneIcon(iconBouquet) }); HALL.zone.group.visible = false;
+  HALL.zone = new Zone({ x: HALL.cx, z: 29.0, w: 4.4, d: 2.8, color: '#ffb000', draw: drawZoneIcon(iconBouquet) }); HALL.zone.group.visible = false;
+  { const c = cv(256, 256), x = c.getContext('2d'); x.strokeStyle = '#fff3b0'; x.lineWidth = 16; x.shadowColor = '#ffb000'; x.shadowBlur = 22; rrect(x, 14, 14, 228, 228, 34); x.stroke();
+    const rm_ = new THREE.Mesh(G.plane, new THREE.MeshBasicMaterial({ map: canvasTex(c), transparent: true, depthWrite: false, fog: false, polygonOffset: true, polygonOffsetFactor: -6, polygonOffsetUnits: -6 })); rm_.rotation.x = -Math.PI / 2; rm_.position.y = 0.008; rm_.renderOrder = 4; rm_.scale.set(HALL.zone.w, HALL.zone.d, 1); HALL.zone.group.add(rm_); HALL.ring = rm_; }
   HALL.monZone = new Zone({ x: -8.6, z: 35.1, w: 3.2, d: 2.2, color: '#1ed760', draw: null, labelSize: 0.01 }); HALL.monZone.label.visible = false; HALL.monZone.group.visible = false;
   HALL.spr = makeSprite(512, 192, () => {}, 6.0, 2.25, false); HALL.spr.position.set(HALL.cx, 4.3, 27.4); HALL.spr.visible = false; scene.add(HALL.spr);
   z.onShow = () => { HALL.active = true; };
-  extPad('hall', 'Balık Hali', [12000], -1.5, 27.5, iconHall, () => S.lv.cage > 0).autoShow = true; UPG.hall.sub = () => 'Toplu satış, x1.5–2 çarpan'; EXTAPPLY.hall = i => unlockExt(z, i);
-  let u = extPad('hallBonus', 'Mezat Çarpanı', geo(6000, 5), -1.5, 32.5, iconStar, () => S.lv.hall > 0); u.autoShow = true; UPG.hallBonus.sub = () => 'Çarpan +0.12';
+  extPad('hall', 'Balık Hali', [12000], -1.5, 27.5, iconHall, () => S.lv.cage > 0).autoShow = true; UPG.hall.sub = () => 'Toplu satış, kasa başı ~x2–3, VIP alıcı'; EXTAPPLY.hall = i => unlockExt(z, i);
+  let u = extPad('hallBonus', 'Mezat Çarpanı', geo(6000, 5), -1.5, 32.5, iconStar, () => S.lv.hall > 0); u.autoShow = true; UPG.hallBonus.sub = () => 'Çarpan +0.20';
   u = extPad('hallSpd', 'Mezat Sıklığı', geo(7000, 4), -1.5, 37.5, iconBolt, () => S.lv.hall > 0); u.autoShow = true; UPG.hallSpd.sub = () => 'Zil daha sık çalar';
 }
 function hallBuyerSpot(i) { return [HALL.cx - 6.5 + i * 2.6, 26.0]; }
 function hallSprite(txt, col, sub) { const sig = txt + col + (sub || ''); if (HALL.sig === sig) return; HALL.sig = sig; redrawSprite(HALL.spr, (ctx, w, h) => { ctx.fillStyle = 'rgba(22,28,64,.94)'; ctx.strokeStyle = col; ctx.lineWidth = 8; rrect(ctx, 6, 6, w - 12, h - 12, 34); ctx.fill(); ctx.stroke(); if (sub) { otext(ctx, txt, w / 2, h * 0.36, fitT(ctx, txt, 64, w - 50), '#fff', '#05071a'); otext(ctx, sub, w / 2, h * 0.76, fitT(ctx, sub, 46, w - 50), col, '#05071a'); } else otext(ctx, txt, w / 2, h / 2 + 2, fitT(ctx, txt, 62, w - 50), '#fff', '#05071a'); }); }
 function updateHall(dt, t) {
   const H = HALL; if (!H.active) return; H.zone.group.visible = H.monZone.group.visible = H.spr.visible = true; H.stock.update(dt, t); H.pile.update(dt, t);
+  { const k = (t * 1.1) % 1; H.ring.scale.set(H.zone.w * (1 + 0.22 * k), H.zone.d * (1 + 0.22 * k), 1); H.ring.material.opacity = 0.95 * (1 - k); H.zone.baseMat.opacity = Math.max(H.zone.baseMat.opacity, 0.88); }
   if (H.zone.inside && P.stack.count('bouquet') > 0 && H.stock.length + (H.stock.pend || 0) < 40) { H.tick = (H.tick || 0) - dt; if (H.tick <= 0) { dropTo(H.stock, P, 'bouquet'); H.tick = CFG.transferEvery; } }
   if (H.monZone.inside && (H.pile.length > 0 || H.pile.extra > 0)) { H.mt = (H.mt || 0) - dt; if (H.mt <= 0) { collectMoney(H.pile); H.mt = 0.03; } }
   const gp = P.group.position;
@@ -3861,11 +3943,11 @@ function hallBuyer(i) {
   c.group.position.set(HALL.cx + rand(-9, 9), 0, 14 + rand(0, 3)); c.spot = hallBuyerSpot(i); c.state = 'in'; c.atSpot = false; c.phase = rand(0, 6); scene.add(c.group); HALL.buyers.push(c); return c;
 }
 function hallSell() {
-  const H = HALL, n = H.stock.length; let k = 0; const total = Math.round(n * 20 * H.mult * priceMul());
+  const H = HALL, n = H.stock.length; let k = 0; H.vip = Math.random() < 0.4; const base = Math.round(n * 70 * H.mult * priceMul()), vipB = H.vip ? Math.round(base * 0.3) : 0, total = base + vipB; // kasa basi 70 (normal satisin ~2-3 kati) x carpan; VIP aliciyla +%30
   while (H.stock.length) { const it = H.stock.takeLast(); const b = H.buyers[k++ % Math.max(1, H.buyers.length)]; later(k * 0.05, () => { if (b && b.group.parent) fly(it.mesh, out => { out.set(b.group.position.x, 1.5, b.group.position.z); return 0; }, 0.35, 1.6, () => { rm(it.mesh); sfx('pick'); }); else rm(it.mesh); }); }
   for (const b of H.buyers) { b.held = ITEMF.sand(); b.held.visible = false; }
   const nb = clamp(Math.round(total / CFG.billValue / 3), 3, 12), bv = total / nb; H.sellT = 2.4 + n * 0.05; H.stats = (H.stats || 0) + 1; stats.auctions = (stats.auctions || 0) + 1; stats.auctionSum = (stats.auctionSum || 0) + total;
-  popText(H.cx, 6.2, 28.5, '+' + fmt(total) + '  x' + H.mult.toFixed(2), '#6dff6a'); confetti(H.cx, 4, 30, 50); sfx('up'); vib(20); praise('MEZAT! x' + H.mult.toFixed(2));
+  popText(H.cx, 6.2, 28.5, '+' + fmt(total) + '  x' + H.mult.toFixed(2), '#6dff6a'); if (H.vip) later(0.5, () => popText(H.cx + 3, 5.2, 28.5, 'VIP ALICI +' + fmt(vipB), '#ffd23f')); confetti(H.cx, 4, 30, 50 + (H.vip ? 30 : 0)); sfx('up'); vib(20); praise(H.vip ? 'VIP ALICI! x' + H.mult.toFixed(2) : 'MEZAT! x' + H.mult.toFixed(2));
   for (let i = 0; i < nb; i++) later(0.5 + i * 0.12, () => { const b2 = makeBill(); b2.userData.v = bv; b2.position.set(H.cx + rand(-2, 2), 3.2, 28.5); scene.add(b2); const idx = H.pile.length + (H.pile.pend || 0); H.pile.pend = (H.pile.pend || 0) + 1; fly(b2, out => { H.pile.slotFn(Math.min(idx, 35), out); return 0; }, 0.6, 2.2, () => { H.pile.pend--; if (H.pile.length >= 36) { H.pile.extra += bv; rm(b2); } else H.pile.add(b2, 'bill'); sfx('cash'); }); });
 }
 /* =====================================================================
@@ -4036,6 +4118,8 @@ function initGatePad() {
 buildGround(); buildBeach(); buildFences();
 // plaza edge hedges / bushes
 for (const [x, z, s] of [[-9.5, -8.6, 1.1], [0.6, -8.6, 1.0], [13, -8.5, 1.2], [18.5, 13, 1.1], [6, 13.4, 0.9], [-9.4, 13.2, 1.0], [15.5, -7.2, 0.9]]) buildBush(x, z, s);
+buildPolishPlaza();
+buildPolishPier();
 for (const [x, z, s] of [[-24, -14.5, 1.6]]) buildTree(x, z, s);
 for (let i = 0; i < 3; i++) buildBed(i);
 buildStations(); buildDecor(); buildSera(); buildVan(); buildZones(); buildPlayer(); LANES.bouquet = shelfB; LANES.pot = shelfP; buildExpansion(); buildLanes(); initBoats(); finalizeWorld();
