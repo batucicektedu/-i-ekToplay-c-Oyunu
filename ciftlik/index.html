@@ -3397,8 +3397,7 @@ function updateGardener(h, dt, t) {
     } else { tx = h.group.position.x; tz = h.group.position.z; const hm = r.home; if (h.idleT > 1 && Math.hypot(hm[0] - gp.x, hm[1] - gp.z) > 2) { tx = hm[0]; tz = hm[1]; } }
   } else {
     if (h.stack.length === 0 && h.incoming === 0) { h.state = 'seek'; h.ctype = null; h.helping = false; }
-    else { if (!h.ctype && h.stack.items.length) h.ctype = h.stack.items[h.stack.items.length - 1].type; // resetGardener ctype'ı sıfırlar: taşınan türden geri kur (teslim kilidi)
-      const d = gNeed(h.ctype || 'flower', 25) || gTargets(h.ctype).find(q => q.stack.length + (q.stack.pend || 0) < q.cap); if (d) { h.dest = d; tx = d.zone.x; tz = d.zone.z; } else h.dest = null; }
+    else { const d = gNeed(h.ctype || 'flower', 25) || gTargets(h.ctype).find(q => q.stack.length + (q.stack.pend || 0) < q.cap); if (d) { h.dest = d; tx = d.zone.x; tz = d.zone.z; } else h.dest = null; }
   }
   let mv = 0, dx = 0, dz = 0;
   if (tx !== null) { const w_ = wayPt(h, tx, tz); dx = w_[0] - gp.x; dz = w_[1] - gp.z; const d = Math.hypot(dx, dz); if (d > Math.max(0.35, spd * dt * 1.5)) { const s2 = Math.min(d, spd * dt); gp.x += dx / d * s2; gp.z += dz / d * s2; h.vel.set(dx / d * spd, 0, dz / d * spd); mv = 1; } else h.vel.set(0, 0, 0); } else h.vel.set(0, 0, 0);
@@ -4412,7 +4411,7 @@ for (const k in upPads) { const u = upPads[k]; if (!u.done) { u.group.visible = 
 /* ---- pad çakışma denetimi: pad dikdörtgeni prop/collider ile kesişiyorsa en yakın boş yere taşınır ---- */
 function allPads() { const l = []; for (const k in upPads) l.push(upPads[k]); return l; }
 function roadsList() { return [[3.45, 7.35, -172, -11.5], [8.3, 11.7, 12, 47], [-11.1, -8.9, -11, 11], [-17.5, -10.5, -5.5, -2.5], [-17.5, -10.5, 2.5, 5.5], [-17.5, -10.5, -13.2, -10.5]]; } // sokak, minibüs yolu, toprak patikalar
-function bedBox(b) { return b.rc || (b.rc = (() => { let x0 = 1e9, x1 = -1e9, z0 = 1e9, z1 = -1e9; for (const f of b.flowers) { x0 = Math.min(x0, f.x); x1 = Math.max(x1, f.x); z0 = Math.min(z0, f.z); z1 = Math.max(z1, f.z); } return [x0 - 0.8, x1 + 0.8, z0 - 0.8, z1 + 0.8]; })()); }
+function bedRect(b) { return b.rc || (b.rc = (() => { let x0 = 1e9, x1 = -1e9, z0 = 1e9, z1 = -1e9; for (const f of b.flowers) { x0 = Math.min(x0, f.x); x1 = Math.max(x1, f.x); z0 = Math.min(z0, f.z); z1 = Math.max(z1, f.z); } return [x0 - 0.8, x1 + 0.8, z0 - 0.8, z1 + 0.8]; })()); }
 function padOnRoadOK(p) { return !!(p.key && (EXTZ[p.key] || p.key === 'sera' || p.key === 'van' || p.key === 'coll')); } // bölge açma pad'leri sokak üstünde durur
 function padMeshHit(p, x, z, mg) { // pad ayak izi herhangi bir statik mesh kutusuyla (bina, silo, ağaç tacı, çit...) kesişiyor mu
   const m = mg === undefined ? 0.1 : mg, hw = p.w / 2 + m, hd = p.d / 2 + m, x0 = x - hw, x1 = x + hw, z0 = z - hd, z1 = z + hd;
@@ -4434,7 +4433,7 @@ function padHits(p, x, z, others) {
   for (const c of colliders) { if (c.active && !c.active()) continue; if (c.x0 < x1 && c.x1 > x0 && c.z0 < z1 && c.z1 > z0) return 'collider'; }
   for (const q of zones) { if (q instanceof UpgradePad || q.noPadCheck) continue; if (Math.abs(q.x - x) < q.w / 2 + p.w / 2 + 0.8 && Math.abs(q.z - z) < q.d / 2 + p.d / 2 + 0.8) return 'zone'; }
   if (!padOnRoadOK(p)) for (const r of roadsList()) if (r[0] < x1 && r[1] > x0 && r[2] < z1 && r[3] > z0) return 'road';
-  for (const b of beds) { if (!b.flowers.length) continue; const r = bedBox(b); if (r[0] < x1 && r[1] > x0 && r[2] < z1 && r[3] > z0) return 'bed'; }
+  for (const b of beds) { if (!b.flowers.length) continue; const r = bedRect(b); if (r[0] < x1 && r[1] > x0 && r[2] < z1 && r[3] > z0) return 'bed'; }
   if (others) for (const q of others) { if (q === p) continue; if (p.o0 && q.o0 && Math.abs(p.o0[0] - q.o0[0]) < 0.05 && Math.abs(p.o0[1] - q.o0[1]) < 0.05) continue; if (Math.abs(q.x - x) < (q.w + p.w) / 2 - 1.5 && Math.abs(q.z - z) < (q.d + p.d) / 2 - 1.5) return 'pad'; }
   return null;
 }
