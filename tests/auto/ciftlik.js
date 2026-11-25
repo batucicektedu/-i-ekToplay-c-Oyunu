@@ -34,7 +34,7 @@ const CH=[ // [zincir, otomasyon rolu, uretim, satis/tuketim, toplanmamis nakit]
  ['Sut kamyonu','Tasiyici yukler+toplar',D.vanRuns,D.vanRuns,0],
  ['At binisi (ranch)','Binicilik Hocasi (bineri baslatir + parayi toplar)',D.rides,D.rides,rp],
  ['At bakimi (yem>sevgi)','Seyis (+elma bahcesi/havuc)',D.fed,D.fed,0],
- ['Engelli Parkur gosterisi','YOK (oyuncu parkur pad icine girer)',D.shows||0,D.shows||0,0],
+ ['Engelli Parkur gosterisi','Binicilik Hocasi (hazir olunca otomatik baslatir)',D.shows||0,D.shows||0,0],
  ['Koyun>yun>orgu>kazak>pazar','Coban+Pazarci',D.sheared,D.s_sweater,0],
  ['Sut>peynir>pazar','Pazarci (sut tasir+satar)',D.made,D.s_cheese,0],
  ['Sevimli Hayvanlar (ziyaretci)','otomatik ziyaretci',1,1,0]];

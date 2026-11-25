@@ -3878,7 +3878,7 @@ function updateShow(dt, t) {
   if (S.lv.show <= 0) { showZone.group.visible = false; showZone.hidden = true; return; }
   showZone.hidden = SHOW.state !== 'ready'; showZone.group.visible = SHOW.state === 'ready';
   if (SHOW.state === 'cd') { SHOW.cd -= dt; if (SHOW.cd <= 0) { SHOW.state = 'ready'; praise('PARKUR GÖSTERİSİ HAZIR!', true); sfx('up', true); } }
-  else if (SHOW.state === 'ready') { if (showZone.inside) { const hs = RH.filter(rideReady).sort((a, b) => b.love - a.love).slice(0, 3); if (hs.length) startShow(hs); } }
+  else if (SHOW.state === 'ready') { /* Binicilik Hocası varsa gösteri hazır olunca kendiliğinden başlar; oyuncu pad'e girerek de başlatabilir */ if (showZone.inside || instructor) { const hs = RH.filter(rideReady).sort((a, b) => b.love - a.love).slice(0, 3); if (hs.length) startShow(hs); } }
   else if (SHOW.state === 'run') {
     SHOW.t += dt; let alive = 0; const F = SHOWF(), f = RANCH.showF;
     SHOW.run.forEach((e, ei) => { e.ei = ei; });
