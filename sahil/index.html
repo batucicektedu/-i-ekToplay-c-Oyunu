@@ -1502,6 +1502,23 @@ function buildPolishIsland() { // kayalik kiyi + deniz kuslari (gece/gunduz dong
   const m = new THREE.Mesh(mergeParts(P_), vcMat); m.castShadow = true; m.userData.nopb = true; world.add(m);
   for (const [x, y, z, a] of perch) polGull(x, y, z, -a + 1.4);
 }
+function polLounger(P_, x, z, ry, c) { const cs = Math.cos(ry), sn = Math.sin(ry), T = (lx, lz) => [x + lx * cs + lz * sn, z - lx * sn + lz * cs];
+  let [a, b] = T(0, 0); P_.push(part(G.box, 0xf7f3e8, a, 0.24, b, 0.7, 0.08, 1.25, 0, ry, 0), part(G.box, c, a, 0.29, b, 0.62, 0.04, 1.15, 0, ry, 0));
+  [a, b] = T(0, -0.78); P_.push(part(G.box, 0xf7f3e8, a, 0.44, b, 0.7, 0.08, 0.7, -0.6, ry, 0), part(G.box, c, a, 0.49, b, 0.62, 0.04, 0.62, -0.6, ry, 0));
+  for (const [lx, lz] of [[-0.3, 0.5], [0.3, 0.5], [-0.3, -0.4], [0.3, -0.4]]) { [a, b] = T(lx, lz); P_.push(part(G.box, 0xd8d2c0, a, 0.1, b, 0.06, 0.2, 0.06)); } }
+function polSandcastle(P_, x, z, s) { const sd = 0xe6cb8e; P_.push(part(G.cyl, sd, x, 0.12 * s, z, 0.5 * s, 0.24 * s, 0.5 * s), part(G.cyl, shade(sd, 0.08), x, 0.3 * s, z, 0.3 * s, 0.2 * s, 0.3 * s));
+  for (const [dx, dz] of [[-0.4, 0.15], [0.4, -0.1], [0.05, 0.42]]) P_.push(part(G.cyl, shade(sd, -0.04), x + dx * s, 0.2 * s, z + dz * s, 0.14 * s, 0.4 * s, 0.14 * s), part(G.cone, 0xff6f61, x + dx * s, 0.5 * s, z + dz * s, 0.17 * s, 0.22 * s, 0.17 * s));
+  P_.push(part(G.cyl8, 0x5a3a1c, x, 0.62 * s, z, 0.015, 0.4 * s, 0.015), part(G.box, 0xffd23f, x + 0.1 * s, 0.76 * s, z, 0.2 * s, 0.12 * s, 0.02)); }
+function polShell(P_, x, z, k) { const c = [0xffb6c1, 0xfff1de, 0xffa56a, 0xe9d8ff][k % 4]; P_.push(part(G.sph6, c, x, 0.04, z, 0.09, 0.05, 0.08, 0, k, 0), part(G.sph6, shade(c, -0.15), x + 0.05, 0.05, z - 0.03, 0.04, 0.03, 0.04)); }
+function buildPolishBeach() {
+  const P_ = [];
+  const grp = (x, z, ry, c1, c2) => { umbrella(world, x, z, c1, c2); polLounger(P_, x + 1.3, z + 0.2, ry, c1); polLounger(P_, x - 1.2, z + 0.4, ry + 0.2, c2 === 0xffffff ? c1 : c2); P_.push(part(G.sph, 0xff6f61, x + 0.2, 0.2, z + 1.5, 0.2, 0.2, 0.2), part(G.sph6, 0xffffff, x + 0.2, 0.28, z + 1.5, 0.12, 0.1, 0.12), part(G.box, shade(c1, 0.1), x - 0.3, 0.03, z - 1.4, 0.8, 0.03, 0.5, 0, ry, 0)); };
+  grp(33.6, 43.0, 0.1, 0xff6f61, 0xffffff); grp(40.3, 42.9, -0.2, 0xffc21a, 0xffffff); grp(46.2, 42.8, 0.2, 0x1d6fb8, 0xffffff);
+  polSandcastle(P_, 37.0, 43.2, 1.1); polSandcastle(P_, 43.4, 43.1, 0.9); polSandcastle(P_, 5.0, 19.0, 0.8);
+  for (let i = 0; i < 22; i++) polShell(P_, 32 + i * 0.68 + Math.sin(i * 2.9) * 0.4, 43.1 + Math.sin(i * 1.7) * 0.5, i);
+  for (let i = 0; i < 8; i++) polShell(P_, 2.5 + (i % 4) * 1.3, 17.5 + Math.floor(i / 4) * 1.4 + Math.sin(i) * 0.3, i);
+  const m = new THREE.Mesh(mergeParts(P_), vcMat); m.castShadow = true; world.add(m);
+}
 const BEACH = { foam: [] };
 function updateBeach(dt, t) { SEAT.value = t; for (const f of BEACH.foam) f.material.map.offset.x -= dt * 0.03; updateGulls(t); updatePolish(t); }
 /* balıkçı teknesi (traktör yerine) */
@@ -4127,6 +4144,7 @@ buildGround(); buildBeach(); buildFences();
 for (const [x, z, s] of [[-9.5, -8.6, 1.1], [0.6, -8.6, 1.0], [13, -8.5, 1.2], [18.5, 13, 1.1], [6, 13.4, 0.9], [-9.4, 13.2, 1.0], [15.5, -7.2, 0.9]]) buildBush(x, z, s);
 buildPolishPlaza();
 buildPolishPier();
+buildPolishBeach();
 buildPolishIsland();
 for (const [x, z, s] of [[-24, -14.5, 1.6]]) buildTree(x, z, s);
 for (let i = 0; i < 3; i++) buildBed(i);
