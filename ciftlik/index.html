@@ -2314,13 +2314,25 @@ function dropToPot(who) {
 function bedRect(b) { if (b._r) return b._r; let a = 1e9, c = -1e9, d = 1e9, e = -1e9; for (const f of b.flowers) { a = Math.min(a, f.x); c = Math.max(c, f.x); d = Math.min(d, f.z); e = Math.max(e, f.z); } return (b._r = { x0: a - 0.8, x1: c + 0.8, z0: d - 0.8, z1: e + 0.8 }); }
 const VEH_REACH = 4.3;
 function inBedRect(x, z, m, skip) { for (const b of beds) { if (b.nohelp || b === skip || !b.flowers.length) continue; const r = bedRect(b); if (x > r.x0 - m && x < r.x1 + m && z > r.z0 - m && z < r.z1 + m) return true; } return false; }
-function vehTarget(f) { // [x, z] yatak dışında yaklaşma noktası (araç hedefi); yatak değilse çiçeğin kendisi
-  const b = f.bed; if (b.nohelp || !b.flowers.length) return [f.x, f.z]; const r = bedRect(b), cz = (r.z0 + r.z1) / 2, x = clamp(f.x, r.x0, r.x1), n = [x, r.z0 - 1.2], so = [x, r.z1 + 1.2], first = f.z <= cz ? n : so, second = f.z <= cz ? so : n;
+function vehTarget(f, gp) { // [x, z] yatak dışında yaklaşma noktası (araç hedefi); aracın bulunduğu taraftaki serbest kenar tercih edilir (yatağı dolanmamak için)
+  const b = f.bed; if (b.nohelp || !b.flowers.length) return [f.x, f.z]; const r = bedRect(b), cz = (r.z0 + r.z1) / 2, x = clamp(f.x, r.x0, r.x1), n = [x, r.z0 - 1.2], so = [x, r.z1 + 1.2], fz = gp ? gp.z <= cz : f.z <= cz, first = fz ? n : so, second = fz ? so : n;
   return inBedRect(first[0], first[1], 0.7, b) && !inBedRect(second[0], second[1], 0.7, b) ? second : first;
 }
-function vehNear(h, gp) { const f = h.target, ap = vehTarget(f); return Math.hypot(f.x - gp.x, f.z - gp.z) < VEH_REACH || Math.hypot(ap[0] - gp.x, ap[1] - gp.z) < 0.8; }
+function vehNear(h, gp) { const f = h.target, ap = vehTarget(f, gp); return Math.hypot(f.x - gp.x, f.z - gp.z) < VEH_REACH || Math.hypot(ap[0] - gp.x, ap[1] - gp.z) < 0.8; }
 function vehAvoid(h) { const gp = h.group.position; for (const b of beds) { if (b.nohelp || !b.flowers.length) continue; const r = bedRect(b), m = 0.7;
   if (gp.x > r.x0 - m && gp.x < r.x1 + m && gp.z > r.z0 - m && gp.z < r.z1 + m) { const l = gp.x - (r.x0 - m), rr = r.x1 + m - gp.x, tp = gp.z - (r.z0 - m), bt = r.z1 + m - gp.z, mn = Math.min(l, rr, tp, bt); if (mn === l) gp.x = r.x0 - m; else if (mn === rr) gp.x = r.x1 + m; else if (mn === tp) gp.z = r.z0 - m; else gp.z = r.z1 + m; } } }
+/* araç doğrudan hedefe giderken yatak dikdörtgeninden geçecekse (vehAvoid geri iter, araç takılır) yatağın yan koridorundan dolanır */
+function vehDetour(h, tx, tz) {
+  const gp = h.group.position, ax = gp.x, az = gp.z, dx = tx - ax, dz = tz - az;
+  for (const b of beds) { if (b.nohelp || !b.flowers.length) continue; const r = bedRect(b), m = 0.6, x0 = r.x0 - m, x1 = r.x1 + m, z0 = r.z0 - m, z1 = r.z1 + m;
+    let t0 = 0, t1 = 1, ok = true;
+    for (const [p0, d, lo, hi] of [[ax, dx, x0, x1], [az, dz, z0, z1]]) { if (Math.abs(d) < 1e-6) { if (p0 <= lo || p0 >= hi) ok = false; } else { let u = (lo - p0) / d, v = (hi - p0) / d; if (u > v) { const w = u; u = v; v = w; } t0 = Math.max(t0, u); t1 = Math.min(t1, v); } }
+    if (!ok || t0 >= t1) continue;
+    const xe = Math.abs(ax - (r.x0 - 1.0)) + Math.abs(tx - (r.x0 - 1.0)) < Math.abs(ax - (r.x1 + 1.0)) + Math.abs(tx - (r.x1 + 1.0)) ? r.x0 - 1.0 : r.x1 + 1.0;
+    return Math.abs(ax - xe) > 0.6 && (az <= r.z0 - 0.6 || az >= r.z1 + 0.6) ? [xe, az] : [xe, tz]; }
+  return [tx, tz];
+}
+function vehWp(h, d) { const w = wayPt(h, d[0], d[1]); return inBedRect(w[0], w[1], 0.75) ? d : w; } // A* ara noktası yatak payına düşerse (vehAvoid geri iter, araç varamaz) doğrudan hedefe
 function updateHelper(dt, t) {
   const h = helper; if (!h) return;
   if (h.spawnT !== undefined) { h.spawnT += dt * 2.5; h.group.scale.setScalar(easeOutBack(h.spawnT) * CHAR_S); if (h.spawnT >= 1) { h.group.scale.setScalar(CHAR_S); h.spawnT = undefined; } }
@@ -2338,7 +2350,7 @@ function updateHelper(dt, t) {
         if (!f && h.stack.length === 0 && h.incoming === 0 && zone2 && !zone2.locked) { const k2 = h.kind === 'orchid' ? 'flower' : 'orchid'; f = pickT(k2); if (f) h.kind = k2; } // tercih edilen tür yoksa diğerine geç (kilitlenme önlemi)
         if (f) claimF(f, h);
       }
-      if (h.target) { if (h.tr) { const ap = vehTarget(h.target); tx = ap[0]; tz = ap[1]; } else { tx = h.target.x; tz = h.target.z; } h.idle = 0; }
+      if (h.target) { if (h.tr) { const ap = vehTarget(h.target, h.group.position); tx = ap[0]; tz = ap[1]; } else { tx = h.target.x; tz = h.target.z; } h.idle = 0; }
       else { h.idle += dt; if (h.idle > 1.2 && h.stack.length > 0) h.state = 'deliver'; }
     }
   } else if (h.state === 'deliver') {
@@ -2349,7 +2361,7 @@ function updateHelper(dt, t) {
   }
   let mv = 0, dx = 0, dz = 0;
   if (tx !== null) {
-    const w_ = wayPt(h, tx, tz); dx = w_[0] - h.group.position.x; dz = w_[1] - h.group.position.z; const d = Math.hypot(dx, dz);
+    const dt_ = h.tr ? vehDetour(h, tx, tz) : [tx, tz], w_ = !h.tr ? wayPt(h, dt_[0], dt_[1]) : dt_[0] === tx && Math.hypot(tx - h.group.position.x, tz - h.group.position.z) < 3 ? dt_ : vehWp(h, dt_); dx = w_[0] - h.group.position.x; dz = w_[1] - h.group.position.z; const d = Math.hypot(dx, dz);
     if (d > 0.35) { const st = Math.min(d, spd * dt); h.group.position.x += dx / d * st; h.group.position.z += dz / d * st; h.vel.set(dx / d * spd, 0, dz / d * spd); mv = 1; }
     else h.vel.set(0, 0, 0);
   } else h.vel.set(0, 0, 0);
@@ -2451,7 +2463,7 @@ function updateCarrierW(h, dt, t) {
     if (h.stack.length === 0) { h.state = 'idle'; h.trips = (h.trips || 0) + 1; }
   }
   let mv = 0, dx = 0, dz = 0;
-  if (tx !== null) { const w_ = wayPt(h, tx, tz); dx = w_[0] - gp.x; dz = w_[1] - gp.z; const d = Math.hypot(dx, dz); if (d > 0.3) { const st = Math.min(d, spd * dt); gp.x += dx / d * st; gp.z += dz / d * st; h.vel.set(dx / d * spd, 0, dz / d * spd); mv = 1; faceChar(h, dx, dz, dt); } else h.vel.set(0, 0, 0); }
+  if (tx !== null) { const dt_ = h.tr ? vehDetour(h, tx, tz) : [tx, tz], w_ = !h.tr ? wayPt(h, dt_[0], dt_[1]) : dt_[0] === tx && Math.hypot(tx - h.group.position.x, tz - h.group.position.z) < 3 ? dt_ : vehWp(h, dt_); dx = w_[0] - gp.x; dz = w_[1] - gp.z; const d = Math.hypot(dx, dz); if (d > 0.3) { const st = Math.min(d, spd * dt); gp.x += dx / d * st; gp.z += dz / d * st; h.vel.set(dx / d * spd, 0, dz / d * spd); mv = 1; faceChar(h, dx, dz, dt); } else h.vel.set(0, 0, 0); }
   else { h.vel.set(0, 0, 0); if (h.state === 'unload') faceChar(h, 1, -0.4, dt); }
   watchdog(h, dt, gp, h.dest + h.ptype, [5.0, 3.4], c => { c.state = 'idle'; c.waitT = 0; c.stuck = 0; c.cd = 0; }, q => (q.state === 'idle' && q.stack.length === 0) || (q.state === 'unload' && q.stack.length > 0 && !q.stack.items.some(i => shelfFree(i.type) > 0) && q.dest !== 'van') || (q.state === 'unload' && q.dest === 'van' && vanFree() <= 0));
   updateSway(h, dt); animChar(h, dt, mv, t); tractorFx(h, mv, spd, dt); h.stack.update(dt, t);
@@ -3392,7 +3404,7 @@ function updateGardener(h, dt, t) {
       if (full) h.state = 'deliver';
       else {
         if (!h.target) { const f = gFlower(h.ctype, gp); if (f) claimF(f, h); }
-        if (h.target) { if (h.tr) { const ap = vehTarget(h.target); tx = ap[0]; tz = ap[1]; } else { tx = h.target.x; tz = h.target.z; } h.idle = 0; } else { h.idle += dt; if (h.idle > 1.2) { if (h.stack.length > 0) h.state = 'deliver'; else { h.ctype = null; h.helping = false; } } }
+        if (h.target) { if (h.tr) { const ap = vehTarget(h.target, h.group.position); tx = ap[0]; tz = ap[1]; } else { tx = h.target.x; tz = h.target.z; } h.idle = 0; } else { h.idle += dt; if (h.idle > 1.2) { if (h.stack.length > 0) h.state = 'deliver'; else { h.ctype = null; h.helping = false; } } }
       }
     } else { tx = h.group.position.x; tz = h.group.position.z; const hm = r.home; if (h.idleT > 1 && Math.hypot(hm[0] - gp.x, hm[1] - gp.z) > 2) { tx = hm[0]; tz = hm[1]; } }
   } else {
@@ -3401,7 +3413,7 @@ function updateGardener(h, dt, t) {
       const d = gNeed(h.ctype || 'flower', 25) || gTargets(h.ctype).find(q => q.stack.length + (q.stack.pend || 0) < q.cap); if (d) { h.dest = d; tx = d.zone.x; tz = d.zone.z; } else h.dest = null; }
   }
   let mv = 0, dx = 0, dz = 0;
-  if (tx !== null) { const w_ = wayPt(h, tx, tz); dx = w_[0] - gp.x; dz = w_[1] - gp.z; const d = Math.hypot(dx, dz); if (d > Math.max(0.35, spd * dt * 1.5)) { const s2 = Math.min(d, spd * dt); gp.x += dx / d * s2; gp.z += dz / d * s2; h.vel.set(dx / d * spd, 0, dz / d * spd); mv = 1; } else h.vel.set(0, 0, 0); } else h.vel.set(0, 0, 0);
+  if (tx !== null) { const dt_ = h.tr ? vehDetour(h, tx, tz) : [tx, tz], w_ = !h.tr ? wayPt(h, dt_[0], dt_[1]) : dt_[0] === tx && Math.hypot(tx - h.group.position.x, tz - h.group.position.z) < 3 ? dt_ : vehWp(h, dt_); dx = w_[0] - gp.x; dz = w_[1] - gp.z; const d = Math.hypot(dx, dz); if (d > Math.max(0.35, spd * dt * 1.5)) { const s2 = Math.min(d, spd * dt); gp.x += dx / d * s2; gp.z += dz / d * s2; h.vel.set(dx / d * spd, 0, dz / d * spd); mv = 1; } else h.vel.set(0, 0, 0); } else h.vel.set(0, 0, 0);
   if (h.tr) vehAvoid(h);
   if (mv) { faceChar(h, dx, dz, dt); const hd = Math.atan2(dx, dz); if (h._hd !== undefined && Math.abs(angDiff(h._hd, hd)) > 2.4) h._fl = (h._fl || 0) + 1; h._hd = hd; }
   h._ft = (h._ft || 0) + dt; if (h._ft > 10) { if (h._fl > 6) { h.idleCool = 5; h.helping = false; resetGardener(h); } h._ft = 0; h._fl = 0; }
