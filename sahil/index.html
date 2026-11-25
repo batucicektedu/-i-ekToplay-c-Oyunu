@@ -1495,6 +1495,13 @@ function buildPolishPier() {
   POL.ripM = new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.4, depthWrite: false, fog: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
   const rm = new THREE.Mesh(mergeParts(R_), POL.ripM); rm.renderOrder = 2; rm.userData.dyn = true; rm.userData.nopb = true; world.add(rm); POL.rip = rm;
 }
+function buildPolishIsland() { // kayalik kiyi + deniz kuslari (gece/gunduz dongusu yok: fener isigi atlandi)
+  const P_ = [], gr = [0x7c7c78, 0x8d8d88, 0x6d6d6a, 0x9a9a94], perch = [];
+  for (let i = 0; i < 22; i++) { const a = i / 22 * TAU + 0.15; if (Math.cos(a) > 0.86 && Math.abs(Math.sin(a)) < 0.45) continue; const r = ISL.r + 1.3 + (i % 3) * 0.55, x = ISL.cx + Math.cos(a) * r, z = ISL.cz + Math.sin(a) * r, s = 0.55 + (i % 4) * 0.2;
+    P_.push(part(G.sph6, gr[i % 4], x, -0.12 + s * 0.2, z, s * 1.1, s * 0.62, s * 0.9, 0, a, 0), part(G.sph6, gr[(i + 1) % 4], x + 0.4 * s, -0.15 + s * 0.1, z + 0.3 * s, s * 0.55, s * 0.36, s * 0.5)); if (i % 7 === 2) perch.push([x, -0.12 + s * 0.2 + s * 0.6, z, a]); }
+  const m = new THREE.Mesh(mergeParts(P_), vcMat); m.castShadow = true; m.userData.nopb = true; world.add(m);
+  for (const [x, y, z, a] of perch) polGull(x, y, z, -a + 1.4);
+}
 const BEACH = { foam: [] };
 function updateBeach(dt, t) { SEAT.value = t; for (const f of BEACH.foam) f.material.map.offset.x -= dt * 0.03; updateGulls(t); updatePolish(t); }
 /* balıkçı teknesi (traktör yerine) */
@@ -4120,6 +4127,7 @@ buildGround(); buildBeach(); buildFences();
 for (const [x, z, s] of [[-9.5, -8.6, 1.1], [0.6, -8.6, 1.0], [13, -8.5, 1.2], [18.5, 13, 1.1], [6, 13.4, 0.9], [-9.4, 13.2, 1.0], [15.5, -7.2, 0.9]]) buildBush(x, z, s);
 buildPolishPlaza();
 buildPolishPier();
+buildPolishIsland();
 for (const [x, z, s] of [[-24, -14.5, 1.6]]) buildTree(x, z, s);
 for (let i = 0; i < 3; i++) buildBed(i);
 buildStations(); buildDecor(); buildSera(); buildVan(); buildZones(); buildPlayer(); LANES.bouquet = shelfB; LANES.pot = shelfP; buildExpansion(); buildLanes(); initBoats(); finalizeWorld();
