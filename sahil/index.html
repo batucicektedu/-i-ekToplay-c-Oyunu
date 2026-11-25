@@ -3930,7 +3930,7 @@ function buildHallBody(g) {
   P_.push(part(G.box, 0x8a5a30, cx, 0.7, cz - 2.6, 8.0, 0.14, 2.0), part(G.box, 0xb98040, cx, 0.35, cz - 2.6, 7.6, 0.6, 1.7));
   polHallDetails(P_, cx, cz);
   const m = new THREE.Mesh(mergeParts(P_), vcMat); m.castShadow = m.receiveShadow = true; g.add(m); m.position.set(-g.userData.px, 0, -g.userData.pz);
-  const sg = makeBoard('BALIK HALİ', 9.0, 1.7, 'wood'); ad(g, sg, cx, 7.0, cz - 6.2); sg.rotation.x = -0.15;
+  const sg = makeBoard('BALIK HALİ', 6.6, 1.25, 'wood'); ad(g, sg, cx, 4.3, cz - 6.2); sg.rotation.x = -0.15;
   const mt = rbox(3.0, 0.75, 1.9, 0.08, woodM()); ad(g, mt, -8.6, 0.38, 33.0); addCollider(-10.1, -7.1, 32, 34); const tr = rbox(3.1, 0.1, 2.0, 0.04, mat(0x12a04a)); ad(g, tr, -8.6, 0.78, 33.0);
   const ms = makeBoard('PARA', 1.1, 0.4, 'wood'); ad(g, ms, -8.6, 1.9, 31.8); ms.scale.setScalar(0.9);
   // zil direği
