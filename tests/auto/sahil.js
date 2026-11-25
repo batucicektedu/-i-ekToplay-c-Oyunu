@@ -31,10 +31,10 @@ const CH=[ // [zincir, otomasyon rolu, uretim, satis/tuketim, toplanmamis nakit]
  ['Midye kayaligi>saksi>raf','Yardimci+Tasiyici',D.potted,D.s_pot,0],
  ['Teslimat araci','Tasiyici yukler+toplar',D.vanRuns,D.vanRuns,0],
  ['Tekne>Rihtim>Hamal>temizleme','Balikci Teknesi+El Arabali Hamal',D.carted,D.carted,0],
- ['Balik-Ekmek teknesi','YOK (girdi+para elle)',D.grilled?D.grilled:0,0,pile('eat.gboat')],
- ['Karides&Yengec kafes>Deniz Tabagi','YOK (tepsi+girdi+para elle)',0,0,pile('eat.cage')],
- ['Balik Hali / Mezat','YOK (stok+para elle)',D.auctions||0,D.auctions||0,pile('hall')],
- ['Fener Kafe','gelir otomatik, para elle',1,1,Math.round(S_['fin.pileExtra'].last)]];
+ ['Balik-Ekmek teknesi','Tezgahtar (+1 Eleman)',D.gr_gboat||0,D.ea_gboat||0,pile('eat.gboat')],
+ ['Karides&Yengec kafes>Deniz Tabagi','Kafes Ciragi (+1 Eleman)',D.gr_cage||0,D.ea_cage||0,pile('eat.cage')],
+ ['Balik Hali / Mezat','Mezat Hamali (+1 Eleman)',D.auctions||0,D.auctions||0,pile('hall')],
+ ['Fener Kafe','gelir otomatik, kasa otomatik toplanir (autoCollect)',1,1,Math.round(S_['fin.pileExtra'].last+S_['fin.pile'].last)]];
 console.log('\nZINCIR | ROL | URETIM | SATIS | TOPLANMAMIS PARA | DURUM');
 let bad=0;for(const [n,r,p,s2,u] of CH){const st=(p>0&&s2>0&&u<1000)?'OK':(u>=1000?'MANUAL (nakit toplanmiyor)':'MANUAL/STALLED');if(st!=='OK')bad++;console.log([n,r,Math.round(p||0),Math.round(s2||0),u,st].join(' | '))}
 console.log('stalls(watchdog):',D.stalls||0,'| gelir (20dk, otomatik toplanan):',Math.round(res.earned),'| oyuncu tasiyor:',res.carry);

@@ -227,9 +227,10 @@ let LOADED_X = null, carpet1 = null, carpet2 = null;
 const MAIN_UNLOCKS = { bed: 1, helper: 1, cashier: 1, carrier: 1, sera: 1, van: 1 };
 const S = { money: 0, lv: { cap: 0, speed: 0, pack: 0, bed: 0, helper: 0, cashier: 0, carrier: 0, cashSpd: 0, carSpd: 0, carCap: 0, helpSpd: 0, sera: 0, van: 0, lav: 0, lavW: 0, keseSpd: 0, parf: 0, parfW: 0, parfSpd: 0, cafe: 0, cafeW: 0, teaSpd: 0, wed: 0, wedBonus: 0, sunf: 0, sunW: 0, sbqSpd: 0, city: 0, cityW: 0, citySpd: 0, stars: 0, bee: 0, beeW: 0, hiveN: 0, hiveSpd: 0, honSpd: 0, jap: 0, bonW: 0, bonSpd: 0, coll: 0, port: 0, portW: 0, portBonus: 0, fest: 0, festBonus: 0, mus: 0, musTkt: 0, wedW: 0, portSpd: 0, portCap: 0, helpCap: 0, helperN: 0, helperT: 0, lavCap: 0, lavN: 0, lavT: 0, parfCap: 0, parfN: 0, parfT: 0, cafeG: 0, cafeGCap: 0, cafeGN: 0, cafeGT: 0, sunCap: 0, sunN: 0, bonCap: 0, bonN: 0, bonT: 0, carN: 0, cashN: 0, wedSpd: 0, potSpd: 0, boat: 0, bridge: 0, fener: 0, fenerSpd: 0, fenerTip: 0, hall: 0, hallBonus: 0, hallSpd: 0, cage: 0, cageSpd: 0, cageQ: 0, gboat: 0, gboatSpd: 0, gboatQ: 0, boatN: 0, boatSpd: 0, boatCap: 0, hamal: 0, hamalN: 0, hamalSpd: 0, hamalCap: 0, bus: 0, busSpd: 0, busCap: 0, busN: 0, wedN: 0, waitN: 0, cityN: 0, portN: 0, beeN: 0, gate: 0 }, ic: 0, tut: 0, tier: { pack: 0, flo: 0, pot: 0, van: 0, kese: 0, parf: 0, tea: 0, wed: 0, city: 0, hon: 0, bon: 0 }, decor: {}, cos: { hat: 'straw', fit: 0, uni: 0, floor: 0, own: [] }, dn: 0,
   cb: {}, cs: [], pt: { n: 0, cur: null }, fe: { n: 0, t: 420 }, q: { a: [], n: 0 }, bx: 0, ts: 0, op: 0, mv: 0, seen: {} };
+Object.assign(S.lv, { tez: 0, tezN: 0, kcir: 0, kcirN: 0, mez: 0, mezN: 0 }); // v9: servis çalışanları
 let saveDirty = false, saveTimer = 0;
 let introDone = false, curGoal = null, curGoalIdx = -1, lastGoalIdx = -2;
-const SAVE_VER = 8, BAK_KEY = SAVE_KEY + '_bak', TMP_KEY = SAVE_KEY + '_tmp';
+const SAVE_VER = 9, BAK_KEY = SAVE_KEY + '_bak', TMP_KEY = SAVE_KEY + '_tmp';
 let SAVE_BLOCKED = false; // okuma bozuk/başarısızsa eski kaydın üzerine yazma
 function readSaveKey(k) { try { const r = localStorage.getItem(k); if (r === null) return { none: true }; const o = JSON.parse(r); return o && typeof o === 'object' && !Array.isArray(o) ? { o, raw: r } : { bad: true, raw: r }; } catch (e) { return { bad: true }; } }
 const hasProgress = o => !!o && (+o.money > 0 || (o.lv && Object.keys(o.lv).some(k => +o.lv[k] > 0)) || +o.tut > 0);
@@ -256,6 +257,7 @@ function migrateSave(s) { // ver alanı yoksa 1 sayılır; sadece alan ekler, hi
   if (v < 5) { /* v4 -> v5 (C5): toplayıcı kapasite/eleman/traktör, otobüs, hız anahtarları eklendi (hepsi varsayılan 0); sunW>0 traktör sahibi kalır */ }
   if (v < 7) { /* v6 -> v7 (Bölüm 2): ic (giriş kartı görüldü), lv.gate (bölüm kapısı) eklendi; varsayılan 0 */ }
   if (v < 8) migrateV8(s);
+  if (v < 9) { /* v8 -> v9: servis çalışanları lv.tez/tezN/kcir/kcirN/mez/mezN eklendi (varsayılan 0) */ }
   if (v < 6) { /* v5 -> v6 (C6): +1 Eleman anahtarları eklendi (wedN, waitN, cityN, portN, beeN; varsayılan 0) */ }
   s.ver = SAVE_VER; return s;
 }
@@ -3534,10 +3536,12 @@ function fireworks(x, z) {
 /* ---- garson ---- */
 function payDirect(x, z, v, label) { addMoney(v); popText(x, 4.0, z, '+' + fmt(v), '#6dff6a'); if (label) popText(x, 5.0, z, label, '#ffd400'); coins(x, 2.2, z, 8); toScreen(x, 1.5, z, _sc); coinFlyScreen(_sc.x, _sc.y); sfx('cash'); }
 let acT = 0;
+const FIN_REG = { group: { position: { x: -53.5, y: 1.3, z: 6.1 } } };
 function autoCollect(dt) {
   acT -= dt; if (acT > 0) return; acT = 0.12;
   const pull = (pile, who) => { if (!pile || !who) return; const it = pile.takeLast('bill'); if (!it) { if (pile.extra > 0) { addMoney(pile.extra); pile.extra = 0; } return; } const bv = it.mesh.userData.v || CFG.billValue, p = who.group.position; fly(it.mesh, out => { out.set(p.x, 1.3, p.z); return 0; }, 0.2, 1.2, () => { rm(it.mesh); addMoney(bv); stats.collected++; }); };
   pull(moneyPile, cashier); if (zone3 && !zone3.locked) pull(vanPile, carrier || cashier); 
+  if (S.lv.fener > 0 && FIN.pile && FIN.monZone) pullBill(FIN.pile, FIN_REG); // Fener Kafe kasası kendiliğinden toplanır (banknotlar kafenin kasasına uçar)
 }
 function updateExpansion(dt, t) {
   updateExtZones(dt); for (const st of STATIONS) updateStation(st, dt, t);
@@ -3548,6 +3552,7 @@ function updateExpansion(dt, t) {
 function buildLanes() { /* ch1 ürün şeritleri kaldırıldı */ }
 // Ekonomi (v9): her büyük açılışın arasında 2-4 gelir/hız yükseltmesi; bot ölçümünde (tests/sahil/econ.js) iki satın alma arası ~6 dk'yı geçmez.
 GOALS.push({ key: 'boat', lv: 1 }, { key: 'hamal', lv: 1 }, { key: 'boatCap', lv: 1 }, { key: 'boatN', lv: 1 }, { key: 'gboat', lv: 1 }, { key: 'gboatSpd', lv: 1 }, { key: 'gboatQ', lv: 1 }, { key: 'boatSpd', lv: 1 }, { key: 'stars', lv: 1 }, { key: 'hamalSpd', lv: 1 }, { key: 'cage', lv: 1 }, { key: 'cageSpd', lv: 1 }, { key: 'cageQ', lv: 1 }, { key: 'gboatSpd', lv: 2 }, { key: 'boatCap', lv: 2 }, { key: 'stars', lv: 2 }, { key: 'hamalCap', lv: 1 }, { key: 'hall', lv: 1 }, { key: 'hallBonus', lv: 1 }, { key: 'boatN', lv: 2 }, { key: 'hallSpd', lv: 1 }, { key: 'cageSpd', lv: 2 }, { key: 'gboatQ', lv: 2 }, { key: 'hallBonus', lv: 2 }, { key: 'stars', lv: 3 }, { key: 'hamalN', lv: 1 }, { key: 'hallSpd', lv: 2 }, { key: 'cageQ', lv: 2 }, { key: 'boatSpd', lv: 2 }, { key: 'bridge', lv: 1 }, { key: 'hallBonus', lv: 3 }, { key: 'gboatSpd', lv: 3 }, { key: 'cageSpd', lv: 3 }, { key: 'hamalSpd', lv: 2 }, { key: 'stars', lv: 4 }, { key: 'hallSpd', lv: 3 }, { key: 'cageQ', lv: 3 }, { key: 'fener', lv: 1 }, { key: 'fenerSpd', lv: 1 }, { key: 'fenerTip', lv: 1 }, { key: 'boatCap', lv: 3 }, { key: 'fenerSpd', lv: 2 }, { key: 'stars', lv: 5 }, { key: 'fenerTip', lv: 2 }, { key: 'hallBonus', lv: 4 }, { key: 'fenerSpd', lv: 3 }, { key: 'gboatQ', lv: 3 }, { key: 'fenerTip', lv: 3 }, { key: 'hallSpd', lv: 4 }, { key: 'fenerSpd', lv: 4 }, { key: 'cageSpd', lv: 4 }, { key: 'fenerTip', lv: 4 }, { key: 'stars', lv: 6 }, { key: 'hallBonus', lv: 5 }, { key: 'stars', lv: 7 }, { key: 'fenerSpd', lv: 5 }, { key: 'fenerTip', lv: 5 }, { key: 'stars', lv: 8 }, { key: 'gate', lv: 1 });
+{ const ins = (aft, g) => { const i = GOALS.findIndex(q => q.key === aft.key && q.lv === aft.lv); if (i >= 0) GOALS.splice(i + 1, 0, g); }; ins({ key: 'gboatQ', lv: 1 }, { key: 'tez', lv: 1 }); ins({ key: 'cageQ', lv: 1 }, { key: 'kcir', lv: 1 }); ins({ key: 'hallSpd', lv: 1 }, { key: 'mez', lv: 1 }); }
 GOALS.forEach((g, i) => { if (GFIRST[g.key] === undefined) GFIRST[g.key] = i; });
 Object.assign(MAIN_UNLOCKS, { boat: 1, gboat: 1, cage: 1, hall: 1, bridge: 1, fener: 1, stars: 1 });
 
@@ -3690,6 +3695,7 @@ function initBoats() {
   u = extPad('hamalSpd', 'Hamal Hızı', geo(800, 4), -14.5, 24.2, iconBolt, () => S.lv.hamal > 0); u.autoShow = true; UPG.hamalSpd.sub = () => 'Daha hızlı yürür';
   u = extPad('hamalCap', 'Arabası Kapasite', geo(1000, 4), -24.5, 24.2, iconBackpack, () => S.lv.hamal > 0); u.autoShow = true; UPG.hamalCap.sub = () => 'Araba ' + (6 + 3 * S.lv.hamalCap) + ' → ' + (9 + 3 * S.lv.hamalCap);
   initEast(); initSouth(); initHall(); initFinale();
+  initSvc();
   if (upPads.helperT && !S.lv.helperT) upPads.helperT.vis = () => false; // balıkçı "tekne yap" evrimi artık gerçek tekneler
 }
 /* =====================================================================
@@ -3743,7 +3749,7 @@ function updateEatery(E, dt, t) {
     E.timer += dt; if (Math.random() < dt * 14) emit({ x: E.cookX + rand(-0.3, 0.3), y: 2.0, z: E.cookZ + rand(-0.3, 0.3), vx: 0.35, vy: rand(0.8, 1.4), vz: rand(-0.1, 0.1), life: 1.3, size: 0.5, c: 0xe8e8e8, grav: -0.5, a: 0.55, grow: 1.5 });
     if (Math.random() < dt * 4) emit({ x: E.cookX, y: 1.8, z: E.cookZ, vx: rand(-0.5, 0.5), vy: rand(1.5, 2.5), vz: rand(-0.5, 0.5), life: 0.4, size: 0.12, c: 0xffa23a, grav: 6 });
     if (E.timer >= interval) {
-      E.working = false; stats.grilled = (stats.grilled || 0) + 1;
+      E.working = false; stats.grilled = (stats.grilled || 0) + 1; stats['gr_' + E.id] = (stats['gr_' + E.id] || 0) + 1;
       for (let k = 0; k < o.outN; k++) { E.pend++; const b = ITEMF[o.outType](); b.position.set(E.cookX, 1.9, E.cookZ); scene.add(b); const idx = E.out.length + E.pend - 1; later(k * 0.12, () => fly(b, out => { E.out.slotFn(Math.min(idx, 7), out); return 0; }, 0.35, 1.0, () => { E.pend--; E.out.add(b, o.outType); sfx('drop'); })); }
     }
   } else if (Math.random() < dt * 2) emit({ x: E.cookX, y: 1.9, z: E.cookZ, vx: 0.3, vy: 1, vz: 0, life: 1.1, size: 0.35, c: 0xdddddd, grav: -0.4, a: 0.25, grow: 1.2 });
@@ -3770,7 +3776,7 @@ function updateEatery(E, dt, t) {
   }
 }
 function eatDone(E, c) {
-  const o = E.o; c.state = 'leave'; c.path = o.leave.slice(); setTimeout(() => { if (c.bubble) c.bubble.visible = false; }, 600); stats.sold++; stats.eaten = (stats.eaten || 0) + c.want; sfx('happy');
+  const o = E.o; c.state = 'leave'; c.path = o.leave.slice(); setTimeout(() => { if (c.bubble) c.bubble.visible = false; }, 600); stats.sold++; stats.eaten = (stats.eaten || 0) + c.want; stats['ea_' + E.id] = (stats['ea_' + E.id] || 0) + c.want; sfx('happy');
   const total = Math.round(c.want * o.price * priceMul()), n = clamp(Math.round(total / CFG.billValue), 1, 8), bv = total / n, gp = c.group.position;
   hearts(gp.x, 3.0, gp.z, 3); popText(gp.x, 3.9, gp.z, '+' + fmt(total), '#6dff6a'); for (let k = 0; k < n; k++) later(0.1 + k * 0.1, () => eatBill(E, c, bv));
 }
@@ -3813,6 +3819,7 @@ function updateEast(dt, t) {
   updateHall(dt, t);
   updateSouth(dt, t);
   for (const E of EATS) updateEatery(E, dt, t);
+  for (const w of SVCW) updateSvc(w, dt, t);
   if (EATS.boat) { EATS.boat.position.y = WATER_Y + 0.55 + Math.sin(t * 1.3) * 0.05; EATS.boat.rotation.z = Math.sin(t * 1.1) * 0.025; EATS.boat.rotation.x = Math.cos(t * 0.9) * 0.015; }
 }
 /* =====================================================================
@@ -4039,6 +4046,80 @@ function updateFinale(dt, t) {
     q.t += dt; animChar(q.c, dt, 0, t); q.c.legL.rotation.x = q.c.legR.rotation.x = -1.4; q.c.armR.rotation.x = q.t > per - 1 ? -1.2 + Math.sin(t * 10) * 0.3 : -0.35;
     if (q.t >= per) { q.t = rand(0, 1.5); const b = makeBill(); b.userData.v = val; b.position.set(q.x, 1.5, q.z); scene.add(b); const idx = FIN.pile.length + (FIN.pile.pend || 0); FIN.pile.pend = (FIN.pile.pend || 0) + 1; hearts(q.x, 2.6, q.z, 2); popText(q.x, 3.3, q.z, '+' + fmt(val), '#6dff6a'); fly(b, out => { FIN.pile.slotFn(Math.min(idx, 35), out); return 0; }, 0.6, 2.0, () => { FIN.pile.pend--; if (FIN.pile.length >= 36) { FIN.pile.extra += val; rm(b); } else FIN.pile.add(b, 'bill'); sfx('cash'); }); }
   }
+}
+/* =====================================================================
+   SAHİL v9: SERVİS ÇALIŞANLARI – Tezgâhtar (Balık-Ekmek), Kafes Çırağı (Deniz Tabağı), Mezat Hamalı (Hal)
+   Her biri kendi zincirini taşır (yalnızca kaynakta yeterli stok varsa) ve kendi para yığınını toplar; oyuncu elle de taşıyabilir.
+   ===================================================================== */
+const SVCW = [], SVCR = {};
+const eatOf = id => EATS.find(e => e.id === id);
+function pullBill(pile, who) { // para yığınından 1 banknot (yığın boşsa taşan kısmı) who'ya uçurur; true = daha var
+  if (!pile || !who) return false; const it = pile.takeLast('bill');
+  if (!it) { if (pile.extra > 0) { addMoney(pile.extra); pile.extra = 0; } return false; }
+  const bv = it.mesh.userData.v || CFG.billValue, p = who.group.position; fly(it.mesh, out => { out.set(p.x, 1.3, p.z); return 0; }, 0.2, 1.2, () => { rm(it.mesh); addMoney(bv); stats.collected++; }); return true;
+}
+function svcRole(o) { const r = Object.assign({ units: [], cap: 10 }, o); SVCR[o.id] = r; return r; }
+const svcWant = r => S.lv[r.hire] > 0 ? 1 + (S.lv[r.cnt] || 0) : 0;
+function spawnSvc(r, instant, idx) {
+  const c = makeChar({ shirt: r.shirt, pants: 0x35507a, hair: 0x2a1a10, hairStyle: 'short', hat: 'cap', hatColor: r.hat, outfit: 'apron', apron: 0xffffff, skin: 0xe8b88a, shoe: 0xffffff });
+  c.group.position.set(r.home[0] + idx * 1.4, 0, r.home[1]); attachBackStack(c, () => r.cap); scene.add(c.group);
+  c.state = 'idle'; c.cd = 0; c.rt = 0; c.kind = 'svc_' + r.id; c.role = r; c.idx = idx; c.wait = 0; c.plan = 0; c.route = -1; popInWorker(c, instant); SVCW.push(c); r.units.push(c); return c;
+}
+function svcSync(r, instant) { while (r.units.length < svcWant(r)) spawnSvc(r, instant, r.units.length); }
+const svcBusy = h => h.state === 'toSrc' || h.state === 'pick';
+function svcPlan(h) { // boştaki çalışan için sıradaki işi seç
+  const r = h.role, rts = r.routes(), cs = r.cash(); let best = null, ba = 0;
+  rts.forEach((rt, i) => {
+    let planned = 0; for (const o of r.units) if (o !== h && o.route === i) planned += svcBusy(o) ? o.plan : (o.state === 'toDst' || o.state === 'drop' ? o.stack.length + o.incoming : 0);
+    const avail = rt.src.length - rt.keep - planned, room = rt.dcap - rt.dst.length - (rt.dst.pend || 0) - planned;
+    if (rt.src.length >= rt.start && avail > 0 && room > 0 && avail > ba) { ba = avail; best = { i, n: Math.min(r.cap, avail, room) }; }
+  });
+  const cashDue = cs && (cs.pile.length >= 6 || cs.pile.extra > 0 || (!best && cs.pile.length > 0)) && !r.units.some(o => o !== h && (o.state === 'toCash' || o.state === 'cash'));
+  if (cashDue) { h.state = 'toCash'; return; }
+  if (best) { h.route = best.i; h.plan = best.n; h.state = 'toSrc'; h.wait = 0; }
+}
+function updateSvc(h, dt, t) {
+  workerPop(h, dt); const r = h.role, gp = h.group.position, spd = 4.6; let tx = null, tz = null; h.cd -= dt; h.rt -= dt;
+  const goTo = (x, z) => { if (h.rt <= 0 || h.gx !== x || h.gz !== z) { h.rt = 1.0; h.gx = x; h.gz = z; h.path = findPath(gp.x, gp.z, x, z); h.pi = 1; } while (h.path && h.pi < h.path.length - 1 && Math.hypot(h.path[h.pi][0] - gp.x, h.path[h.pi][1] - gp.z) < 0.45) h.pi++; const w = h.path && h.path[Math.min(h.pi, h.path.length - 1)]; if (w) { tx = w[0]; tz = w[1]; } };
+  const rts = r.routes(), rt = rts[h.route], load = h.stack.length + h.incoming;
+  if (h.state === 'idle') {
+    if (h.stack.length > 0 && h.incoming === 0) { const ty = h.stack.items[h.stack.items.length - 1].type, i = rts.findIndex(q => q.types.includes(ty)); if (i >= 0) { h.route = i; h.state = 'toDst'; } else { h.stack.takeLast(); } }
+    else if (h.cd <= 0) { h.cd = 0.4; svcPlan(h); }
+    if (h.state === 'idle') { const hm = [r.home[0] + h.idx * 1.4, r.home[1]]; if (Math.hypot(hm[0] - gp.x, hm[1] - gp.z) > 0.6) goTo(hm[0], hm[1]); }
+  } else if (h.state === 'toSrc') { if (!rt) h.state = 'idle'; else { if (Math.hypot(rt.sx - gp.x, rt.sz - gp.z) < 0.7) { h.state = 'pick'; h.cd = 0.1; h.wait = 0; } else goTo(rt.sx, rt.sz); } }
+  else if (h.state === 'pick') {
+    if (!rt) h.state = 'idle';
+    else if (h.cd <= 0 && load < h.plan && rt.src.length > 0) { const it = rt.src.takeLast(rt.types.find(ty => rt.src.count(ty) > 0)); if (it) { it.mesh.getWorldPosition(_w); scene.add(it.mesh); it.mesh.position.copy(_w); if (posable(it.mesh)) bouquetPose(it.mesh, false); sendToBack(h, it.mesh, it.type, 1.4); h.cd = 0.12; h.wait = 0; } }
+    else if (h.incoming === 0) { h.wait += dt; if (load >= h.plan || h.wait > 1.5) h.state = h.stack.length > 0 ? 'toDst' : 'idle'; }
+  } else if (h.state === 'toDst') { if (!rt) h.state = 'idle'; else if (h.stack.length === 0 && h.incoming === 0) h.state = 'idle'; else if (Math.hypot(rt.dx - gp.x, rt.dz - gp.z) < 0.7) { h.state = 'drop'; h.cd = 0.1; } else goTo(rt.dx, rt.dz); }
+  else if (h.state === 'drop') {
+    if (!rt) h.state = 'idle';
+    else { if (h.cd <= 0 && h.stack.length > 0 && rt.dst.length + (rt.dst.pend || 0) < rt.dcap) { dropTo(rt.dst, h, h.stack.items[h.stack.items.length - 1].type); h.cd = 0.1; stats.svcCarried = (stats.svcCarried || 0) + 1; } if (h.stack.length === 0 && h.incoming === 0) { h.state = 'idle'; h.cd = 0.2; } }
+  } else if (h.state === 'toCash') { const cs = r.cash(); if (Math.hypot(cs.x - gp.x, cs.z - gp.z) < 0.9) { h.state = 'cash'; h.cd = 0.1; } else goTo(cs.x, cs.z); }
+  else if (h.state === 'cash') { const cs = r.cash(); if (h.cd <= 0) { h.cd = 0.06; if (!pullBill(cs.pile, h) && !(cs.pile.length > 0)) { h.state = 'idle'; h.cd = 0.3; } } }
+  let mv = 0, dx = 0, dz = 0;
+  if (tx !== null) { dx = tx - gp.x; dz = tz - gp.z; const d = Math.hypot(dx, dz); if (d > 0.2) { const st = Math.min(d, spd * dt); gp.x += dx / d * st; gp.z += dz / d * st; h.vel.set(dx / d * spd, 0, dz / d * spd); mv = 1; faceChar(h, dx, dz, dt); } else h.vel.set(0, 0, 0); } else h.vel.set(0, 0, 0);
+  gp.y = damp(gp.y, deckY(gp.x, gp.z), 12, dt);
+  watchdog(h, dt, gp, h.state + h.route, r.home, q => { q.state = 'idle'; q.path = null; q.rt = 0; q.cd = 0; q.route = -1; }, q => { const rr = r.routes()[q.route]; return q.state === 'idle' || q.state === 'cash' || (q.state === 'drop' && rr && rr.dst.length + (rr.dst.pend || 0) >= rr.dcap); });
+  updateSway(h, dt); animChar(h, dt, mv, t); h.stack.update(dt, t);
+}
+function initSvc() {
+  const E1 = eatOf('gboat'), E2 = eatOf('cage');
+  const eatCash = E => () => ({ pile: E.pile, x: E.monZone.x, z: E.monZone.z });
+  const mk_ = (r, vis, pads) => {
+    EXTAPPLY[r.hire] = i => svcSync(r, i); EXTAPPLY[r.cnt] = i => svcSync(r, i); HIREK.add(r.hire);
+    let u = extPad(r.hire, r.name, [r.price], pads[0][0], pads[0][1], r.icon, vis); u.autoShow = true; UPG[r.hire].sub = () => r.sub;
+    u = extPad(r.cnt, '+1 Eleman', geo(r.price2, 2), pads[1][0], pads[1][1], iconHelper, () => S.lv[r.hire] > 0); u.autoShow = true; UPG[r.cnt].sub = () => 'Şu an ' + (1 + S.lv[r.cnt]) + ' ' + r.name.toLowerCase();
+  };
+  const rT = svcRole({ id: 'tez', name: 'Tezgâhtar', hire: 'tez', cnt: 'tezN', shirt: 0xff8a1f, hat: 0xff8a1f, home: [37.5, 24], price: 3500, price2: 4500, icon: iconSand, sub: 'Temiz balığı tekneye taşır, parayı toplar',
+    routes: () => [{ src: outputPile, sx: POS.outPad.x, sz: POS.outPad.z + 0.3, start: 8, keep: 4, dst: E1.input, dx: E1.o.inZone[0], dz: E1.o.inZone[1], dcap: 24, types: ['bouquet'] }], cash: eatCash(E1) });
+  mk_(rT, () => S.lv.gboat > 0, [[37, 34], [40, 37.5]]);
+  const rK = svcRole({ id: 'kcir', name: 'Kafes Çırağı', hire: 'kcir', cnt: 'kcirN', shirt: 0x19b5c9, hat: 0x19b5c9, home: [15, 40], price: 4500, price2: 6000, icon: iconCrab, sub: 'Tepsileri kioska taşır, parayı toplar',
+    routes: () => CAGES.map(C => ({ src: C.tray, sx: C.zone.x, sz: C.zone.z, start: 4, keep: 0, dst: E2.input, dx: E2.o.inZone[0], dz: E2.o.inZone[1], dcap: 24, types: [C.def.type] })), cash: eatCash(E2) });
+  mk_(rK, () => S.lv.cage > 0, [[20, 29.5], [27, 31.5]]);
+  const rM = svcRole({ id: 'mez', name: 'Mezat Hamalı', hire: 'mez', cnt: 'mezN', shirt: 0x1d6fb8, hat: 0xffd23f, home: [-11, 31.5], price: 5000, price2: 7000, icon: iconHall, sub: 'Temiz balığı hale taşır, mezat parasını toplar',
+    routes: () => HALL.active ? [{ src: outputPile, sx: POS.outPad.x, sz: POS.outPad.z + 0.3, start: 8, keep: 4, dst: HALL.stock, dx: HALL.zone.x, dz: HALL.zone.z, dcap: 10, types: ['bouquet'] }] : [], cash: () => ({ pile: HALL.pile, x: HALL.monZone.x, z: HALL.monZone.z }) });
+  mk_(rM, () => S.lv.hall > 0, [[-2.5, 40.5], [-7.5, 24.5]]);
 }
 /* =====================================================================
    15. INIT
@@ -4280,6 +4361,7 @@ window.__game = {
   render() { if (composer) composer.render(0); else renderer.render(scene, camera); scene.autoUpdate = true; },
   get scene() { return scene; }, fill(name, n) { const M = { input: [inputPile, () => makeFlowerItem(0, 'tulip'), 'flower'], output: [outputPile, () => makeBouquetItem(undefined, true), 'bouquet'], potIn: [potInput, () => makeFlowerItem(0, 'orchid'), 'orchid'], potOut: [potOutput, () => makePotItem(true), 'pot'], shelfB: [shelfB, () => makeBouquetItem(undefined, true), 'bouquet'], shelfP: [shelfP, () => makePotItem(true), 'pot'], vanLoad: [vanLoad, () => makeBouquetItem(undefined, true), 'bouquet'], money: [moneyPile, makeBill, 'bill'], vanMoney: [vanPile, makeBill, 'bill'] }[name]; const st = M[0]; while (st.length) rm(st.items.pop().mesh); fillStack(st, n, M[1], M[2]); }, get calls() { return renderer.info.render.calls; }, get tris() { return renderer.info.render.triangles; }, tutStep: () => S.tut, forceVip() { custCount = 5; }, zoom(v) { camMul = v; }
 };
+Object.defineProperty(window.__game, 'SVCW', { get: () => SVCW });
 
 let last = performance.now(), fpsAcc = 0, fpsN = 0, fpsT = 0, fpsChecked = !HQ || qExplicit;
 let toastTm = 0;
