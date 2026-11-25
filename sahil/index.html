@@ -1470,7 +1470,9 @@ function buildPolishPlaza() {
   polCat(-2.4, -7.3, 0.5, 0xe99a4a, 0); polCat(15.2, -12.6, -0.4, 0x8d8d96, 0);
   polGull(-12.4, 1.05, 1.65, 1.2); polGull(-16.4, 1.05, -1.65, -2.0); polGull(-24.4, 1.05, 1.65, 0.6);
 }
-function updatePolish(t) {
+let _polSmoke = 0;
+function updatePolish(t, dt) {
+  if (dt && typeof EATS !== 'undefined' && (_polSmoke += dt) > 0.28) { _polSmoke = 0; for (const E of EATS) if (E.active && E.cookX !== undefined) emit({ x: E.cookX + rand(-0.15, 0.15), y: 2.1, z: E.cookZ + rand(-0.15, 0.15), vx: 0.25, vy: rand(0.7, 1.1), vz: rand(-0.1, 0.1), life: 1.7, size: 0.32, c: 0xeeeeee, grav: -0.35, a: 0.3, grow: 1.6 }); }
   if (POL.ripM) POL.ripM.opacity = 0.34 + 0.12 * Math.sin(t * 1.8);
   for (const c of POL.cats) { c.tl.rotation.z = Math.sin(t * 2.2 + c.ph) * 0.45; c.tl.rotation.x = 0.35 + Math.sin(t * 1.3 + c.ph) * 0.12; c.m.scale.y = 1 + Math.sin(t * 1.6 + c.ph) * 0.015; }
   for (const g of POL.gulls) { g.m.rotation.x = Math.max(0, Math.sin(t * 1.4 + g.ph * 3)) > 0.93 ? 0.5 : 0; g.m.position.y = g.y + Math.max(0, Math.sin(t * 0.7 + g.ph)) * 0.015; g.m.rotation.y += Math.sin(t * 0.3 + g.ph) * 0.0015; }
@@ -1521,8 +1523,15 @@ function buildPolishBeach() {
   for (let i = 0; i < 8; i++) polShell(P_, 2.5 + (i % 4) * 1.3, 17.5 + Math.floor(i / 4) * 1.4 + Math.sin(i) * 0.3, i);
   const m = new THREE.Mesh(mergeParts(P_), vcMat); m.castShadow = true; world.add(m);
 }
+function polFish(P_, x, y, z, c, ry) { P_.push(part(G.sph6, c, x, y, z, 0.3, 0.075, 0.095, 0, ry, 0), part(G.cone, shade(c, -0.12), x + Math.cos(ry) * 0.3, y, z - Math.sin(ry) * 0.3, 0.1, 0.16, 0.025, 0, ry, -Math.PI / 2), part(G.sph5, 0x1a1a1a, x - Math.cos(ry) * 0.18, y + 0.04, z + Math.sin(ry) * 0.18 + 0.03, 0.025, 0.025, 0.025)); }
+function polHallDetails(P_, cx, cz) { // buz tezgahlarinda balik vitrini, buzlu kasalar, on direkler arasi bayrak
+  const fc = [0xcfd8e3, 0xff9a5a, 0x5a86bd, 0xe86a58, 0xdfe6ee];
+  for (let i = 0; i < 6; i++) for (let k = 0; k < 4; k++) polFish(P_, cx - 7.2 + i * 2.6 + (k % 2) * 1.0, 1.25, cz + 4.65 + (k >> 1) * 0.42, fc[(i + k) % 5], 0.2 + k * 0.5 + i * 0.3);
+  for (const [x, z, y] of [[-8.9, 4.2, 0], [-8.9, 3.4, 0], [-8.9, 3.8, 0.38], [8.4, 4.4, 0], [8.4, 3.6, 0]]) { P_.push(part(G.box, 0xf1f8fc, cx + x, y + 0.26, cz + z, 0.9, 0.5, 0.62), part(G.box, 0xbfe6fb, cx + x, y + 0.53, cz + z, 0.82, 0.05, 0.54)); polFish(P_, cx + x, y + 0.58, cz + z, fc[Math.abs(x * 3 | 0) % 5], 0.5 + z); }
+  polGarland(P_, cx - 8.6, 4.5, cz - 5.8, cx - 2.9, 4.5, cz - 5.8, 0.5, 6); polGarland(P_, cx - 2.9, 4.5, cz - 5.8, cx + 2.9, 4.5, cz - 5.8, 0.5, 6); polGarland(P_, cx + 2.9, 4.5, cz - 5.8, cx + 8.6, 4.5, cz - 5.8, 0.5, 6);
+}
 const BEACH = { foam: [] };
-function updateBeach(dt, t) { SEAT.value = t; for (const f of BEACH.foam) f.material.map.offset.x -= dt * 0.03; updateGulls(t); updatePolish(t); }
+function updateBeach(dt, t) { SEAT.value = t; for (const f of BEACH.foam) f.material.map.offset.x -= dt * 0.03; updateGulls(t); updatePolish(t, dt); }
 /* balıkçı teknesi (traktör yerine) */
 function makeBoatModel(col) {
   const g = new THREE.Group(), white = mat(0xffffff), navy = mat(0x1d3b66);
@@ -3919,6 +3928,7 @@ function buildHallBody(g) {
   // buz tezgâhları (arka duvar) ve stok masası
   for (let i = 0; i < 6; i++) P_.push(part(G.box, 0xe8f6fc, cx - 6.5 + i * 2.6, 0.6, cz + 4.9, 2.2, 1.0, 1.0), part(G.box, 0xcfeeff, cx - 6.5 + i * 2.6, 1.15, cz + 4.9, 2.0, 0.12, 0.8));
   P_.push(part(G.box, 0x8a5a30, cx, 0.7, cz - 2.6, 8.0, 0.14, 2.0), part(G.box, 0xb98040, cx, 0.35, cz - 2.6, 7.6, 0.6, 1.7));
+  polHallDetails(P_, cx, cz);
   const m = new THREE.Mesh(mergeParts(P_), vcMat); m.castShadow = m.receiveShadow = true; g.add(m); m.position.set(-g.userData.px, 0, -g.userData.pz);
   const sg = makeBoard('BALIK HALİ', 9.0, 1.7, 'wood'); ad(g, sg, cx, 7.0, cz - 6.2); sg.rotation.x = -0.15;
   const mt = rbox(3.0, 0.75, 1.9, 0.08, woodM()); ad(g, mt, -8.6, 0.38, 33.0); addCollider(-10.1, -7.1, 32, 34); const tr = rbox(3.1, 0.1, 2.0, 0.04, mat(0x12a04a)); ad(g, tr, -8.6, 0.78, 33.0);
