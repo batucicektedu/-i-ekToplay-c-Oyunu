@@ -24,3 +24,9 @@ exports.open=async function(opts={}){
   return {b,page,errs};
 };
 exports.shot=async(page,name)=>{await page.evaluate(()=>__game.render());await page.waitForTimeout(150);await page.screenshot({path:name.startsWith('/')?name+'.png':path.join(__dirname,name+'.png')});};
+// Sayfada oyuncuyu A* yoluyla (gercek giris vektoruyla) yuruten yardimci: window.__walk(x,z,maxSec,onStep)
+exports.WALK=`window.__walk=(x,z,maxSec,onStep,stop)=>{const g=__game;let pa=null,res=false;const n=Math.round((maxSec||60)/0.1);
+ for(let i=0;i<n;i++){const p=g.P().group.position;if(Math.hypot(x-p.x,z-p.z)<(window.__walkR||0.5)){res=true;break}
+  if(!pa||i%8===0)pa=g.path(x,z);let k=1;while(k<pa.length-1&&Math.hypot(pa[k][0]-p.x,pa[k][1]-p.z)<0.5)k++;const w=pa[Math.min(k,pa.length-1)]||[x,z];let dx=w[0]-p.x,dz=w[1]-p.z;const L=Math.hypot(dx,dz)||1;
+  g.bot(dx/L||1e-6,dz/L||1e-6);g.sim(0.1);if(onStep)onStep();if(stop&&stop())break}
+ g.bot(0,0);return res};`;

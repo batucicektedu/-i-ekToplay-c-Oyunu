@@ -942,7 +942,7 @@ function ibRebuild(r, cam) {
   for (const b of IB.map.values()) {
     if (!b.im) continue; let n = 0; const arr = b.im.instanceMatrix.array;
     for (const m of b.set) {
-      let p = m, vis = true; while (p.parent) { if (!p.visible) { vis = false; break; } p = p.parent; }
+      let p = m, vis = true; while (p.parent) { if (!p.visible) vis = false; p = p.parent; }
       if (p !== scene) { if (++m.userData.ibd > 900) b.set.delete(m); continue; } m.userData.ibd = 0;
       if (!vis || !m.visible) continue;
       const e = m.matrixWorld.elements; IB.sph.center.set(e[12], e[13], e[14]); if (!IB.fr.intersectsSphere(IB.sph)) continue;
@@ -2604,11 +2604,21 @@ function updateGoalState() {
 /* C4: aynı anda en çok ~4 pad: sıradaki hedef + para biriktirilen/yakında alınabilir olanlar */
 const HIREK = new Set(['wedW', 'helper', 'cashier', 'carrier', 'lavW', 'parfW', 'cafeW', 'sunW', 'cityW', 'beeW', 'bonW', 'portW', 'cafeG', 'bus']);
 const PADOK = new Set(), STORY = new Set(['boat', 'gboat', 'cage', 'hall', 'bridge', 'fener', 'gate']); let padOkT = 0;
+const PADNEAR = 26, PADMAX = 6; // alan başına en çok 6 yeni pad (oyuncuya en yakınlar); görünen pad satın alınana dek kalıcı
 function padOkRefresh(dt) {
-  padOkT -= dt; if (padOkT > 0) return; padOkT = 0.25; PADOK.clear();
+  padOkT -= dt; if (padOkT > 0) return; padOkT = 0.25; const prev = new Set(PADOK); PADOK.clear();
   const list = []; for (const k in upPads) { const u = upPads[k]; if (u.done || !padVisible(u)) continue; list.push(u); }
-  const goalU = curGoal ? upPads[curGoal.key] : null, score = u => { if (u === goalU) return -3; if (u.paid > 0 || u.inside) return -2; if (STORY.has(u.key) && S.money + u.paid >= u.cost() * 0.4) return -2.1; if (HIREK.has(u.key)) return -1.5; const c = u.cost(); return (S.money + u.paid >= c * 0.4) ? c / 1e9 : 9; };
-  list.sort((a, b) => score(a) - score(b)); let n = 0; for (const u of list) { const sc = score(u); if (sc >= 9 && u !== goalU) continue; if (n >= 4 && !(sc <= -2)) continue; let ov = false; for (const q of PADOK) if (Math.abs(q.x - u.x) < (q.w + u.w) / 2 - 0.3 && Math.abs(q.z - u.z) < (q.d + u.d) / 2 - 0.3) { ov = true; break; } if (ov && u !== goalU && !(u.paid > 0 || u.inside)) continue; PADOK.add(u); n++; }
+  const gp = P.group.position, goalU = curGoal ? upPads[curGoal.key] : null, dist = u => Math.hypot(u.x - gp.x, u.z - gp.z);
+  const score = u => { if (u === goalU) return -3; if (u.paid > 0 || u.inside) return -2; if (STORY.has(u.key) && S.money + u.paid >= u.cost() * 0.4) return -2.1; return (S.money + u.paid >= u.cost() * 0.4 || HIREK.has(u.key)) ? 0 : 9; };
+  const ovl = u => { for (const q of PADOK) if (Math.abs(q.x - u.x) < (q.w + u.w) / 2 - 0.3 && Math.abs(q.z - u.z) < (q.d + u.d) / 2 - 0.3) return true; return false; };
+  // 1) hedef / ödemesi başlamış / hikâye padleri her zaman; 2) önceden görünenler (satın alınana dek kalıcı); 3) yeni: oyuncuya yakın en çok PADMAX
+  const pri = [], stick = [], fresh = [];
+  for (const u of list) { const sc = score(u); if (sc <= -2) pri.push(u); else if (prev.has(u)) stick.push(u); else if (sc < 9) fresh.push(u); }
+  pri.sort((a, b) => score(a) - score(b)); for (const u of pri) if (!ovl(u) || u === goalU || u.paid > 0 || u.inside) PADOK.add(u);
+  for (const u of stick) if (!ovl(u)) PADOK.add(u);
+  const crowd = u => { let n = 0; for (const q of PADOK) if (Math.hypot(q.x - u.x, q.z - u.z) <= 12) n++; return n; }; // aynı bölgede (12 birim) en çok PADMAX pad
+  fresh.sort((a, b) => (dist(a) - (HIREK.has(a.key) ? 8 : 0)) - (dist(b) - (HIREK.has(b.key) ? 8 : 0)));
+  for (const u of fresh) { if (dist(u) > PADNEAR || crowd(u) >= PADMAX || ovl(u)) continue; PADOK.add(u); }
 }
 function updateUpgrades(dt) {
   padOkRefresh(dt);
@@ -2645,7 +2655,7 @@ function applyUpgrade(key, instant) {
   else if (key === 'carrier') spawnCarrier(instant);
   else if (EXTAPPLY[key]) EXTAPPLY[key](instant);
 }
-const RIZA = { sera: 'Gelgit çekilince midyeler ortaya çıkar. Acele et!', boat: 'Tekneler denize açıldı! Kasaları rıhtımdan al ya da hamal tut.', gboat: 'Balık-ekmek en sevilen yemek. Buzlu kasaları tekneye getir!', cage: 'Kafeslerde karides ve yengeç var. Tabak yap, kalabalık yığılsın!', hall: 'Mezat zili çaldı mı herkes toplanır. Stoku hazır tut!', bridge: 'Eski fenere giden yol açıldı. Gün batımı orada daha güzel...', fener: 'Fener Kafe senin. Artık sahil seninle anılacak!', gate: 'Yeni ufuklar seni bekliyor, evlat. Çiftlikte görüşürüz!' };
+const RIZA = { sera: 'Gelgit çekilince midyeler ortaya çıkar. Acele et!', boat: 'Tekneler denize açıldı! Kasaları rıhtımdan al ya da hamal tut.', gboat: 'Balık-ekmek en sevilen yemek. Buzlu kasaları tekneye getir!', cage: 'Kafeslerde karides ve yengeç var. Tabak yap, kalabalık yığılsın!', hall: 'Hal açıldı! Temiz balık kasalarını sarı alana bırak; zil çalınca tüccarlar x1.5–2 fiyata alır.', bridge: 'Eski fenere giden yol açıldı. Gün batımı orada daha güzel...', fener: 'Fener Kafe senin. Artık sahil seninle anılacak!', gate: 'Yeni ufuklar seni bekliyor, evlat. Çiftlikte görüşürüz!' };
 function purchase(u) {
   const key = u.key; S.lv[key]++; u.paid = 0; stats.upgrades++; saveDirty = true; u.locked = true; u.pause = 0.3; u.off = false; u.hold = 0; u.pop = 0.6;
   sfx('up', true); confetti(u.x, 1.2, u.z, 44); sparkles(u.x, 0.8, u.z, 14, 0xfff2a0, 1.0); ring(u.x, u.z, 0xffc21a, 4.5);
@@ -2866,7 +2876,8 @@ function objective(out) {
     if (S.lv.fener > 0 && FIN.pile.length + FIN.pile.extra >= 3) return set(FIN.monZone.x, 0.8, FIN.monZone.z, 'money');
     if (E2 && E2.active && sc > 0 && E2.input.length + (E2.input.pend || 0) < 20) return set(E2.inZone.x, 0.4, E2.inZone.z, 'eat');
     if (CAGES.active && P.free() > 0 && sc < 8) { const C = CAGES.find(c => c.tray.length >= 3); if (C) return set(C.zone.x, 0.4, C.zone.z, 'cage'); }
-    if (nB >= 8) { if (E1 && E1.active && E1.input.length + (E1.input.pend || 0) < 16) return set(E1.inZone.x, 0.4, E1.inZone.z, 'eat'); if (HALL.active && HALL.stock.length + (HALL.stock.pend || 0) < 36) return set(HALL.zone.x, 0.4, HALL.zone.z, 'hall'); }
+    if (HALL.active && nB >= 3 && HALL.stock.length + (HALL.stock.pend || 0) < 3 && !HALL.zone.inside) return set(HALL.zone.x, 0.4, HALL.zone.z, 'hall'); // mezat başlamak için en az 3 kasa
+    if (nB >= 5) { if (E1 && E1.active && E1.input.length + (E1.input.pend || 0) < 16) return set(E1.inZone.x, 0.4, E1.inZone.z, 'eat'); if (HALL.active && HALL.stock.length + (HALL.stock.pend || 0) < 36) return set(HALL.zone.x, 0.4, HALL.zone.z, 'hall'); }
   }
   if (PROD_LIST.some(t => hold(t) > 0 && canCounter(t))) return set(counterZone.x, 0.4, counterZone.z, 'counter');
   if (prodHeld) {
@@ -3813,21 +3824,21 @@ function initHall() {
   HALL.pile = new Stack(scene, (i, out) => { const r = i % 6, l = Math.floor(i / 6); out.set(-8.6 + ((r % 3) - 1) * 0.9, 0.95 + l * 0.14, 33.0 + (Math.floor(r / 3) - 0.5) * 0.6); }, 36); HALL.pile.extra = 0; HALL.pile.jitter = 0.07; EXTSTACKS.push(HALL.pile);
   HALL.zone = new Zone({ x: HALL.cx, z: 29.0, w: 3.4, d: 2.2, color: '#ffd23f', draw: drawZoneIcon(iconBouquet) }); HALL.zone.group.visible = false;
   HALL.monZone = new Zone({ x: -8.6, z: 35.1, w: 3.2, d: 2.2, color: '#1ed760', draw: null, labelSize: 0.01 }); HALL.monZone.label.visible = false; HALL.monZone.group.visible = false;
-  HALL.spr = makeSprite(384, 128, () => {}, 4.6, 1.53, false); HALL.spr.position.set(HALL.cx, 8.9, 27.6); HALL.spr.visible = false; scene.add(HALL.spr);
+  HALL.spr = makeSprite(512, 192, () => {}, 6.0, 2.25, false); HALL.spr.position.set(HALL.cx, 4.3, 27.4); HALL.spr.visible = false; scene.add(HALL.spr);
   z.onShow = () => { HALL.active = true; };
   extPad('hall', 'Balık Hali', [12000], -1.5, 27.5, iconHall, () => S.lv.cage > 0).autoShow = true; UPG.hall.sub = () => 'Toplu satış, x1.5–2 çarpan'; EXTAPPLY.hall = i => unlockExt(z, i);
   let u = extPad('hallBonus', 'Mezat Çarpanı', geo(6000, 5), -1.5, 32.5, iconStar, () => S.lv.hall > 0); u.autoShow = true; UPG.hallBonus.sub = () => 'Çarpan +0.12';
   u = extPad('hallSpd', 'Mezat Sıklığı', geo(7000, 4), -1.5, 37.5, iconBolt, () => S.lv.hall > 0); u.autoShow = true; UPG.hallSpd.sub = () => 'Zil daha sık çalar';
 }
 function hallBuyerSpot(i) { return [HALL.cx - 6.5 + i * 2.6, 26.0]; }
-function hallSprite(txt, col) { const sig = txt + col; if (HALL.sig === sig) return; HALL.sig = sig; redrawSprite(HALL.spr, (ctx, w, h) => { ctx.fillStyle = 'rgba(22,28,64,.92)'; ctx.strokeStyle = col; ctx.lineWidth = 8; rrect(ctx, 6, 6, w - 12, h - 12, 34); ctx.fill(); ctx.stroke(); otext(ctx, txt, w / 2, h / 2 + 2, fitT(ctx, txt, 62, w - 50), '#fff', '#05071a'); }); }
+function hallSprite(txt, col, sub) { const sig = txt + col + (sub || ''); if (HALL.sig === sig) return; HALL.sig = sig; redrawSprite(HALL.spr, (ctx, w, h) => { ctx.fillStyle = 'rgba(22,28,64,.94)'; ctx.strokeStyle = col; ctx.lineWidth = 8; rrect(ctx, 6, 6, w - 12, h - 12, 34); ctx.fill(); ctx.stroke(); if (sub) { otext(ctx, txt, w / 2, h * 0.36, fitT(ctx, txt, 64, w - 50), '#fff', '#05071a'); otext(ctx, sub, w / 2, h * 0.76, fitT(ctx, sub, 46, w - 50), col, '#05071a'); } else otext(ctx, txt, w / 2, h / 2 + 2, fitT(ctx, txt, 62, w - 50), '#fff', '#05071a'); }); }
 function updateHall(dt, t) {
   const H = HALL; if (!H.active) return; H.zone.group.visible = H.monZone.group.visible = H.spr.visible = true; H.stock.update(dt, t); H.pile.update(dt, t);
   if (H.zone.inside && P.stack.count('bouquet') > 0 && H.stock.length + (H.stock.pend || 0) < 40) { H.tick = (H.tick || 0) - dt; if (H.tick <= 0) { dropTo(H.stock, P, 'bouquet'); H.tick = CFG.transferEvery; } }
   if (H.monZone.inside && (H.pile.length > 0 || H.pile.extra > 0)) { H.mt = (H.mt || 0) - dt; if (H.mt <= 0) { collectMoney(H.pile); H.mt = 0.03; } }
   const gp = P.group.position;
   if (H.state === 'wait') {
-    H.t -= dt; hallSprite('Mezat ' + Math.max(0, Math.ceil(H.t)) + ' sn · stok ' + H.stock.length, '#ffd23f');
+    H.t -= dt; { const n = H.stock.length + (H.stock.pend || 0); hallSprite(n < 10 ? 'Temiz balık getir ' + n + '/10' : n + ' kasa hazır', '#ffd23f', 'Mezat ' + Math.max(0, Math.ceil(H.t)) + ' sn' + (n < 3 ? ' · en az 3 kasa' : '')); }
     if (H.t <= 0) { if (H.stock.length >= 3) { H.state = 'bell'; H.bellT = 0; H.mult = hallMult(); for (let i = 0; i < 6; i++) hallBuyer(i); sfx('up'); } else { H.t = 10; if (Math.hypot(gp.x - H.cx, gp.z - H.cz) < 20) toast('Mezat için en az 3 kasa gerekli'); } }
   } else if (H.state === 'bell') {
     H.bellT += dt; hallSprite('ZİL! Mezat başlıyor', '#ff8a1f'); H.bell.rotation.z = Math.sin(H.bellT * 18) * 0.6 * Math.max(0, 1 - H.bellT / 3); if (Math.random() < dt * 8) sparkles(-5.6, 3.1, 29.2, 1, 0xffe36a, 0.3); if (Math.floor(H.bellT * 6) !== Math.floor((H.bellT - dt) * 6) && H.bellT < 2.4) blip(1200 + (Math.floor(H.bellT * 6) % 2) * 300, 0.18, 'triangle', 0.08);
@@ -4053,7 +4064,7 @@ STK_FROZEN = true;
 introDone = !(S.tut === 0 && S.money === 0 && !Object.keys(S.lv).some(k => S.lv[k] > 0));
 if (!introDone) introEl.style.display = 'block';
 curGoalIdx = goalIndex(); curGoal = curGoalIdx >= 0 ? GOALS[curGoalIdx] : null; lastGoalIdx = curGoalIdx; drawGoalIcon();
-for (const k in upPads) { const u = upPads[k]; if (!u.done) { u.group.visible = padVisible(u); } }
+padOkT = 0; padOkRefresh(0); for (const k in upPads) { const u = upPads[k]; if (!u.done) { u.group.visible = padVisible(u) && PADOK.has(u); } } // yüklemede görünen = gösterilecek olan (açılışta pad belirip kaybolmaz)
 
 /* ---- pad çakışma denetimi: pad dikdörtgeni prop/collider ile kesişiyorsa en yakın boş yere taşınır ---- */
 function allPads() { const l = []; for (const k in upPads) l.push(upPads[k]); return l; }
