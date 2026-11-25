@@ -1458,8 +1458,31 @@ function buildPolishPlaza() {
   polGull(-12.4, 1.05, 1.65, 1.2); polGull(-16.4, 1.05, -1.65, -2.0); polGull(-24.4, 1.05, 1.65, 0.6);
 }
 function updatePolish(t) {
+  if (POL.ripM) POL.ripM.opacity = 0.34 + 0.12 * Math.sin(t * 1.8);
   for (const c of POL.cats) { c.tl.rotation.z = Math.sin(t * 2.2 + c.ph) * 0.45; c.tl.rotation.x = 0.35 + Math.sin(t * 1.3 + c.ph) * 0.12; c.m.scale.y = 1 + Math.sin(t * 1.6 + c.ph) * 0.015; }
   for (const g of POL.gulls) { g.m.rotation.x = Math.max(0, Math.sin(t * 1.4 + g.ph * 3)) > 0.93 ? 0.5 : 0; g.m.position.y = g.y + Math.max(0, Math.sin(t * 0.7 + g.ph)) * 0.015; g.m.rotation.y += Math.sin(t * 0.3 + g.ph) * 0.0015; }
+}
+function polRope(P_, x, z, s) { P_.push(part(G.torus, 0xc8a46a, x, 0.11, z, 0.3 * s, 0.3 * s, 0.3 * s, Math.PI / 2, 0, 0), part(G.torus, 0xb4905a, x, 0.2, z, 0.24 * s, 0.24 * s, 0.24 * s, Math.PI / 2, 0, 0), part(G.torus, 0xc8a46a, x, 0.29, z, 0.17 * s, 0.17 * s, 0.17 * s, Math.PI / 2, 0, 0)); }
+function polBarrel(P_, x, z, c) { P_.push(part(G.cyl, c, x, 0.4, z, 0.3, 0.8, 0.3), part(G.cyl, 0x2d3a45, x, 0.2, z, 0.315, 0.06, 0.315), part(G.cyl, 0x2d3a45, x, 0.62, z, 0.315, 0.06, 0.315), part(G.cyl, shade(c, -0.25), x, 0.81, z, 0.26, 0.03, 0.26)); }
+function polBuoy(P_, x, y, z, ry) { P_.push(part(G.torus, 0xe8142e, x, y, z, 0.3, 0.3, 0.3, 0, ry, 0)); for (let i = 0; i < 4; i++) { const a = i * Math.PI / 2 + 0.78, ca = Math.cos(a) * 0.3, sa = Math.sin(a) * 0.3, c = Math.cos(ry), sn = Math.sin(ry); P_.push(part(G.box, 0xffffff, x + ca * c, y + sa, z - ca * sn, 0.14, 0.14, 0.12, 0, ry, a)); } }
+function polNet(P_, x, z, s) { P_.push(part(G.sph6, 0x4a9a9a, x, 0.08, z, 0.5 * s, 0.1, 0.38 * s), part(G.sph6, 0x2f7a7a, x + 0.15 * s, 0.13, z - 0.05, 0.3 * s, 0.07, 0.25 * s), part(G.sph6, 0xd96a3a, x - 0.2 * s, 0.14, z + 0.1, 0.07, 0.05, 0.07), part(G.sph6, 0xf2d27a, x + 0.3 * s, 0.17, z + 0.06, 0.06, 0.05, 0.06)); }
+function polCrate(P_, x, y, z, c, ry) { P_.push(part(G.box, c, x, y + 0.2, z, 0.5, 0.36, 0.5, 0, ry, 0), part(G.box, shade(c, -0.2), x, y + 0.32, z, 0.4, 0.06, 0.4, 0, ry, 0), part(G.sph6, 0xb8c6d4, x, y + 0.4, z, 0.2, 0.07, 0.1, 0, ry, 0)); }
+function buildPolishPier() {
+  const P_ = [], R_ = [], pts = POL.pts = POL.pts || [];
+  // iskele: halat, can simidi, varil, ag, kasalar (kenarlarda; yürüyüs seridi bos)
+  polRope(P_, -13.0, 1.2, 1); polRope(P_, -21.3, -1.2, 1.1); polBarrel(P_, -24.6, 1.2, 0x7a5230); polBarrel(P_, -25.3, 1.0, 0x8a6a3a); polNet(P_, -17.4, -1.15, 1.1);
+  polCrate(P_, -15.2, 0.04, -1.2, 0xc99a5a, 0.3); polCrate(P_, -15.35, 0.4, -1.25, 0xb98040, 0.5); polCrate(P_, -22.8, 0.04, 1.2, 0xb98040, -0.2);
+  polBuoy(P_, -15.2, 0.72, 1.68, 0); polBuoy(P_, -23.2, 0.72, -1.68, Math.PI);
+  // rıhtım: halat, varil, ag, can simidi
+  const qz = QUAY.z; polRope(P_, -13.4, qz + 0.55, 1); polRope(P_, -24.0, qz + 0.5, 1.1); polBarrel(P_, -27.6, qz + 0.5, 0x7a5230); polNet(P_, -11.7, qz + 0.45, 1.2); polBuoy(P_, -28.3, 1.9, qz + 1.4, 0);
+  polCrate(P_, -10.9, 0.2, qz - 0.2, 0xc99a5a, 0.2);
+  for (const q of P_) void q;
+  const m = new THREE.Mesh(mergeParts(P_), vcMat); m.castShadow = true; world.add(m);
+  // direk diplerinde hafif kopuk/dalga halkalari (tek birlesik, tek cizim; opacity ile nefes alir)
+  const posts = []; for (let i = 0; i < 9; i++) for (const sz of [-1.65, 1.65]) posts.push([-11.2 - i * 2.0, sz]); posts.push([-28.2, 0]); for (let i = 0; i < 11; i++) posts.push([QUAY.x0 + 0.4 + i * 1.9, QUAY.z - 1.05]);
+  for (const [x, z] of posts) { R_.push(part(new THREE.RingGeometry(0.34, 0.55, 14), 0xeaffff, x, WATER_Y + 0.035, z, 1, 1, 1, -Math.PI / 2, 0, 0), part(new THREE.RingGeometry(0.62, 0.74, 14), 0xdaf6fb, x, WATER_Y + 0.03, z, 1, 1, 1, -Math.PI / 2, 0, 0)); }
+  POL.ripM = new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.4, depthWrite: false, fog: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
+  const rm = new THREE.Mesh(mergeParts(R_), POL.ripM); rm.renderOrder = 2; rm.userData.dyn = true; rm.userData.nopb = true; world.add(rm); POL.rip = rm;
 }
 const BEACH = { foam: [] };
 function updateBeach(dt, t) { SEAT.value = t; for (const f of BEACH.foam) f.material.map.offset.x -= dt * 0.03; updateGulls(t); updatePolish(t); }
@@ -4085,6 +4108,7 @@ buildGround(); buildBeach(); buildFences();
 // plaza edge hedges / bushes
 for (const [x, z, s] of [[-9.5, -8.6, 1.1], [0.6, -8.6, 1.0], [13, -8.5, 1.2], [18.5, 13, 1.1], [6, 13.4, 0.9], [-9.4, 13.2, 1.0], [15.5, -7.2, 0.9]]) buildBush(x, z, s);
 buildPolishPlaza();
+buildPolishPier();
 for (const [x, z, s] of [[-24, -14.5, 1.6]]) buildTree(x, z, s);
 for (let i = 0; i < 3; i++) buildBed(i);
 buildStations(); buildDecor(); buildSera(); buildVan(); buildZones(); buildPlayer(); LANES.bouquet = shelfB; LANES.pot = shelfP; buildExpansion(); buildLanes(); initBoats(); finalizeWorld();
