@@ -4161,7 +4161,7 @@ function updateFinale(dt, t) {
 /* =====================================================================
    SAHİL v10: TALEP YÜKSELTMELERİ (Turist Akını, Büyük Sipariş, Tur Otobüsü) + İHRACAT GEMİSİ (toptan satış, taşan balığı emer)
    ===================================================================== */
-const SHIP_X = 54.2, SHIP_Z = -1.0, SHIP_DX = 46.2; // gemi (su üstünde, x>48.1) ve rıhtım platformu (kara)
+const SHIP_X = 52.5, SHIP_Z = -1.0, SHIP_DX = 46.2; // gemi (su üstünde, x>48.1) ve rıhtım platformu (kara)
 const SHIP = { active: false, g: null, dock: null, pile: null, zone: null, monZone: null, spr: null, sig: '', st: 'away', t: 0, load: 0, fly: 0, cd: 0, x: SHIP_X, z: -95, yaw: -Math.PI / 2, cargo: [], trips: 0, ph: 0 };
 const shipCap = () => 40 + 10 * (S.lv.shipCap || 0);
 const shipCrate = () => 40 * (1 + 0.2 * (S.lv.shipBonus || 0)); // sandık başı sabit toptan fiyat (mezat çarpanlı değil, tahmin edilebilir)
