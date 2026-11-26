@@ -2,7 +2,7 @@
 // 1) mid/late/end/v9/v10 örnek kayıtlarında (hiçbirinde her şey maksimum değil): hedef ve ok asla kapı olmamalı, bol parayla bile.
 // 2) her pad maksimumda (kapı hariç) sentetik kayıtta: hedef kapı olmalı. Calistir: NODE_PATH=... node tests/sahil/gatehint.js
 const path = require('path'), fs = require('fs'), h = require('../auto/_h.js');
-const FIX = ['sahil-mid-v8', 'sahil-late-v8', 'sahil-end-v8', 'sahil-v9', 'sahil-v10'];
+const FIX = ['sahil-mid-v8', 'sahil-late-v8', 'sahil-end-v8', 'sahil-v9', 'sahil-v10', 'sahil-v11'];
 (async () => {
   const bad = [];
   for (const f of FIX) {

@@ -3013,7 +3013,7 @@ function objective(out) {
   const set = (x, y, z, kind) => { out.x = x; out.y = y; out.z = z; out.kind = kind; out.ok = true; return out; };
   const setPier = f => { const pg = P.group.position; if (f.x === pg.x && f.z === pg.z) return set(f.x, 0.4, f.z, 'harvest'); return set(clamp(f.x, -27.5, -10.9), 0.4, clamp(f.z, -1.15, 1.15), 'harvest'); }; // ok denizi değil, balığa en yakın iskele noktasını gösterir
   const gp = curGoal ? upPads[curGoal.key] : null;
-  if (gp && gp.group.visible && !gp.done && S.money + gp.paid >= gp.cost()) return set(gp.x, 0.4, gp.z, 'pad');
+  if (gp && gp.group.visible && !gp.done && S.money + gp.paid >= gp.cost()) return gp.locked && gp.inside ? set(gp.x + 3.0, 0.4, gp.z + 3.0, 'pad') : set(gp.x, 0.4, gp.z, 'pad'); // az önce alınan pad'in üstündeyse: önce adım at, sonra yeniden gir
   if (DOCK.stack && DOCK.zone.group.visible && DOCK.stack.length >= 6 && !HAMALS.length && P.free() > 0 && nF < 10) return set(DOCK.zone.x, 0.4, DOCK.zone.z, 'dock');
   const ripe = () => { { const pg = P.group.position; if (fishPick(pg.x, pg.z, 3.6)) return { x: pg.x, z: pg.z }; } let best = null, bd = 1e9; for (const bb of beds) { if (bb.locked || bb.nohelp) continue; for (const f of bb.flowers) if (f.t >= f.gt) { const d = (f.x - P.group.position.x) ** 2 + (f.z - P.group.position.z) ** 2; if (d < bd) { bd = d; best = f; } } } return best; };
   if (outZone.inside && outputPile.length > 0 && P.free() > 0 && nB < 14) return set(outZone.x, 0.4, outZone.z, 'out');
