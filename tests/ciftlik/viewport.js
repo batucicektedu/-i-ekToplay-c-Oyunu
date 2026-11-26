@@ -19,5 +19,17 @@ const URL = process.env.GAME || 'file://' + path.resolve(__dirname, '..', '..', 
     }
     if (errs.length) bad.push('hata ' + errs[0]); await ctx.close();
   }
+  { /* pencere resize olayı gelmeden büyür (iOS PWA açılış hatası taklidi): sadece visualViewport resize dinlenir */
+    const ctx = await b.newContext({ viewport: { width: 390, height: 700 }, screen: { width: 390, height: 844 }, isMobile: true, hasTouch: true }), page = await ctx.newPage(), errs = []; page.on('pageerror', e => errs.push(e.message));
+    await page.addInitScript(() => { window.__noAuto = true; const o = window.addEventListener.bind(window); window.addEventListener = (t, f, c) => { if (t === 'resize' || t === 'orientationchange') return; return o(t, f, c); }; });
+    await page.route('**/three.min.js', r => r.fulfill({ path: SP + '/node_modules/three/build/three.min.js', contentType: 'application/javascript' }));
+    await page.route('**/cdn.jsdelivr.net/npm/three@0.128.0/examples/js/**', r => { const u = r.request().url().split('examples/js/')[1]; r.fulfill({ path: SP + '/node_modules/three/examples/js/' + u, contentType: 'application/javascript' }); });
+    await page.goto(URL); await page.waitForTimeout(1200);
+    const m = () => page.evaluate(() => { const c = document.getElementById('c').getBoundingClientRect(), a = document.getElementById('app').getBoundingClientRect(); return { ih: innerHeight, cb: c.bottom, ab: a.bottom }; });
+    await page.setViewportSize({ width: 390, height: 844 }); await page.waitForTimeout(700);
+    const r = await m(); console.log('visualViewport-only', JSON.stringify(r));
+    if (r.cb < r.ih - 0.5 || r.ab < r.ih - 0.5) bad.push('visualViewport-only: canvas/app penceredan kısa');
+    if (errs.length) bad.push('hata ' + errs[0]); await ctx.close();
+  }
   console.log(bad.length ? 'FAIL ' + bad.join('; ') : 'PASS'); await b.close(); process.exit(bad.length ? 1 : 0);
 })();

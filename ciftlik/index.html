@@ -18,7 +18,8 @@
   html,body{margin:0;height:100%;overflow:hidden;background:#9fdc7a;touch-action:none;overscroll-behavior:none;
     font-family:'Arial Rounded MT Bold','Nunito','Baloo 2','Fredoka',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif}
   html{min-height:-webkit-fill-available}
-  #app{position:fixed;left:0;top:0;width:100%;height:var(--appH,100%);touch-action:none;background:#9fdc7a}
+  html.sa #app{min-height:100vh;min-height:100lvh}
+  #app{position:fixed;left:0;top:0;right:0;bottom:0;width:100%;height:100%;touch-action:none;background:#9fdc7a}
   canvas#c{position:absolute;left:0;top:0;width:100%;height:100%;display:block;touch-action:none}
   .txt{color:#fff;font-weight:900;letter-spacing:.5px;paint-order:stroke fill;-webkit-text-stroke:5px #16324a;
     text-shadow:0 3px 0 #16324a}
@@ -379,11 +380,18 @@ function setupPost() {
     fxaaPass = new THREE.ShaderPass(THREE.FXAAShader); composer.addPass(fxaaPass);
   } catch (e) { composer = null; }
 }
-function viewH() { /* iOS Safari/PWA: innerHeight araç çubuğuna göre oynar; en büyük güvenilir yükseklik alınır (alt boşluk şeridi olmasın) */
-  const vv = window.visualViewport; return Math.round(Math.max(window.innerHeight || 0, vv ? vv.height + (vv.offsetTop || 0) : 0, document.documentElement.clientHeight || 0));
+let _vh = 0;
+function measureH() { /* iOS Safari/PWA (black-translucent): innerHeight/visualViewport açılışta yanlış olabilir; #app (fixed, inset 0) + ekran yüksekliği + diğerlerinin en büyüğü alınır, altta boş şerit kalmaz */
+  const app = document.getElementById('app'), vv = window.visualViewport; let h = 0;
+  try { if (app) { app.style.height = ''; h = app.getBoundingClientRect().height; } } catch (e) {}
+  h = Math.max(h, window.innerHeight || 0, vv ? vv.height + (vv.offsetTop || 0) : 0, document.documentElement.clientHeight || 0);
+  try { const sa = navigator.standalone || (window.matchMedia && matchMedia('(display-mode: standalone)').matches);
+    if (sa) { document.documentElement.classList.add('sa'); const por = (window.innerHeight || 0) >= (window.innerWidth || 0), sh = por ? Math.max(screen.width, screen.height) : Math.min(screen.width, screen.height); if (sh > h && sh - h < 200) h = sh; } } catch (e) {}
+  return Math.round(h);
 }
+function viewH() { return _vh || (_vh = measureH()); }
 function onResize() {
-  const w = window.innerWidth, h = viewH(); document.documentElement.style.setProperty('--appH', h + 'px');
+  const w = window.innerWidth, h = _vh = measureH(); document.documentElement.style.setProperty('--appH', h + 'px'); { const ap = document.getElementById('app'); if (ap) ap.style.height = h + 'px'; }
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
   renderer.setSize(w, h, false);
   if (composer) { postPR = Math.min(window.devicePixelRatio || 1, 1.5); if (w * h * postPR * postPR > 1.5e6) postPR = Math.sqrt(1.5e6 / (w * h)); composer.setPixelRatio(postPR); composer.setSize(w, h); fxaaPass.material.uniforms.resolution.value.set(1 / (w * postPR), 1 / (h * postPR)); }
@@ -395,6 +403,8 @@ function onResize() {
 window.addEventListener('resize', onResize);
 if (window.visualViewport) { visualViewport.addEventListener('resize', onResize); visualViewport.addEventListener('scroll', onResize); }
 window.addEventListener('orientationchange', () => setTimeout(onResize, 120));
+/* açılışta/yerleşimden sonra yeniden ölç (iOS PWA'da ilk ölçüm yanlış çıkabiliyor) */
+requestAnimationFrame(() => { onResize(); requestAnimationFrame(onResize); }); setTimeout(onResize, 300); setTimeout(onResize, 1000); window.addEventListener('load', onResize); window.addEventListener('pageshow', onResize);
 
 const hemi = new THREE.HemisphereLight(0xe4f4ff, 0x8aaa5a, HQ ? 0.55 : 0.62); scene.add(hemi);
 const sun = new THREE.DirectionalLight(HQ ? 0xffe6bd : 0xfff0d0, HQ ? 1.25 : 1.05);
