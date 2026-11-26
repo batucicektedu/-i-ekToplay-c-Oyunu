@@ -1,8 +1,35 @@
-// iPhone emulasyonu: canvas ve #app tam yüksekliği kaplamalı, altta boş şerit olmamalı
-const {devices}=require('/opt/node22/lib/node_modules/playwright');const h=require('./h.js'),path=require('path');
-(async()=>{const {b,page,errs}=await h.open({q:'low',device:devices['iPhone 13'],wait:1800});
-const r=await page.evaluate(()=>{const c=document.getElementById('c').getBoundingClientRect(),a=document.getElementById('app').getBoundingClientRect();return{ih:innerHeight,cb:c.bottom,ab:a.bottom}});
-console.log(JSON.stringify(r));await page.screenshot({path:path.resolve(__dirname,'../../docs/sahil/iphone_after.png')});
-const bad=[];if(r.cb<r.ih-0.5||r.ab<r.ih-0.5)bad.push('canvas/app shorter than window');
-const e=errs.filter(e=>!/vibrate/.test(e));if(e.length)bad.push('errors');
-console.log(bad.length?'FAIL '+bad:'PASS');await b.close();process.exit(bad.length?1:0)})();
+// iPhone emülasyonu (Bölüm 2 (Sahil)): canvas ve #app tam pencere yüksekliğini kaplamalı, altta boş şerit olmamalı. node tests/sahil/viewport.js
+const { chromium, devices } = require('/opt/node22/lib/node_modules/playwright'), path = require('path');
+const SP = process.env.THREE_ROOT || '/tmp/claude-0/-home-user--i-ekToplay-c-Oyunu/6b93401d-9332-57b8-8dd6-38b9980f733e/scratchpad';
+const URL = process.env.GAME || 'file://' + path.resolve(__dirname, '..', '..', 'sahil', 'index.html');
+(async () => {
+  const b = await chromium.launch({ args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--use-gl=swiftshader', '--ignore-gpu-blocklist'] }), bad = [];
+  for (const [n, dev] of [['iPhone 13', devices['iPhone 13']], ['iPhone 15 Pro', Object.assign({}, devices['iPhone 13'], { viewport: { width: 393, height: 659 }, screen: { width: 393, height: 852 } })]]) {
+    const ctx = await b.newContext(dev), page = await ctx.newPage(), errs = []; page.on('pageerror', e => errs.push(e.message));
+    await page.addInitScript(() => { window.__noAuto = true; });
+    await page.route('**/three.min.js', r => r.fulfill({ path: SP + '/node_modules/three/build/three.min.js', contentType: 'application/javascript' }));
+    await page.route('**/cdn.jsdelivr.net/npm/three@0.128.0/examples/js/**', r => { const u = r.request().url().split('examples/js/')[1]; r.fulfill({ path: SP + '/node_modules/three/examples/js/' + u, contentType: 'application/javascript' }); });
+    await page.goto(URL); await page.waitForTimeout(1500);
+    const m = () => page.evaluate(() => { const c = document.getElementById('c').getBoundingClientRect(), a = document.getElementById('app').getBoundingClientRect(); return { ih: innerHeight, cb: c.bottom, ab: a.bottom, bufH: document.getElementById('c').height, dpr: Math.min(devicePixelRatio, 1.5) }; });
+    for (const [tag, vs] of [['dik', null], ['yatay', { width: dev.viewport.height, height: dev.viewport.width }]]) {
+      if (vs) { await page.setViewportSize(vs); await page.waitForTimeout(500); }
+      const r = await m(); console.log(n, tag, JSON.stringify(r));
+      if (r.cb < r.ih - 0.5 || r.ab < r.ih - 0.5) bad.push(n + ' ' + tag + ': canvas/app penceredan kısa');
+      if (Math.abs(r.bufH - r.ih * r.dpr) > 2) bad.push(n + ' ' + tag + ': çizim tamponu yüksekliği uyumsuz');
+    }
+    if (errs.length) bad.push('hata ' + errs[0]); await ctx.close();
+  }
+  { /* pencere resize olayı gelmeden büyür (iOS PWA açılış hatası taklidi): sadece visualViewport resize dinlenir */
+    const ctx = await b.newContext({ viewport: { width: 390, height: 700 }, screen: { width: 390, height: 844 }, isMobile: true, hasTouch: true }), page = await ctx.newPage(), errs = []; page.on('pageerror', e => errs.push(e.message));
+    await page.addInitScript(() => { window.__noAuto = true; const o = window.addEventListener.bind(window); window.addEventListener = (t, f, c) => { if (t === 'resize' || t === 'orientationchange') return; return o(t, f, c); }; });
+    await page.route('**/three.min.js', r => r.fulfill({ path: SP + '/node_modules/three/build/three.min.js', contentType: 'application/javascript' }));
+    await page.route('**/cdn.jsdelivr.net/npm/three@0.128.0/examples/js/**', r => { const u = r.request().url().split('examples/js/')[1]; r.fulfill({ path: SP + '/node_modules/three/examples/js/' + u, contentType: 'application/javascript' }); });
+    await page.goto(URL); await page.waitForTimeout(1200);
+    const m = () => page.evaluate(() => { const c = document.getElementById('c').getBoundingClientRect(), a = document.getElementById('app').getBoundingClientRect(); return { ih: innerHeight, cb: c.bottom, ab: a.bottom }; });
+    await page.setViewportSize({ width: 390, height: 844 }); await page.waitForTimeout(700);
+    const r = await m(); console.log('visualViewport-only', JSON.stringify(r));
+    if (r.cb < r.ih - 0.5 || r.ab < r.ih - 0.5) bad.push('visualViewport-only: canvas/app penceredan kısa');
+    if (errs.length) bad.push('hata ' + errs[0]); await ctx.close();
+  }
+  console.log(bad.length ? 'FAIL ' + bad.join('; ') : 'PASS'); await b.close(); process.exit(bad.length ? 1 : 0);
+})();
