@@ -342,6 +342,7 @@ function sfx(name, force) {
     case 'coin': blip(1000 + Math.random() * 200, 0.08, 'triangle', 0.08, 1.4); break;
     case 'up': [523, 659, 784, 1047, 1319, 1568].forEach((f, i) => blip(f, 0.2, 'triangle', 0.1, 1, i * 0.07)); break;
     case 'happy': blip(660, 0.1, 'sine', 0.1, 1.5); blip(990, 0.15, 'sine', 0.1, 1, 0.09); break;
+    case 'splash': blip(420, 0.16, 'sine', 0.1, 0.45); blip(240, 0.22, 'triangle', 0.08, 0.5, 0.05); blip(900, 0.08, 'sine', 0.05, 0.6, 0.02); break;
   }
 }
 
@@ -2542,7 +2543,22 @@ function leaveSad(c) {
   const qi = queue.indexOf(c); if (qi >= 0) queue.splice(qi, 1);
   c.state = 'leaving'; setBubble(c, 'sad'); c.hideBubble = 1.4; c.path = [[12.4, -0.3], [12.4, 12.5], [10, 18], [10, 40]]; sfx('drop');
 }
+/* ekranda belirme/kaybolma yok: karakterler kamera görüş alanının (marj dahil) DIŞINDA doğar ve DIŞINDA silinir */
+const _ov = new THREE.Vector3();
+function offScreen(x, z, mx, my) { // true = ekranın (yatay mx, dikey my marjıyla) dışında
+  camera.updateMatrixWorld(); camera.matrixWorldInverse.copy(camera.matrixWorld).invert();
+  _ov.set(x, 1, z).applyMatrix4(camera.matrixWorldInverse); if (_ov.z > -0.1) return true; _ov.applyMatrix4(camera.projectionMatrix);
+  return Math.abs(_ov.x) > 1 + (mx === undefined ? 0.45 : mx) || Math.abs(_ov.y) > 1 + (my === undefined ? 0.3 : my);
+}
+function spawnFar(x, z) { let n = 0; while (n++ < 30 && z < 46 && !offScreen(x, z)) z += 1.5; return z; } // doğma noktası ekrandaysa yol boyunca uzaklaştır
+function exitCheck(c, dt) { // yol bitti: ekran dışındaysa true (sil); değilse aynı yönde yürümeye devam; 25 sn sonra hâlâ ekrandaysa küçülerek kaybolur
+  const gp = c.group.position; if (c.exitT0 === undefined) c.exitT0 = T;
+  if (offScreen(gp.x, gp.z)) return true;
+  if (T - c.exitT0 > 25) { if (!(dt > 0)) return true; c.fade = (c.fade || 0) + dt / 0.4; c.group.scale.setScalar(Math.max(0.001, 1 - c.fade) * CHAR_S); stats.popFade = (stats.popFade || 0) + (c.fade === dt / 0.4 ? 1 : 0); return c.fade >= 1; }
+  let dx = c.vel ? c.vel.x : 0, dz = c.vel ? c.vel.z : 0; if (Math.hypot(dx, dz) < 0.01) { dx = Math.sin(c.group.rotation.y); dz = Math.cos(c.group.rotation.y); } const L = Math.hypot(dx, dz) || 1; c.path = [[gp.x + dx / L * 6, gp.z + dz / L * 6]]; return false;
+}
 function spawnCustomer(z) {
+  if (z >= 20) z = spawnFar(CFG.queueX, z);
   const fem = Math.random() < 0.5, sh = pick(SHIRTS); custCount++; const vip = custCount % 6 === 0 || Math.random() < 0;
   const c = makeChar(vip ? { shirt: 0xff1fa0, pants: 0x6a2be8, hair: pick(HAIRS), skin: pick(SKINS), hairStyle: fem ? 'long' : 'short', crown: true, shoe: 0xffc21a } : { shirt: sh, pants: pick([0x3b4a6b, 0x5b4636, 0x2f6f5f, 0x444444]), hair: pick(HAIRS), skin: pick(SKINS), dress: fem && Math.random() < 0.6 ? pick(SHIRTS) : 0,
     hairStyle: fem ? pick(['bob', 'long', 'ponytail', 'bun']) : pick(['short', 'spiky', 'short']), hat: !fem && Math.random() < 0.3 ? 'cap' : null, hatColor: pick([0xff5a6e, 0x4d96ff, 0xffd23f]), shoe: pick([0x3a2a22, 0xffffff, 0xd8412f]) });
@@ -2593,8 +2609,8 @@ function updateCustomers(dt, t) {
       if (c.atSlot) { faceChar(c, 0, -1, dt); tx = null; }
     } else if (c.state === 'leaving') {
       if (c.hideBubble > 0) { c.hideBubble -= dt; if (c.hideBubble <= 0 && c.bubble) c.bubble.visible = false; }
-      const wp = c.path[0]; tx = wp[0]; tz = wp[1]; spd = CFG.leaveSpeed;
-      if (Math.hypot(tx - gp.x, tz - gp.z) < 0.4) { c.path.shift(); if (!c.path.length) { removeCustomer(i); continue; } }
+      if (!c.path.length && exitCheck(c, dt)) { removeCustomer(i); continue; }
+      if (c.path.length) { const wp = c.path[0]; tx = wp[0]; tz = wp[1]; spd = CFG.leaveSpeed; if (Math.hypot(tx - gp.x, tz - gp.z) < 0.4) { c.path.shift(); if (!c.path.length && exitCheck(c, 0)) { removeCustomer(i); continue; } } }
     }
     if (tx !== null) {
       dx = tx - gp.x; dz = tz - gp.z; const d = Math.hypot(dx, dz);
@@ -3470,18 +3486,28 @@ function spawnUnit(r, instant, idx) {
 }
 function roleSync(r, instant) { if (r.id === 'main' && !helper) return; while (r.units.length < (r.id === 'main' ? (S.lv.helperN || 0) : roleWant(r))) spawnUnit(r, instant, r.units.length + 1); }
 function roleEvolve(r, instant) { for (const u of r.units) setTractor(u, instant); if (r.id === 'main' && helper) { helper.tcol = r.tcol; helper.rname = r.name; setTractor(helper, instant); } }
+/* yardım kuralı (ortak): kendi işi yokken idleT >= helpAt (3.5-4.3 sn) olunca bir kez bakar, sonra ancak 3.5 sn'de bir; bir açığa en çok 1 yardımcı; en az 6 sn bağlı kalır, dönüşte mevcut yükü bitirir */
+const HELP_WAIT = 3.5, HELP_EVERY = 3.5, HELP_MIN = 6;
+const helpAtNew = () => HELP_WAIT + Math.random() * 0.8;
+function noteHelpSwitch(h) { const g = T - (h._hsT === undefined ? -99 : h._hsT); h._hsT = T; stats.helpSw = (stats.helpSw || 0) + 1; if (g < stats.helpMinGap || stats.helpMinGap === undefined) stats.helpMinGap = g; }
 function gPickType(h) {
   const r = h.role; for (const ty of r.types) if (gNeed(ty, 16) && gFlower(ty, h.group.position)) return [ty, false];
-  if (h.idleT > 3) for (const ty of GHELP) if (!r.types.includes(ty) && gNeed(ty, 10) && gFlower(ty, h.group.position)) return [ty, true];
+  if (h.idleT >= (h.helpAt || (h.helpAt = helpAtNew())) && !(h.helpChk > 0)) {
+    h.helpChk = HELP_EVERY; let best = null, bs = 0;
+    for (const ty of GHELP) { if (r.types.includes(ty)) continue; const q = gNeed(ty, 10); if (!q) continue; const f = gFlower(ty, h.group.position); if (!f) continue;
+      if (GARD.some(o => o !== h && o.helping && o.ctype === ty)) continue; // bu açığa zaten bir yardımcı gitti
+      const sc = (10 * q.cap / 24 - q.stack.length - (q.stack.pend || 0) + 1) / (Math.hypot(f.x - h.group.position.x, f.z - h.group.position.z) + 6); if (sc > bs) { bs = sc; best = ty; } }
+    if (best) { noteHelpSwitch(h); return [best, true]; }
+  }
   return null;
 }
 function updateGardener(h, dt, t) {
-  workerPop(h, dt); const r = h.role, gp = h.group.position, spd = gSpdOf(h), cap = gCapOf(h); if (h.idleCool > 0) h.idleCool -= dt; if (h.helping) h.helpT = (h.helpT || 0) + dt;
+  workerPop(h, dt); const r = h.role, gp = h.group.position, spd = gSpdOf(h), cap = gCapOf(h); if (h.idleCool > 0) h.idleCool -= dt; if (h.helpChk > 0) h.helpChk -= dt; if (h.helping) h.helpT = (h.helpT || 0) + dt;
   let tx = null, tz = null; const full = h.stack.length + h.incoming >= cap; h.pickT -= dt;
   if (h.state === 'seek') {
     if (h.target && (h.target.t < h.target.gt || h.target.bed.locked || !tideOK(h.target) || (h.ctype && !gMatch(h.ctype, h.target)))) dropTarget(h);
-    if (!h.ctype && h.stack.length === 0 && h.incoming === 0 && h.pickT <= 0 && !(h.idleCool > 0)) { h.pickT = 0.35; const p = gPickType(h); if (p) { h.ctype = p[0]; h.helping = p[1]; h.idleT = 0; h.helpT = 0; } else h.idleT += 0.35; }
-    else if (h.helping && h.ctype && h.stack.length + h.incoming === 0 && h.pickT <= 0 && h.helpT > 6) { h.pickT = 0.35; for (const ty of r.types) if (gNeed(ty, 16) && gFlower(ty, gp)) { dropTarget(h); h.ctype = null; h.helping = false; break; } } // kendi bölgesinde iş çıktı: eve dön
+    if (!h.ctype && h.stack.length === 0 && h.incoming === 0 && h.pickT <= 0 && !(h.idleCool > 0)) { h.pickT = 0.35; const p = gPickType(h); if (p) { h.ctype = p[0]; h.helping = p[1]; h.idleT = 0; h.helpT = 0; h.helpAt = 0; } else h.idleT += 0.35; }
+    else if (h.helping && h.ctype && h.stack.length + h.incoming === 0 && h.pickT <= 0 && h.helpT > HELP_MIN) { h.pickT = 0.35; for (const ty of r.types) if (gNeed(ty, 16) && gFlower(ty, gp)) { dropTarget(h); h.ctype = null; h.helping = false; noteHelpSwitch(h); break; } } // kendi bölgesinde iş çıktı: eve dön
     if (h.ctype) {
       if (full) h.state = 'deliver';
       else {
@@ -3757,8 +3783,10 @@ function makeEatery(o) {
   EATS.push(E); return E;
 }
 function eatSpawn(E) {
-  const o = E.o, fem = Math.random() < 0.5, c = makeChar({ shirt: pick(SHIRTS), pants: pick([0x3b4a6b, 0x5b4636, 0x2f3542]), hair: pick(HAIRS), skin: pick(SKINS), hairStyle: fem ? pick(['bob', 'long', 'ponytail', 'bun']) : pick(['short', 'spiky']), hat: !fem && Math.random() < 0.3 ? 'cap' : null, hatColor: pick([0xff5a6e, 0x4d96ff, 0xffd23f]), shoe: 0xffffff });
-  c.group.position.set(o.spawn[0] + rand(-1, 1), 0, o.spawn[1]); c.want = Math.random() < 0.5 ? 1 : 2; c.got = 0; c.pending = 0; c.prod = o.outType; c.state = 'in'; c.wait = 0; c.bubble = null; c.eat = E; c.vip = false;
+  const o = E.o; if (!E.hold) E.hold = 0; if (E.hold < 8) { const q0 = E.slot(0); if (!findSpawn(o.spawn[0], o.spawn[1], q0[0], q0[1])) { E.hold += 1.5; E.t = 1.5; return null; } } E.hold = 0;
+  const fem = Math.random() < 0.5, c = makeChar({ shirt: pick(SHIRTS), pants: pick([0x3b4a6b, 0x5b4636, 0x2f3542]), hair: pick(HAIRS), skin: pick(SKINS), hairStyle: fem ? pick(['bob', 'long', 'ponytail', 'bun']) : pick(['short', 'spiky']), hat: !fem && Math.random() < 0.3 ? 'cap' : null, hatColor: pick([0xff5a6e, 0x4d96ff, 0xffd23f]), shoe: 0xffffff });
+  { const q0 = E.slot(0); let sp = findSpawn(o.spawn[0] + rand(-1, 1), o.spawn[1], q0[0], q0[1]); const soft = !sp; if (soft) sp = [o.spawn[0] + rand(-1, 1), o.spawn[1]]; c.group.position.set(sp[0], 0, sp[1]); if (soft) { c.spawnT = 0; c.group.scale.setScalar(0.001); } }
+  c.want = Math.random() < 0.5 ? 1 : 2; c.got = 0; c.pending = 0; c.prod = o.outType; c.state = 'in'; c.wait = 0; c.bubble = null; c.eat = E; c.vip = false;
   scene.add(c.group); E.cs.push(c); return c;
 }
 function eatBill(E, c, v) {
@@ -3784,7 +3812,7 @@ function updateEatery(E, dt, t) {
   } else if (Math.random() < dt * 2) emit({ x: E.cookX, y: 1.9, z: E.cookZ, vx: 0.3, vy: 1, vz: 0, life: 1.1, size: 0.35, c: 0xdddddd, grav: -0.4, a: 0.25, grow: 1.2 });
   // müşteri
   E.t -= dt; const qmax = 3 + (S.lv[o.id + 'Q'] || 0);
-  if (E.t <= 0 && E.cs.filter(c => c.state !== 'leave').length < qmax) { eatSpawn(E); E.t = (o.spawn[2] || 4) * Math.pow(0.85, S.lv[o.id + 'Q'] || 0) * rand(0.8, 1.2); }
+  if (E.t <= 0 && E.cs.filter(c => c.state !== 'leave').length < qmax) { if (eatSpawn(E)) E.t = (o.spawn[2] || 4) * Math.pow(0.85, S.lv[o.id + 'Q'] || 0) * rand(0.8, 1.2); }
   let qi = 0;
   for (const c of E.cs.slice()) {
     const cp = c.group.position; let tx = null, tz = null, spd = CFG.walkSpeed;
@@ -3798,14 +3826,42 @@ function updateEatery(E, dt, t) {
         if (c.wait > 50 && c.got === 0 && c.pending === 0) { c.state = 'leave'; if (c.bubble) c.bubble.visible = false; c.path = o.leave.slice(); }
       }
     } else if (c.state === 'leave') {
-      const wp = c.path[0]; tx = wp[0]; tz = wp[1]; spd = CFG.leaveSpeed; if (Math.hypot(tx - cp.x, tz - cp.z) < 0.5) { c.path.shift(); if (!c.path.length) { const i1 = E.cs.indexOf(c); if (i1 >= 0) E.cs.splice(i1, 1); rmDispose(c.group); if (c.bubble) { c.bubble.material.map.dispose(); c.bubble.material.dispose(); } continue; } }
+      if (c.jmp) { if (jumperTick(c, dt, t)) { const i1 = E.cs.indexOf(c); if (i1 >= 0) E.cs.splice(i1, 1); rmDispose(c.group); if (c.bubble) { c.bubble.material.map.dispose(); c.bubble.material.dispose(); } } continue; }
+      if (!c.path.length && exitCheck(c, dt)) { const i1 = E.cs.indexOf(c); if (i1 >= 0) E.cs.splice(i1, 1); rmDispose(c.group); if (c.bubble) { c.bubble.material.map.dispose(); c.bubble.material.dispose(); } continue; }
+      if (c.path.length) { const wp = c.path[0]; tx = wp[0]; tz = wp[1]; spd = CFG.leaveSpeed; if (Math.hypot(tx - cp.x, tz - cp.z) < 0.5) { c.path.shift(); if (!c.path.length && exitCheck(c, 0)) { const i1 = E.cs.indexOf(c); if (i1 >= 0) E.cs.splice(i1, 1); rmDispose(c.group); if (c.bubble) { c.bubble.material.map.dispose(); c.bubble.material.dispose(); } continue; } } }
     }
+    if (c.spawnT !== undefined) { c.spawnT += dt * 2; c.group.scale.setScalar(Math.min(1, c.spawnT) * CHAR_S); if (c.spawnT >= 1) c.spawnT = undefined; }
     let mv = 0; if (tx !== null) { const dx = tx - cp.x, dz = tz - cp.z, d = Math.hypot(dx, dz); if (d > 0.02) { const st = Math.min(d, spd * dt); cp.x += dx / d * st; cp.z += dz / d * st; c.vel.set(dx / d * spd, 0, dz / d * spd); mv = 1; faceChar(c, dx, dz, dt); } } else c.vel.set(0, 0, 0);
     animChar(c, dt, mv, t);
   }
 }
+/* sahil: yemeğini alan müşterilerin ~%35'i en yakın kıyı/iskele kenarına koşup suya atlar (yay + takla), sıçrar, birkaç sn yüzer, ekran dışına yüzer/batar */
+function planJump(c) {
+  const p = c.group.position; let best = null;
+  for (let k = 0; k < 24; k++) { const a = k / 24 * TAU, dx = Math.cos(a), dz = Math.sin(a);
+    for (let r = 1.5; r <= 13; r += 0.5) { if (!isWater(p.x + dx * r, p.z + dz * r)) continue;
+      let ok = true; for (let q = 0.5; q < r; q += 0.5) { const sx = p.x + dx * q, sz = p.z + dz * q; if (isWater(sx, sz) || solidAt(sx, sz)) { ok = false; break; } }
+      if (ok && isWater(p.x + dx * (r + 2.6), p.z + dz * (r + 2.6)) && (!best || r < best.r)) best = { r, dx, dz }; break; } }
+  if (best) { c.jmp = { st: 'run', r: best.r, dx: best.dx, dz: best.dz, t: 0, x0: p.x + best.dx * (best.r - 0.7), z0: p.z + best.dz * (best.r - 0.7) }; c.path = []; }
+}
+function solidAt(x, z) { for (const q of colliders) { if (q.water || (q.active && !q.active())) continue; if (x > q.x0 - 0.3 && x < q.x1 + 0.3 && z > q.z0 - 0.3 && z < q.z1 + 0.3) return true; } return false; }
+function walkLine(x0, z0, x1, z1) { const L = Math.hypot(x1 - x0, z1 - z0), n = Math.max(1, Math.ceil(L / 1.0)); for (let i = 0; i <= n; i++) { const x = lerp(x0, x1, i / n), z = lerp(z0, z1, i / n); if (isWater(x, z) || solidAt(x, z)) return false; } return true; }
+function findSpawn(x0, z0, tx, tz) { // (x0,z0) civarında, ekran dışında, hedefe düz yürünebilen en yakın nokta; yoksa null
+  let best = null, bd = 1e9; for (let k = 0; k < 16; k++) { const a = k / 16 * TAU, dx = Math.cos(a), dz = Math.sin(a);
+    for (let r = 0; r <= 34; r += 2) { const x = x0 + dx * r, z = z0 + dz * r; if (r === 0 && k > 0) continue; if (isWater(x, z) || solidAt(x, z) || !offScreen(x, z)) continue; if (r < bd && walkLine(x, z, tx, tz)) { bd = r; best = [x, z]; } break; } }
+  return best;
+}
+function jumperTick(c, dt, t) { // true = sil
+  const J = c.jmp, gp = c.group.position; let mv = 0;
+  if (J.st === 'run') { const dx = J.x0 - gp.x, dz = J.z0 - gp.z, d = Math.hypot(dx, dz), sp = 6.8; if (d > 0.3) { const st = Math.min(d, sp * dt); gp.x += dx / d * st; gp.z += dz / d * st; c.vel.set(dx / d * sp, 0, dz / d * sp); mv = 1; faceChar(c, dx, dz, dt); } else { J.st = 'jump'; J.t = 0; J.ox = gp.x; J.oz = gp.z; J.tx = gp.x + J.dx * 3.4; J.tz = gp.z + J.dz * 3.4; J.y0 = gp.y; } }
+  else if (J.st === 'jump') { J.t += dt / 0.95; const k = Math.min(1, J.t); gp.x = lerp(J.ox, J.tx, k); gp.z = lerp(J.oz, J.tz, k); gp.y = lerp(J.y0, WATER_Y - 0.7, k * k) + Math.sin(Math.PI * k) * 2.6; c.group.rotation.x = k * TAU * 1.0; mv = 1;
+    if (k >= 1) { c.group.rotation.x = 0; J.st = 'swim'; J.t = 0; J.rp = 0; stats.jumps = (stats.jumps || 0) + 1; ring(gp.x, gp.z, 0xdff6ff, 4.2, WATER_Y + 0.07); splashRing(gp.x, gp.z, 1.6); for (let i = 0; i < 16; i++) { const a = rand(0, TAU), s = rand(1, 3); emit({ x: gp.x, y: WATER_Y + 0.2, z: gp.z, vx: Math.cos(a) * s, vy: rand(3, 6), vz: Math.sin(a) * s, life: rand(0.5, 0.9), size: rand(0.18, 0.32), c: i % 3 ? 0xdff6ff : 0x7fd3f0, grav: 11, drag: 0.8 }); } sfx('splash'); if (c.bubble) c.bubble.visible = false; } }
+  else if (J.st === 'swim') { J.t += dt; gp.y = WATER_Y - 0.95 + Math.sin(t * 3) * 0.06; c.vel.set(0, 0, 0); J.rp -= dt; if (J.rp <= 0) { J.rp = 0.55; splashRing(gp.x, gp.z, 0.8); }
+    if (J.t > 3.2) { const nx = gp.x + J.dx * 1.7 * dt, nz = gp.z + J.dz * 1.7 * dt; if (isWater(nx, nz) && !offScreen(gp.x, gp.z)) { gp.x = nx; gp.z = nz; mv = 0.4; } else if (offScreen(gp.x, gp.z)) return true; else { J.sink = (J.sink || 0) + dt / 1.4; c.group.scale.setScalar(Math.max(0.001, 1 - J.sink) * CHAR_S); gp.y -= dt * 0.8; if (J.sink >= 1) return true; } } }
+  animChar(c, dt, mv, t); return false;
+}
 function eatDone(E, c) {
-  const o = E.o; c.state = 'leave'; c.path = o.leave.slice(); setTimeout(() => { if (c.bubble) c.bubble.visible = false; }, 600); stats.sold++; stats.eaten = (stats.eaten || 0) + c.want; stats['ea_' + E.id] = (stats['ea_' + E.id] || 0) + c.want; sfx('happy');
+  const o = E.o; c.state = 'leave'; c.path = o.leave.slice(); if (Math.random() < 0.35) planJump(c); setTimeout(() => { if (c.bubble) c.bubble.visible = false; }, 600); stats.sold++; stats.eaten = (stats.eaten || 0) + c.want; stats['ea_' + E.id] = (stats['ea_' + E.id] || 0) + c.want; sfx('happy');
   const total = Math.round(c.want * o.price * priceMul()), n = clamp(Math.round(total / CFG.billValue), 1, 8), bv = total / n, gp = c.group.position;
   hearts(gp.x, 3.0, gp.z, 3); popText(gp.x, 3.9, gp.z, '+' + fmt(total), '#6dff6a'); for (let k = 0; k < n; k++) later(0.1 + k * 0.1, () => eatBill(E, c, bv));
 }
@@ -4005,14 +4061,14 @@ function updateHall(dt, t) {
   for (let i = H.buyers.length - 1; i >= 0; i--) {
     const b = H.buyers[i], bp = b.group.position; let tx = null, tz = null, spd = 5.2;
     if (b.state === 'in') { tx = b.spot[0]; tz = b.spot[1]; if (Math.hypot(tx - bp.x, tz - bp.z) < 0.25) { b.atSpot = true; tx = null; faceChar(b, 0, 1, dt); } }
-    else if (b.state === 'leave') { const wp = b.path[0]; tx = wp[0]; tz = wp[1]; if (Math.hypot(tx - bp.x, tz - bp.z) < 0.5) { b.path.shift(); if (!b.path.length) { rmDispose(b.group); H.buyers.splice(i, 1); continue; } } }
+    else if (b.state === 'leave') { if (!b.path.length && exitCheck(b, dt)) { rmDispose(b.group); H.buyers.splice(i, 1); continue; } if (b.path.length) { const wp = b.path[0]; tx = wp[0]; tz = wp[1]; if (Math.hypot(tx - bp.x, tz - bp.z) < 0.5) { b.path.shift(); if (!b.path.length && exitCheck(b, 0)) { rmDispose(b.group); H.buyers.splice(i, 1); continue; } } } }
     let mv = 0; if (tx !== null) { const dx = tx - bp.x, dz = tz - bp.z, d = Math.hypot(dx, dz); if (d > 0.02) { const st = Math.min(d, spd * dt); bp.x += dx / d * st; bp.z += dz / d * st; mv = 1; faceChar(b, dx, dz, dt); } }
     b.vel.set(0, 0, 0); animChar(b, dt, mv, t); if (b.state === 'in' && b.atSpot && H.state !== 'bid') b.armR.rotation.x = 0;
   }
 }
 function hallBuyer(i) {
   const c = makeChar({ shirt: pick([0x1d6fb8, 0xff6f61, 0xffc21a, 0x2fae4a, 0xf2f2f2, 0x8a5acf]), pants: pick([0x2f3542, 0x3b4a6b, 0x5b4636]), hair: pick(HAIRS), skin: pick(SKINS), hairStyle: pick(['short', 'spiky', 'bob', 'bun']), hat: Math.random() < 0.5 ? 'cap' : null, hatColor: pick([0xffffff, 0x1d3b66, 0xff6f61]), outfit: 'apron', apron: 0xffffff, shoe: 0x333333 });
-  c.group.position.set(HALL.cx + rand(-9, 9), 0, 14 + rand(0, 3)); c.spot = hallBuyerSpot(i); c.state = 'in'; c.atSpot = false; c.phase = rand(0, 6); scene.add(c.group); HALL.buyers.push(c); return c;
+  { const bx = HALL.cx + rand(-9, 9); let bz = 14 + rand(0, 3), n = 0; while (n++ < 14 && !offScreen(bx, bz) && !isWater(bx, bz - 1.5)) bz -= 1.5; c.group.position.set(bx, 0, bz); } c.spot = hallBuyerSpot(i); c.state = 'in'; c.atSpot = false; c.phase = rand(0, 6); scene.add(c.group); HALL.buyers.push(c); return c;
 }
 function hallSell() {
   const H = HALL, n = H.stock.length; let k = 0; H.vip = Math.random() < 0.4; const base = Math.round(n * 70 * H.mult * priceMul()), vipB = H.vip ? Math.round(base * 0.3) : 0, total = base + vipB; // kasa basi 70 (normal satisin ~2-3 kati) x carpan; VIP aliciyla +%30
@@ -4104,28 +4160,42 @@ const svcWant = r => S.lv[r.hire] > 0 ? 1 + (S.lv[r.cnt] || 0) : 0;
 function spawnSvc(r, instant, idx) {
   const c = makeChar({ shirt: r.shirt, pants: 0x35507a, hair: 0x2a1a10, hairStyle: 'short', hat: 'cap', hatColor: r.hat, outfit: 'apron', apron: 0xffffff, skin: 0xe8b88a, shoe: 0xffffff });
   c.group.position.set(r.home[0] + idx * 1.4, 0, r.home[1]); attachBackStack(c, () => r.cap); scene.add(c.group);
-  c.state = 'idle'; c.cd = 0; c.rt = 0; c.kind = 'svc_' + r.id; c.role = r; c.idx = idx; c.wait = 0; c.plan = 0; c.route = -1; popInWorker(c, instant); SVCW.push(c); r.units.push(c); return c;
+  c.state = 'idle'; c.cd = 0; c.rt = 0; c.kind = 'svc_' + r.id; c.role = c.base = r; c.idx = idx; c.wait = 0; c.plan = 0; c.route = -1; popInWorker(c, instant); SVCW.push(c); r.units.push(c); return c;
 }
 function svcSync(r, instant) { while (r.units.length < svcWant(r)) spawnSvc(r, instant, r.units.length); }
 const svcBusy = h => h.state === 'toSrc' || h.state === 'pick';
-function svcPlan(h) { // boştaki çalışan için sıradaki işi seç
-  const r = h.role, rts = r.routes(), cs = r.cash(); let best = null, ba = 0;
+function svcWork(h, r) { // r rolünde h için iş var mı? (yan etkisiz) -> { best, cashDue }
+  const rts = r.routes(), cs = r.cash(), pool = SVCW.filter(o => o.role === r); let best = null, ba = 0;
   rts.forEach((rt, i) => {
-    let planned = 0; for (const o of r.units) if (o !== h && o.route === i) planned += svcBusy(o) ? o.plan : (o.state === 'toDst' || o.state === 'drop' ? o.stack.length + o.incoming : 0);
+    let planned = 0; for (const o of pool) if (o !== h && o.route === i) planned += svcBusy(o) ? o.plan : (o.state === 'toDst' || o.state === 'drop' ? o.stack.length + o.incoming : 0);
     const avail = rt.src.length - rt.keep - planned, room = rt.dcap - rt.dst.length - (rt.dst.pend || 0) - planned;
-    if (rt.src.length >= rt.start && avail > 0 && room > 0 && avail > ba) { ba = avail; best = { i, n: Math.min(r.cap, avail, room) }; }
+    if (rt.src.length >= rt.start && avail > 0 && room > 0 && avail > ba) { ba = avail; best = { i, n: Math.min(r.cap, avail, room), sc: avail }; }
   });
-  const cashDue = cs && (cs.pile.length >= 6 || cs.pile.extra > 0 || (!best && cs.pile.length > 0)) && !r.units.some(o => o !== h && (o.state === 'toCash' || o.state === 'cash'));
-  if (cashDue) { h.state = 'toCash'; return; }
-  if (best) { h.route = best.i; h.plan = best.n; h.state = 'toSrc'; h.wait = 0; }
+  const cashDue = !!(cs && (cs.pile.length >= 6 || cs.pile.extra > 0 || (!best && cs.pile.length > 0)) && !pool.some(o => o !== h && (o.state === 'toCash' || o.state === 'cash')));
+  return { best, cashDue, cs };
+}
+function svcPlan(h) { // boştaki çalışan için sıradaki işi seç
+  const w = svcWork(h, h.role);
+  if (w.cashDue) { h.state = 'toCash'; return; }
+  if (w.best) { h.route = w.best.i; h.plan = w.best.n; h.state = 'toSrc'; h.wait = 0; }
+}
+/* yardım: kendi rolünde iş yokken 3.5-4.3 sn bekleyip 3.5 sn'de bir diğer servis rollerinin açığına bakar (açık başına en çok 1 yardımcı) */
+function svcHelpCheck(h) {
+  const base = h.base || h.role;
+  if (h.helping) { if (h.helpT > HELP_MIN) { const w = svcWork(h, base); if (w.best || w.cashDue) { h.role = base; h.helping = false; h.route = -1; h.idleT = 0; h.helpAt = 0; h.cd = 0; noteHelpSwitch(h); } } return; }
+  if (h.idleT < (h.helpAt || (h.helpAt = helpAtNew())) || h.helpChk > 0) return;
+  h.helpChk = HELP_EVERY; let best = null, bs = 0;
+  for (const id in SVCR) { const r2 = SVCR[id]; if (r2 === base || SVCW.some(o => o !== h && o.helping && o.role === r2)) continue; const w = svcWork(h, r2); if (!w.best && !w.cashDue) continue;
+    const tgt = w.best ? r2.routes()[w.best.i] : null, tx = tgt ? tgt.sx : w.cs.x, tz = tgt ? tgt.sz : w.cs.z, sc = (w.best ? w.best.sc : w.cs.pile.length + 1) / (Math.hypot(tx - h.group.position.x, tz - h.group.position.z) + 8); if (sc > bs) { bs = sc; best = r2; } }
+  if (best) { h.role = best; h.helping = true; h.helpT = 0; h.idleT = 0; h.route = -1; h.cd = 0; noteHelpSwitch(h); }
 }
 function updateSvc(h, dt, t) {
-  workerPop(h, dt); const r = h.role, gp = h.group.position, spd = 4.6; let tx = null, tz = null; h.cd -= dt; h.rt -= dt;
+  workerPop(h, dt); const r = h.role, gp = h.group.position, spd = 4.6; let tx = null, tz = null; h.cd -= dt; h.rt -= dt; if (h.helpChk > 0) h.helpChk -= dt; if (h.helping) h.helpT = (h.helpT || 0) + dt;
   const goTo = (x, z) => { if (h.rt <= 0 || h.gx !== x || h.gz !== z) { h.rt = 1.0; h.gx = x; h.gz = z; h.path = findPath(gp.x, gp.z, x, z); h.pi = 1; } while (h.path && h.pi < h.path.length - 1 && Math.hypot(h.path[h.pi][0] - gp.x, h.path[h.pi][1] - gp.z) < 0.45) h.pi++; const w = h.path && h.path[Math.min(h.pi, h.path.length - 1)]; if (w) { tx = w[0]; tz = w[1]; } };
   const rts = r.routes(), rt = rts[h.route], load = h.stack.length + h.incoming;
   if (h.state === 'idle') {
     if (h.stack.length > 0 && h.incoming === 0) { const ty = h.stack.items[h.stack.items.length - 1].type, i = rts.findIndex(q => q.types.includes(ty)); if (i >= 0) { h.route = i; h.state = 'toDst'; } else { h.stack.takeLast(); } }
-    else if (h.cd <= 0) { h.cd = 0.4; svcPlan(h); }
+    else if (h.cd <= 0) { h.cd = 0.4; svcPlan(h); if (h.state === 'idle') { h.idleT = (h.idleT || 0) + 0.4; svcHelpCheck(h); } else h.idleT = 0; }
     if (h.state === 'idle') { const hm = [r.home[0] + h.idx * 1.4, r.home[1]]; if (Math.hypot(hm[0] - gp.x, hm[1] - gp.z) > 0.6) goTo(hm[0], hm[1]); }
   } else if (h.state === 'toSrc') { if (!rt) h.state = 'idle'; else { if (Math.hypot(rt.sx - gp.x, rt.sz - gp.z) < 0.7) { h.state = 'pick'; h.cd = 0.1; h.wait = 0; } else goTo(rt.sx, rt.sz); } }
   else if (h.state === 'pick') {
@@ -4402,7 +4472,7 @@ window.__game = {
   render() { if (composer) composer.render(0); else renderer.render(scene, camera); scene.autoUpdate = true; },
   get scene() { return scene; }, fill(name, n) { const M = { input: [inputPile, () => makeFlowerItem(0, 'tulip'), 'flower'], output: [outputPile, () => makeBouquetItem(undefined, true), 'bouquet'], potIn: [potInput, () => makeFlowerItem(0, 'orchid'), 'orchid'], potOut: [potOutput, () => makePotItem(true), 'pot'], shelfB: [shelfB, () => makeBouquetItem(undefined, true), 'bouquet'], shelfP: [shelfP, () => makePotItem(true), 'pot'], vanLoad: [vanLoad, () => makeBouquetItem(undefined, true), 'bouquet'], money: [moneyPile, makeBill, 'bill'], vanMoney: [vanPile, makeBill, 'bill'] }[name]; const st = M[0]; while (st.length) rm(st.items.pop().mesh); fillStack(st, n, M[1], M[2]); }, get calls() { return renderer.info.render.calls; }, get tris() { return renderer.info.render.triangles; }, tutStep: () => S.tut, forceVip() { custCount = 5; }, zoom(v) { camMul = v; }
 };
-Object.defineProperty(window.__game, 'SVCW', { get: () => SVCW });
+Object.defineProperty(window.__game, 'SVCW', { get: () => SVCW }); Object.assign(window.__game, { planJump, offScreen, solidAt, eatFeed(E, n) { while (n-- > 0 && E.input.length < 24) { const ty = E.o.inType, b = (ITEMF[ty] || (() => makeBouquetItem(undefined, true)))(); scene.add(b); E.input.add(b, ty); } } });
 
 let last = performance.now(), fpsAcc = 0, fpsN = 0, fpsT = 0, fpsChecked = !HQ || qExplicit;
 let toastTm = 0;
