@@ -3006,6 +3006,8 @@ function snapSun(x, z) {
 }
 const camFocus = new THREE.Vector3(CFG.start.x, 0, CFG.start.z); const inV = { x: 0, z: 0 };
 let T = 0, spawnT = 2, camInit = false;
+/* kamera uzaklık çarpanı: bölüm 1'deki (0.2/0.12/0.03) yarısı - bu bölümün dünyası kompakt, oyuncu karaktere yakın kalsın (ilk oyun hissi bölüm 1 ile aynı) */
+function camSTarget() { return 1 + (zone2 && !zone2.locked ? 0.1 : 0) + (zone3 && !zone3.locked ? 0.06 : 0) + 0.015 * EXTLIST.filter(q => !q.locked).length; }
 const nudge = { t: 99, x: 0, z: 0, w: 0.6, dur: 1.8, skip: 0 }; let camS = 1;
 function panTo(x, z, w, dur) { nudge.t = 0; nudge.x = x; nudge.z = z; nudge.w = w || 0.8; nudge.dur = dur || 1.8; nudge.skip = 0; }
 /* C5: kamera gezisi sadece önemli ilk olaylarda, her tür bir kez (S.seen), sıraya girer; oyuncu hareket ederken bekler */
@@ -3140,7 +3142,7 @@ function update(dt) {
   if (nudge.t < 90) { if (Math.hypot(inV.x, inV.z) > 0.3) nudge.skip += dt; else nudge.skip = 0; if (nudge.skip > 1.2) nudge.t = 99; }
   nudge.t += dt; const nk = nudge.t / nudge.dur; const nw = nk >= 1 ? 0 : nk < 0.3 ? sstep(0, 1, nk / 0.3) : nk < 0.7 ? 1 : sstep(0, 1, (1 - nk) / 0.3);
   camFocus.x = damp(camFocus.x, lerp(tx, nudge.x, nw * nudge.w), 6, dt); camFocus.z = damp(camFocus.z, lerp(tz, nudge.z, nw * nudge.w), 6, dt);
-  camS = damp(camS, 1 + (zone2 && !zone2.locked ? 0.2 : 0) + (zone3 && !zone3.locked ? 0.12 : 0) + 0.03 * EXTLIST.filter(q => !q.locked).length, 1.2, dt);
+  camS = damp(camS, camSTarget(), 1.2, dt);
   const cd = camDist * camMul * camS * (1 - 0.1 * nw), H = cd * Math.cos(CFG.tilt), Y = cd * Math.sin(CFG.tilt);
   camera.position.set(camFocus.x + Math.sin(CFG.yaw) * H, Y, camFocus.z + Math.cos(CFG.yaw) * H);
   camera.lookAt(camFocus.x, 0, camFocus.z);
@@ -4540,7 +4542,7 @@ window.__game = {
   helper: () => helper,
   carry(n) { while (P.stack.length) P.stack.items.pop(); n = Math.min(n, P.capFn()); for (let i = 0; i < n; i++) P.stack.add(makeFlowerItem(0, "tulip"), "flower"); },
   tp(x, z) { P.group.position.set(x, 0, z); P.vel.set(0, 0, 0); camInit = false; },
-  camAt(x, z) { P.group.position.set(x, 0, z); P.vel.set(0, 0, 0); camInit = false; PANQ.length = 0; nudge.t = 99; camS = 1 + (zone2 && !zone2.locked ? 0.2 : 0) + (zone3 && !zone3.locked ? 0.12 : 0) + 0.03 * EXTLIST.filter(q => !q.locked).length; update(1 / 30); camera.updateMatrixWorld(true); }, // test: kamerayı oyuncunun üstüne oturt
+  camAt(x, z) { P.group.position.set(x, 0, z); P.vel.set(0, 0, 0); camInit = false; PANQ.length = 0; nudge.t = 99; camS = camSTarget(); update(1 / 30); camera.updateMatrixWorld(true); }, // test: kamerayı oyuncunun üstüne oturt
   sim(sec) { const n = Math.round(sec * 30); for (let i = 0; i < n; i++) update(1 / 30); },
   simDt(sec, dt) { const n = Math.round(sec / dt); for (let i = 0; i < n; i++) update(dt); },
   render() { if (composer) composer.render(0); else renderer.render(scene, camera); },
