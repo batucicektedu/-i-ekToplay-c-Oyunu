@@ -2091,7 +2091,22 @@ function leaveSad(c) {
   const qi = queue.indexOf(c); if (qi >= 0) queue.splice(qi, 1);
   c.state = 'leaving'; setBubble(c, 'sad'); c.hideBubble = 1.4; c.path = [[12.4, -0.3], [12.4, 12.5], [10, 18], [10, 40]]; sfx('drop');
 }
+/* ekranda belirme/kaybolma yok: karakterler kamera görüş alanının (marj dahil) DIŞINDA doğar ve DIŞINDA silinir */
+const _ov = new THREE.Vector3();
+function offScreen(x, z, mx, my) { // true = ekranın (yatay mx, dikey my marjıyla) dışında
+  camera.updateMatrixWorld(); camera.matrixWorldInverse.copy(camera.matrixWorld).invert();
+  _ov.set(x, 1, z).applyMatrix4(camera.matrixWorldInverse); if (_ov.z > -0.1) return true; _ov.applyMatrix4(camera.projectionMatrix);
+  return Math.abs(_ov.x) > 1 + (mx === undefined ? 0.45 : mx) || Math.abs(_ov.y) > 1 + (my === undefined ? 0.3 : my);
+}
+function spawnFar(x, z) { let n = 0; while (n++ < 30 && z < 46 && !offScreen(x, z)) z += 1.5; return z; } // doğma noktası ekrandaysa yol boyunca uzaklaştır
+function exitCheck(c, dt) { // yol bitti: ekran dışındaysa true (sil); değilse aynı yönde yürümeye devam; 25 sn sonra hâlâ ekrandaysa küçülerek kaybolur
+  const gp = c.group.position; if (c.exitT0 === undefined) c.exitT0 = T;
+  if (offScreen(gp.x, gp.z)) return true;
+  if (T - c.exitT0 > 25) { if (!(dt > 0)) return true; c.fade = (c.fade || 0) + dt / 0.4; c.group.scale.setScalar(Math.max(0.001, 1 - c.fade) * CHAR_S); stats.popFade = (stats.popFade || 0) + (c.fade === dt / 0.4 ? 1 : 0); return c.fade >= 1; }
+  let dx = c.vel ? c.vel.x : 0, dz = c.vel ? c.vel.z : 0; if (Math.hypot(dx, dz) < 0.01) { dx = Math.sin(c.group.rotation.y); dz = Math.cos(c.group.rotation.y); } const L = Math.hypot(dx, dz) || 1; c.path = [[gp.x + dx / L * 6, gp.z + dz / L * 6]]; return false;
+}
 function spawnCustomer(z) {
+  if (z >= 20) z = spawnFar(CFG.queueX, z);
   const fem = Math.random() < 0.5, sh = pick(SHIRTS); custCount++; const vip = custCount % 6 === 0 || Math.random() < BF.vip;
   const c = makeChar(vip ? { shirt: 0xff1fa0, pants: 0x6a2be8, hair: pick(HAIRS), skin: pick(SKINS), hairStyle: fem ? 'long' : 'short', crown: true, shoe: 0xffc21a } : { shirt: sh, pants: pick([0x3b4a6b, 0x5b4636, 0x2f6f5f, 0x444444]), hair: pick(HAIRS), skin: pick(SKINS), dress: fem && Math.random() < 0.6 ? pick(SHIRTS) : 0,
     hairStyle: fem ? pick(['bob', 'long', 'ponytail', 'bun']) : pick(['short', 'spiky', 'short']), hat: !fem && Math.random() < 0.3 ? 'cap' : null, hatColor: pick([0xff5a6e, 0x4d96ff, 0xffd23f]), shoe: pick([0x3a2a22, 0xffffff, 0xd8412f]) });
@@ -2142,8 +2157,8 @@ function updateCustomers(dt, t) {
       if (c.atSlot) { faceChar(c, 0, -1, dt); tx = null; }
     } else if (c.state === 'leaving') {
       if (c.hideBubble > 0) { c.hideBubble -= dt; if (c.hideBubble <= 0 && c.bubble) c.bubble.visible = false; }
-      const wp = c.path[0]; tx = wp[0]; tz = wp[1]; spd = CFG.leaveSpeed;
-      if (Math.hypot(tx - gp.x, tz - gp.z) < 0.4) { c.path.shift(); if (!c.path.length) { removeCustomer(i); continue; } }
+      if (!c.path.length && exitCheck(c, dt)) { removeCustomer(i); continue; }
+      if (c.path.length) { const wp = c.path[0]; tx = wp[0]; tz = wp[1]; spd = CFG.leaveSpeed; if (Math.hypot(tx - gp.x, tz - gp.z) < 0.4) { c.path.shift(); if (!c.path.length && exitCheck(c, 0)) { removeCustomer(i); continue; } } }
     }
     if (tx !== null) {
       dx = tx - gp.x; dz = tz - gp.z; const d = Math.hypot(dx, dz);
@@ -3082,18 +3097,28 @@ function spawnUnit(r, instant, idx) {
 }
 function roleSync(r, instant) { if (r.id === 'main' && !helper) return; while (r.units.length < (r.id === 'main' ? (S.lv.helperN || 0) : roleWant(r))) spawnUnit(r, instant, r.units.length + 1); }
 function roleEvolve(r, instant) { for (const u of r.units) setTractor(u, instant); if (r.id === 'main' && helper) { helper.tcol = r.tcol; helper.rname = r.name; setTractor(helper, instant); } }
+/* yardım kuralı (ortak): kendi işi yokken idleT >= helpAt (3.5-4.3 sn) olunca bir kez bakar, sonra ancak 3.5 sn'de bir; bir açığa en çok 1 yardımcı; en az 6 sn bağlı kalır, dönüşte mevcut yükü bitirir */
+const HELP_WAIT = 3.5, HELP_EVERY = 3.5, HELP_MIN = 6;
+const helpAtNew = () => HELP_WAIT + Math.random() * 0.8;
+function noteHelpSwitch(h) { const g = T - (h._hsT === undefined ? -99 : h._hsT); h._hsT = T; stats.helpSw = (stats.helpSw || 0) + 1; if (g < stats.helpMinGap || stats.helpMinGap === undefined) stats.helpMinGap = g; }
 function gPickType(h) {
   const r = h.role; for (const ty of r.types) if (gNeed(ty, 16) && gFlower(ty, h.group.position)) return [ty, false];
-  if (h.idleT > 3) for (const ty of GHELP) if (!r.types.includes(ty) && gNeed(ty, 10) && gFlower(ty, h.group.position)) return [ty, true];
+  if (h.idleT >= (h.helpAt || (h.helpAt = helpAtNew())) && !(h.helpChk > 0)) {
+    h.helpChk = HELP_EVERY; let best = null, bs = 0;
+    for (const ty of GHELP) { if (r.types.includes(ty)) continue; const q = gNeed(ty, 10); if (!q) continue; const f = gFlower(ty, h.group.position); if (!f) continue;
+      if (GARD.some(o => o !== h && o.helping && o.ctype === ty)) continue; // bu açığa zaten bir yardımcı gitti
+      const sc = (10 * q.cap / 24 - q.stack.length - (q.stack.pend || 0) + 1) / (Math.hypot(f.x - h.group.position.x, f.z - h.group.position.z) + 6); if (sc > bs) { bs = sc; best = ty; } }
+    if (best) { noteHelpSwitch(h); return [best, true]; }
+  }
   return null;
 }
 function updateGardener(h, dt, t) {
-  workerPop(h, dt); const r = h.role, gp = h.group.position, spd = gSpdOf(h), cap = gCapOf(h);
+  workerPop(h, dt); const r = h.role, gp = h.group.position, spd = gSpdOf(h), cap = gCapOf(h); if (h.helpChk > 0) h.helpChk -= dt; if (h.helping) h.helpT = (h.helpT || 0) + dt;
   let tx = null, tz = null; const full = h.stack.length + h.incoming >= cap; h.pickT -= dt;
   if (h.state === 'seek') {
     if (h.target && (h.target.t < h.target.gt || h.target.bed.locked || (h.ctype && !gMatch(h.ctype, h.target)))) dropTarget(h);
-    if (!h.ctype && h.stack.length === 0 && h.incoming === 0 && h.pickT <= 0) { h.pickT = 0.35; const p = gPickType(h); if (p) { h.ctype = p[0]; h.helping = p[1]; h.idleT = 0; } else h.idleT += 0.35; }
-    else if (h.helping && h.ctype && h.stack.length + h.incoming === 0 && h.pickT <= 0) { h.pickT = 0.35; for (const ty of r.types) if (gNeed(ty, 16) && gFlower(ty, gp)) { dropTarget(h); h.ctype = null; h.helping = false; break; } } // kendi bölgesinde iş çıktı: eve dön
+    if (!h.ctype && h.stack.length === 0 && h.incoming === 0 && h.pickT <= 0) { h.pickT = 0.35; const p = gPickType(h); if (p) { h.ctype = p[0]; h.helping = p[1]; h.idleT = 0; h.helpT = 0; h.helpAt = 0; } else h.idleT += 0.35; }
+    else if (h.helping && h.ctype && h.stack.length + h.incoming === 0 && h.pickT <= 0 && h.helpT > HELP_MIN) { h.pickT = 0.35; for (const ty of r.types) if (gNeed(ty, 16) && gFlower(ty, gp)) { dropTarget(h); h.ctype = null; h.helping = false; noteHelpSwitch(h); break; } } // kendi bölgesinde iş çıktı: eve dön
     if (h.ctype) {
       if (full) h.state = 'deliver';
       else {
@@ -5388,7 +5413,7 @@ window.__game = {
   admin: ADMIN,
   padCheck() { const pads = allPads(); const hits = []; for (const p of pads) { const h = padHits(p, p.x, p.z, pads); if (h) hits.push([p.key || (p.o && p.o.id) || '?', h, +p.x.toFixed(1), +p.z.toFixed(1)]); } return hits; }, fixPads, allPads, PROPBOX, padOK: () => PADOK, occCheck, OC,
   get camera() { return camera; },
-  hintState() { return { arrow: tutArrow.visible, x: tutArrow.position.x, z: tutArrow.position.z, disp: hintEl.style.display, lb: hintT.textContent, hold: _hsT }; }, near: () => camera.near,
+  hintState() { return { arrow: tutArrow.visible, x: tutArrow.position.x, z: tutArrow.position.z, disp: hintEl.style.display, lb: hintT.textContent, hold: _hsT }; }, near: () => camera.near, offScreen: (x, z, a, b) => offScreen(x, z, a, b),
   measure() { renderer.info.reset(); if (composer) composer.render(0); else renderer.render(scene, camera); return { calls: renderer.info.render.calls, tris: renderer.info.render.triangles }; },
   get c2() { return { TD, TDM, TK, applyTier, CPADS, S, cosGate, buyTier, DSL, DSLM, DECT, DEC, zonesAll: zones, buyDecor, beautyPts, BF, placeDecor, DN, NIGHT, DN_PERIOD }; },
   path(tx, tz) { return findPath(P.group.position.x, P.group.position.z, tx, tz); }, pathOK(tx, tz) { findPath(P.group.position.x, P.group.position.z, tx, tz); return PG.found !== false; }, blockedAt(x, z) { pgBuild(); const i = Math.floor((x - PG.x0) / PG.c), j = Math.floor((z - PG.z0) / PG.c); return i < 0 || j < 0 || i >= PG.w || j >= PG.h || !!PG.blocked[j * PG.w + i]; }, colliders,
