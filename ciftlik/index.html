@@ -2494,7 +2494,22 @@ function leaveSad(c) {
   const qi = queue.indexOf(c); if (qi >= 0) queue.splice(qi, 1);
   c.state = 'leaving'; setBubble(c, 'sad'); c.hideBubble = 1.4; c.path = [[12.4, -0.3], [12.4, 9.5], [10, 12], [10, 18], [10, 40]]; sfx('drop');
 }
+/* ekranda belirme/kaybolma yok: karakterler kamera görüş alanının (marj dahil) DIŞINDA doğar ve DIŞINDA silinir */
+const _ov = new THREE.Vector3();
+function offScreen(x, z, mx, my) { // true = ekranın (yatay mx, dikey my marjıyla) dışında
+  camera.updateMatrixWorld(); camera.matrixWorldInverse.copy(camera.matrixWorld).invert();
+  _ov.set(x, 1, z).applyMatrix4(camera.matrixWorldInverse); if (_ov.z > -0.1) return true; _ov.applyMatrix4(camera.projectionMatrix);
+  return Math.abs(_ov.x) > 1 + (mx === undefined ? 0.45 : mx) || Math.abs(_ov.y) > 1 + (my === undefined ? 0.3 : my);
+}
+function spawnFar(x, z) { let n = 0; while (n++ < 30 && z < 46 && !offScreen(x, z)) z += 1.5; return z; } // doğma noktası ekrandaysa yol boyunca uzaklaştır
+function exitCheck(c, dt) { // yol bitti: ekran dışındaysa true (sil); değilse aynı yönde yürümeye devam; 25 sn sonra hâlâ ekrandaysa küçülerek kaybolur
+  const gp = c.group.position; if (c.exitT0 === undefined) c.exitT0 = T;
+  if (offScreen(gp.x, gp.z)) return true;
+  if (T - c.exitT0 > 25) { if (!(dt > 0)) return true; c.fade = (c.fade || 0) + dt / 0.4; c.group.scale.setScalar(Math.max(0.001, 1 - c.fade) * CHAR_S); stats.popFade = (stats.popFade || 0) + (c.fade === dt / 0.4 ? 1 : 0); return c.fade >= 1; }
+  let dx = c.vel ? c.vel.x : 0, dz = c.vel ? c.vel.z : 0; if (Math.hypot(dx, dz) < 0.01) { dx = Math.sin(c.group.rotation.y); dz = Math.cos(c.group.rotation.y); } const L = Math.hypot(dx, dz) || 1; c.path = [[gp.x + dx / L * 6, gp.z + dz / L * 6]]; return false;
+}
 function spawnCustomer(z) {
+  if (z >= 20) z = spawnFar(CFG.queueX, z);
   const fem = Math.random() < 0.5, sh = pick(SHIRTS); custCount++; const vip = custCount % 6 === 0 || Math.random() < 0;
   const c = makeChar(vip ? { shirt: 0xff1fa0, pants: 0x6a2be8, hair: pick(HAIRS), skin: pick(SKINS), hairStyle: fem ? 'long' : 'short', crown: true, shoe: 0xffc21a } : { shirt: sh, pants: pick([0x3b4a6b, 0x5b4636, 0x2f6f5f, 0x444444]), hair: pick(HAIRS), skin: pick(SKINS), dress: fem && Math.random() < 0.6 ? pick(SHIRTS) : 0,
     hairStyle: fem ? pick(['bob', 'long', 'ponytail', 'bun']) : pick(['short', 'spiky', 'short']), hat: !fem && Math.random() < 0.3 ? 'cap' : null, hatColor: pick([0xff5a6e, 0x4d96ff, 0xffd23f]), shoe: pick([0x3a2a22, 0xffffff, 0xd8412f]) });
@@ -2545,8 +2560,8 @@ function updateCustomers(dt, t) {
       if (c.atSlot) { faceChar(c, 0, -1, dt); tx = null; }
     } else if (c.state === 'leaving') {
       if (c.hideBubble > 0) { c.hideBubble -= dt; if (c.hideBubble <= 0 && c.bubble) c.bubble.visible = false; }
-      const wp = c.path[0]; tx = wp[0]; tz = wp[1]; spd = CFG.leaveSpeed;
-      if (Math.hypot(tx - gp.x, tz - gp.z) < 0.4) { c.path.shift(); if (!c.path.length) { removeCustomer(i); continue; } }
+      if (!c.path.length && exitCheck(c, dt)) { removeCustomer(i); continue; }
+      if (c.path.length) { const wp = c.path[0]; tx = wp[0]; tz = wp[1]; spd = CFG.leaveSpeed; if (Math.hypot(tx - gp.x, tz - gp.z) < 0.4) { c.path.shift(); if (!c.path.length && exitCheck(c, 0)) { removeCustomer(i); continue; } } }
     }
     if (tx !== null) {
       dx = tx - gp.x; dz = tz - gp.z; const d = Math.hypot(dx, dz);
@@ -3400,18 +3415,28 @@ function spawnUnit(r, instant, idx) {
 }
 function roleSync(r, instant) { if (r.id === 'main' && !helper) return; while (r.units.length < (r.id === 'main' ? (S.lv.helperN || 0) : roleWant(r))) spawnUnit(r, instant, r.units.length + 1); }
 function roleEvolve(r, instant) { for (const u of r.units) { u.tlabel = r.tlabel; setTractor(u, instant); } if (r.id === 'main' && helper) { helper.tcol = r.tcol; helper.rname = r.name; helper.tlabel = r.tlabel; setTractor(helper, instant); } }
+/* yardım kuralı (ortak): kendi işi yokken idleT >= helpAt (3.5-4.3 sn) olunca bir kez bakar, sonra ancak 3.5 sn'de bir; bir açığa en çok 1 yardımcı; en az 6 sn bağlı kalır, dönüşte mevcut yükü bitirir */
+const HELP_WAIT = 3.5, HELP_EVERY = 3.5, HELP_MIN = 6;
+const helpAtNew = () => HELP_WAIT + Math.random() * 0.8;
+function noteHelpSwitch(h) { const g = T - (h._hsT === undefined ? -99 : h._hsT); h._hsT = T; stats.helpSw = (stats.helpSw || 0) + 1; if (g < stats.helpMinGap || stats.helpMinGap === undefined) stats.helpMinGap = g; }
 function gPickType(h) {
   const r = h.role; for (const ty of r.types) if (gNeed(ty, 16) && gFlower(ty, h.group.position)) return [ty, false];
-  if (h.idleT > 3) for (const ty of GHELP) if (!r.types.includes(ty) && gNeed(ty, 10) && gFlower(ty, h.group.position)) return [ty, true];
+  if (h.idleT >= (h.helpAt || (h.helpAt = helpAtNew())) && !(h.helpChk > 0)) {
+    h.helpChk = HELP_EVERY; let best = null, bs = 0;
+    for (const ty of GHELP) { if (r.types.includes(ty)) continue; const q = gNeed(ty, 10); if (!q) continue; const f = gFlower(ty, h.group.position); if (!f) continue;
+      if (GARD.some(o => o !== h && o.helping && o.ctype === ty)) continue; // bu açığa zaten bir yardımcı gitti
+      const sc = (10 * q.cap / 24 - q.stack.length - (q.stack.pend || 0) + 1) / (Math.hypot(f.x - h.group.position.x, f.z - h.group.position.z) + 6); if (sc > bs) { bs = sc; best = ty; } }
+    if (best) { noteHelpSwitch(h); return [best, true]; }
+  }
   return null;
 }
 function updateGardener(h, dt, t) {
-  workerPop(h, dt); const r = h.role, gp = h.group.position, spd = gSpdOf(h), cap = gCapOf(h); if (h.idleCool > 0) h.idleCool -= dt; if (h.helping) h.helpT = (h.helpT || 0) + dt;
+  workerPop(h, dt); const r = h.role, gp = h.group.position, spd = gSpdOf(h), cap = gCapOf(h); if (h.idleCool > 0) h.idleCool -= dt; if (h.helpChk > 0) h.helpChk -= dt; if (h.helping) h.helpT = (h.helpT || 0) + dt;
   let tx = null, tz = null; const full = h.stack.length + h.incoming >= cap; h.pickT -= dt;
   if (h.state === 'seek') {
     if (h.target && (h.target.t < h.target.gt || h.target.bed.locked || (h.ctype && !gMatch(h.ctype, h.target)))) dropTarget(h);
-    if (!h.ctype && h.stack.length === 0 && h.incoming === 0 && h.pickT <= 0 && !(h.idleCool > 0)) { h.pickT = 0.35; const p = gPickType(h); if (p) { h.ctype = p[0]; h.helping = p[1]; h.idleT = 0; h.helpT = 0; } else h.idleT += 0.35; }
-    else if (h.helping && h.ctype && h.stack.length + h.incoming === 0 && h.pickT <= 0 && h.helpT > 6) { h.pickT = 0.35; for (const ty of r.types) if (gNeed(ty, 16) && gFlower(ty, gp)) { dropTarget(h); h.ctype = null; h.helping = false; break; } } // kendi bölgesinde iş çıktı: eve dön
+    if (!h.ctype && h.stack.length === 0 && h.incoming === 0 && h.pickT <= 0 && !(h.idleCool > 0)) { h.pickT = 0.35; const p = gPickType(h); if (p) { h.ctype = p[0]; h.helping = p[1]; h.idleT = 0; h.helpT = 0; h.helpAt = 0; } else h.idleT += 0.35; }
+    else if (h.helping && h.ctype && h.stack.length + h.incoming === 0 && h.pickT <= 0 && h.helpT > HELP_MIN) { h.pickT = 0.35; for (const ty of r.types) if (gNeed(ty, 16) && gFlower(ty, gp)) { dropTarget(h); h.ctype = null; h.helping = false; noteHelpSwitch(h); break; } } // kendi bölgesinde iş çıktı: eve dön
     if (h.ctype) {
       if (full) h.state = 'deliver';
       else {
@@ -3743,7 +3768,7 @@ function unseatRider(h, c) {
 }
 function newRider() {
   const fem = Math.random() < 0.5, c = makeChar({ shirt: pick(SHIRTS), pants: pick([0xc9b48a, 0x3b4a6b, 0xe8e0d0]), hair: pick(HAIRS), skin: pick(SKINS), hairStyle: fem ? pick(['bob', 'long', 'ponytail', 'bun']) : pick(['short', 'spiky']), hat: Math.random() < 0.5 ? 'cap' : null, hatColor: pick([0xe8283a, 0x2f7bff, 0xffd23f]), shoe: 0x4a2a14 });
-  c.x = 10.2; c.z = 38; c.group.position.set(c.x, 0, c.z); c.yaw = Math.PI; c.group.rotation.y = Math.PI; scene.add(c.group); return c;
+  c.x = 10.2; c.z = spawnFar(10.2, 38); c.group.position.set(c.x, 0, c.z); c.yaw = Math.PI; c.group.rotation.y = Math.PI; scene.add(c.group); return c;
 }
 const WP_IN = [[10.2, 36], [10.2, 14], [8.2, 10], [6, 4], [5.5, -8], [5.3, -18], [5.5, -27], [6.5, -34], [9, -42]];
 const qSlot = i => [RANCH.q0[0], RANCH.q0[1] + i * 1.6];
@@ -3850,7 +3875,7 @@ function updateRiders(dt, t) {
       const h = r.h, d = stepTo(c, RANCH.mount[0] + 1.6, RANCH.mount[1] - 0.2, 4.5, dt); mv = d > 0.2 ? 1 : 0;
       if (h.state === 'waitRider' && d < 0.4) { seatRider(h, c); r.st = 'ride'; h.v = rideV(S.lv.rideSpd) * (h.love > 70 ? 1.1 : 1); h.state = 'gateOut'; sfx('pick'); }
     } else if (r.st === 'out') {
-      const w = r.wp[0]; const d = stepTo(c, w[0], w[1], 5, dt); mv = 1; if (d < 0.4) { r.wp.shift(); if (!r.wp.length) { rm(c.group); RC.splice(i, 1); continue; } }
+      const w = r.wp[0]; const d = stepTo(c, w[0], w[1], 5, dt); mv = 1; if (d < 0.4) { r.wp.shift(); if (!r.wp.length) { if (exitCheck(c, 0)) { rm(c.group); RC.splice(i, 1); continue; } r.wp = c.path.splice(0); } }
     }
     if (!c.seat) animChar(c, dt, mv, t); else { c.body.position.y = 0; }
   }
@@ -3881,7 +3906,7 @@ function updateShowOut(dt, t) {
   for (let i = SHOWOUT.length - 1; i >= 0; i--) {
     const o = SHOWOUT[i], c = o.c; o.t += dt;
     if (o.t < 1.8) { c.moving = damp(c.moving, 0, 12, dt); c.armR.rotation.set(-2.6 + Math.sin(t * 12) * 0.35, 0, -0.35); c.armL.rotation.x = 0; c.legL.rotation.x = c.legR.rotation.x = 0; c.group.rotation.y = c.yaw = c.yaw + angDiff(c.yaw, -0.6) * (1 - Math.exp(-6 * dt)); if (o.t < dt * 1.5) { hearts(c.x, 3.4, c.z, 2); sfx('happy'); } animBodyOnly(c, t); }
-    else { c.armR.rotation.z = -0.12; const d = stepTo(c, RANCH.showZ[0] - 4, RANCH.showF.cz + 3, 3.2, dt); animChar(c, dt, 1, t); if (d < 0.6 || o.t > 8) { dust(c.x, 0.4, c.z, 6, 0.8); sparkles(c.x, 1.3, c.z, 6, 0xfff2a0, 0.5); rm(c.group); SHOWOUT.splice(i, 1); } }
+    else { c.armR.rotation.z = -0.12; let d = 9; if (!o.gone) { d = stepTo(c, RANCH.showZ[0] - 4, RANCH.showF.cz + 3, 3.2, dt); if (d < 0.6 || o.t > 8) o.gone = true; } else { d = stepTo(c, 10.2, 46, 4.5, dt); if (o.goneT0 === undefined) o.goneT0 = T; if (offScreen(c.x, c.z) || d < 0.6 || T - o.goneT0 > 25) { rm(c.group); SHOWOUT.splice(i, 1); continue; } } animChar(c, dt, 1, t); }
   }
 }
 function animBodyOnly(c, t) { c.body.scale.y = 1 + Math.sin(t * 2.2) * 0.012; }
@@ -4049,8 +4074,8 @@ function updateFarm(dt, t) {
   // elma
   for (const a of APPLES) { if (!a.on) continue; a.t = Math.min(1, a.t + dt / 18); if (!a.m) { a.m = new THREE.Mesh(appleGeo(), vcMat); a.m.userData.dyn = true; a.m.position.set(a.x, 0.5, a.z); scene.add(a.m); } a.m.scale.setScalar(Math.max(0.001, a.t >= 1 ? 2.4 : a.t * 1.2)); if (a.t >= 1 && P.free() > 0 && (a.x - gp.x) ** 2 + (a.z - gp.z) ** 2 < 1.6) { a.t = 0; const it = ITEMF.apple(); it.position.set(a.x, 0.7, a.z); scene.add(it); sendToBack(P, it, 'apple', 1.2); sfx('pick'); } }
   // ziyaretçiler
-  if (L_('zoo')) { ZV.t = (ZV.t === undefined ? 4 : ZV.t) - dt; if (ZV.t <= 0) { ZV.t = Math.max(4, 12 - 2.5 * ZANI.length); if (ZV.length < 3 + ZANI.length) { const c = newRider(); c.x = 10.2; c.z = 36; c.group.position.set(c.x, 0, c.z); ZV.push({ c, st: 'in', wp: [[10.2, 34.5], [20, 34.6], [25, 30.5], [26.6, 27.5], [29, 25.5], [32 + rand(-2, 2), 22 + rand(0, 6)]], t: 0 }); } }
-    for (let i = ZV.length - 1; i >= 0; i--) { const v = ZV[i], c = v.c; let mv = 0; if (v.st === 'in' || v.st === 'out') { const w = v.wp[0], d = stepTo(c, w[0], w[1], 4.5, dt); mv = 1; if (d < 0.4) { v.wp.shift(); if (!v.wp.length) { if (v.st === 'in') { v.st = 'look'; v.t = 5; } else { rm(c.group); ZV.splice(i, 1); continue; } } } } else if (v.st === 'look') { mv = 0; v.t -= dt; if (Math.random() < dt * 0.8) hearts(c.x, 3.4, c.z, 1); const an = ZANI[0]; if (an) faceChar(c, an.x - c.x, an.z - c.z, dt); if (v.t <= 0) { const val = Math.round((60 + 25 * ZANI.length) * (1 + 0.18 * S.lv.ticket)); payDirect(c.x, c.z, val, ''); v.st = 'out'; v.wp = [[29, 25.5], [26.6, 27.5], [25, 30.5], [20, 34.6], [10.2, 34.5], [10.2, 40]]; } } animChar(c, dt, mv, t); } }
+  if (L_('zoo')) { ZV.t = (ZV.t === undefined ? 4 : ZV.t) - dt; if (ZV.t <= 0) { ZV.t = Math.max(4, 12 - 2.5 * ZANI.length); if (ZV.length < 3 + ZANI.length) { const c = newRider(); c.x = 10.2; c.z = spawnFar(10.2, 36); c.group.position.set(c.x, 0, c.z); ZV.push({ c, st: 'in', wp: [[10.2, 34.5], [20, 34.6], [25, 30.5], [26.6, 27.5], [29, 25.5], [32 + rand(-2, 2), 22 + rand(0, 6)]], t: 0 }); } }
+    for (let i = ZV.length - 1; i >= 0; i--) { const v = ZV[i], c = v.c; let mv = 0; if (v.st === 'in' || v.st === 'out') { const w = v.wp[0], d = stepTo(c, w[0], w[1], 4.5, dt); mv = 1; if (d < 0.4) { v.wp.shift(); if (!v.wp.length) { if (v.st === 'in') { v.st = 'look'; v.t = 5; } else { if (exitCheck(c, 0)) { rm(c.group); ZV.splice(i, 1); continue; } v.wp = c.path.splice(0); } } } } else if (v.st === 'look') { mv = 0; v.t -= dt; if (Math.random() < dt * 0.8) hearts(c.x, 3.4, c.z, 1); const an = ZANI[0]; if (an) faceChar(c, an.x - c.x, an.z - c.z, dt); if (v.t <= 0) { const val = Math.round((60 + 25 * ZANI.length) * (1 + 0.18 * S.lv.ticket)); payDirect(c.x, c.z, val, ''); v.st = 'out'; v.wp = [[29, 25.5], [26.6, 27.5], [25, 30.5], [20, 34.6], [10.2, 34.5], [10.2, 40]]; } } animChar(c, dt, mv, t); } }
   if (introDone && !chapOpen) { const st_ = (k, tx) => { if (!S.seen[k]) { S.seen[k] = 1; saveDirty = true; toast(tx); return true; } return false; };
     if (S.lv.ranch && st_('st_ranch', 'Ayşe Teyze: Atlar artık senin, binicilere iyi bak!')) { } else if ((stats.rides || 0) >= 1 && st_('st_ride', 'Ayşe Teyze: İlk bileti kestin, aferin!')) { } else if (S.lv.sheep && st_('st_sheep', 'Ayşe Teyze: Koyunları kırk, yünden kazak ör!')) { } else if ((stats.shows || 0) >= 1 && st_('st_show', 'Ayşe Teyze: Harika bir gösteri oldu!')) { } else if (S.lv.zoo && st_('st_zoo', 'Ayşe Teyze: Çocuklar minik hayvanlara bayılıyor!')) { } }
   // final kutlama
@@ -4548,7 +4573,7 @@ window.__game = {
   path(tx, tz) { return findPath(P.group.position.x, P.group.position.z, tx, tz); }, colliders,
   EXTZ, STN, GARD, GROLES, roleEvolve, give(type, n) { n = Math.min(n, Math.max(0, P.free())); for (let i = 0; i < n; i++) P.stack.add(['orchid', 'lav', 'sun', 'rosep', 'flower'].includes(type) ? makeFlowerItem(0, type === 'flower' ? 'tulip' : type) : makeItemOf(type), type); },
   bot(x, z) { BOT = (x || z) ? { x, z } : null; if (BOT) hideIntro(); }, hideIntro, objective() { objective(_obj); return Object.assign({}, _obj); }, get goal() { return curGoal; }, GOALS, UPG,
-  CARX, CASHX, GARD, padHits, FWU, RH, RC, SHOW, SHOWOUT, ranchPile: () => ranchPile, RANCH, toggleRide, S, stats, P: () => P, queue, beds, machine, inputPile, outputPile, moneyPile, get shelf() { return shelfB; }, get shelfP() { return shelfP; }, get potInput() { return potInput; }, get potOutput() { return potOutput; }, get zone2() { return zone2; }, get zone3() { return zone3; }, VAN, get vanLoad() { return vanLoad; }, get vanPile() { return vanPile; }, get cashier() { return cashier; }, get carrier() { return carrier; }, upPads, zones, customers, CFG, POS,
+  CARX, CASHX, GARD, padHits, FWU, RH, RC, SHOW, SHOWOUT, ZV, offScreen, ranchPile: () => ranchPile, RANCH, toggleRide, S, stats, P: () => P, queue, beds, machine, inputPile, outputPile, moneyPile, get shelf() { return shelfB; }, get shelfP() { return shelfP; }, get potInput() { return potInput; }, get potOutput() { return potOutput; }, get zone2() { return zone2; }, get zone3() { return zone3; }, VAN, get vanLoad() { return vanLoad; }, get vanPile() { return vanPile; }, get cashier() { return cashier; }, get carrier() { return carrier; }, upPads, zones, customers, CFG, POS,
   helper: () => helper,
   carry(n) { while (P.stack.length) P.stack.items.pop(); n = Math.min(n, P.capFn()); for (let i = 0; i < n; i++) P.stack.add(makeFlowerItem(0, "tulip"), "flower"); },
   tp(x, z) { P.group.position.set(x, 0, z); P.vel.set(0, 0, 0); camInit = false; },
