@@ -229,9 +229,10 @@ const MAIN_UNLOCKS = { bed: 1, helper: 1, cashier: 1, carrier: 1, sera: 1, van: 
 const S = { money: 0, lv: { cap: 0, speed: 0, pack: 0, bed: 0, helper: 0, cashier: 0, carrier: 0, cashSpd: 0, carSpd: 0, carCap: 0, helpSpd: 0, sera: 0, van: 0, lav: 0, lavW: 0, keseSpd: 0, parf: 0, parfW: 0, parfSpd: 0, cafe: 0, cafeW: 0, teaSpd: 0, wed: 0, wedBonus: 0, sunf: 0, sunW: 0, sbqSpd: 0, city: 0, cityW: 0, citySpd: 0, stars: 0, bee: 0, beeW: 0, hiveN: 0, hiveSpd: 0, honSpd: 0, jap: 0, bonW: 0, bonSpd: 0, coll: 0, port: 0, portW: 0, portBonus: 0, fest: 0, festBonus: 0, mus: 0, musTkt: 0, wedW: 0, portSpd: 0, portCap: 0, helpCap: 0, helperN: 0, helperT: 0, lavCap: 0, lavN: 0, lavT: 0, parfCap: 0, parfN: 0, parfT: 0, cafeG: 0, cafeGCap: 0, cafeGN: 0, cafeGT: 0, sunCap: 0, sunN: 0, bonCap: 0, bonN: 0, bonT: 0, carN: 0, cashN: 0, wedSpd: 0, potSpd: 0, boat: 0, bridge: 0, fener: 0, fenerSpd: 0, fenerTip: 0, hall: 0, hallBonus: 0, hallSpd: 0, cage: 0, cageSpd: 0, cageQ: 0, gboat: 0, gboatSpd: 0, gboatQ: 0, boatN: 0, boatSpd: 0, boatCap: 0, hamal: 0, hamalN: 0, hamalSpd: 0, hamalCap: 0, bus: 0, busSpd: 0, busCap: 0, busN: 0, wedN: 0, waitN: 0, cityN: 0, portN: 0, beeN: 0, gate: 0 }, ic: 0, tut: 0, tier: { pack: 0, flo: 0, pot: 0, van: 0, kese: 0, parf: 0, tea: 0, wed: 0, city: 0, hon: 0, bon: 0 }, decor: {}, cos: { hat: 'straw', fit: 0, uni: 0, floor: 0, own: [] }, dn: 0,
   cb: {}, cs: [], pt: { n: 0, cur: null }, fe: { n: 0, t: 420 }, q: { a: [], n: 0 }, bx: 0, ts: 0, op: 0, mv: 0, seen: {} };
 Object.assign(S.lv, { tez: 0, tezN: 0, kcir: 0, kcirN: 0, mez: 0, mezN: 0 }); // v9: servis çalışanları
+Object.assign(S.lv, { midye: 0, midyeN: 0, midyeCap: 0 }); // v10: Midyeci (midye toplayıp tabak tezgâhına taşır)
 let saveDirty = false, saveTimer = 0;
 let introDone = false, curGoal = null, curGoalIdx = -1, lastGoalIdx = -2;
-const SAVE_VER = 9, BAK_KEY = SAVE_KEY + '_bak', TMP_KEY = SAVE_KEY + '_tmp';
+const SAVE_VER = 10, BAK_KEY = SAVE_KEY + '_bak', TMP_KEY = SAVE_KEY + '_tmp';
 let SAVE_BLOCKED = false; // okuma bozuk/başarısızsa eski kaydın üzerine yazma
 function readSaveKey(k) { try { const r = localStorage.getItem(k); if (r === null) return { none: true }; const o = JSON.parse(r); return o && typeof o === 'object' && !Array.isArray(o) ? { o, raw: r } : { bad: true, raw: r }; } catch (e) { return { bad: true }; } }
 const hasProgress = o => !!o && (+o.money > 0 || (o.lv && Object.keys(o.lv).some(k => +o.lv[k] > 0)) || +o.tut > 0);
@@ -259,6 +260,7 @@ function migrateSave(s) { // ver alanı yoksa 1 sayılır; sadece alan ekler, hi
   if (v < 7) { /* v6 -> v7 (Bölüm 2): ic (giriş kartı görüldü), lv.gate (bölüm kapısı) eklendi; varsayılan 0 */ }
   if (v < 8) migrateV8(s);
   if (v < 9) { /* v8 -> v9: servis çalışanları lv.tez/tezN/kcir/kcirN/mez/mezN eklendi (varsayılan 0) */ }
+  if (v < 10) { /* v9 -> v10: Midyeci lv.midye/midyeN/midyeCap eklendi (varsayılan 0) */ }
   if (v < 6) { /* v5 -> v6 (C6): +1 Eleman anahtarları eklendi (wedN, waitN, cityN, portN, beeN; varsayılan 0) */ }
   s.ver = SAVE_VER; return s;
 }
@@ -3431,7 +3433,7 @@ const gMatch = (ty, f) => ty === 'flower' ? !ITYPE[f.type] : f.type === ty;
 function gTargets(ty) {
   const l = [];
   if (ty === 'flower') l.push({ zone: packZone, stack: inputPile, cap: CFG.inputCap });
-  else if (ty === 'orchid' && zone2 && !zone2.locked && potZone && S.lv.helper > 0) l.push({ zone: potZone, stack: potInput, cap: CFG.inputCap });
+  else if (ty === 'orchid' && zone2 && !zone2.locked && potZone && (S.lv.helper > 0 || S.lv.midye > 0)) l.push({ zone: potZone, stack: potInput, cap: CFG.inputCap });
   if (ty !== 'flower') for (const sn of STATIONS) { if (sn.zone.locked) continue; for (const q of sn.ins) if (q.type === ty) l.push({ zone: q.zone, stack: q.stack, cap: 24 }); }
   return l;
 }
@@ -3544,6 +3546,12 @@ function buildExpansion() { // Sahil v3: eski ch1 bölgeleri kaldırıldı; sade
   extPad('potSpd', 'Midye Hızı', geo(300, 5), 40.3, 4.5, iconBolt, () => S.lv.sera > 0).autoShow = true;
   { const rMain = gRole({ id: 'main', name: 'Yardımcı', types: ['flower', 'orchid'], shirt: 0xffffff, tcol: 0x2fae4a, home: [-9.2, 3.2], spdKey: 'helpSpd', hireKey: 'helper', capKey: 'helpCap', cntKey: 'helperN', evoKey: 'helperT', baseCap: 6 });
     gRolePads(rMain, { cap: [-7.6, 9.4, 180], cnt: [-7.6, 5.4, 900], evo: [-0.6, 12.6, 3500] }); }
+  { /* v10: Midyeci - gelgitte midye (orchid) toplar, midye tabağı tezgâhının girdisine taşır; +1 Eleman ile en çok 3 */
+    const rMid = gRole({ id: 'midye', name: 'Midyeci', types: ['orchid'], shirt: 0x2f7bff, tcol: 0x2f7bff, home: [34.5, 3.2], spdKey: 'helpSpd', hireKey: 'midye', capKey: 'midyeCap', cntKey: 'midyeN', baseCap: 8 });
+    EXTAPPLY.midye = i => roleSync(rMid, i); HIREK.add('midye');
+    let u = extPad('midye', 'Midyeci', [1500], 35.5, 6.2, iconMussel, () => S.lv.sera > 0); u.autoShow = true; UPG.midye.sub = () => 'Midye toplar, tabak tezgâhına taşır';
+    u = extPad('midyeCap', 'Midyeci Kapasite', geo(300, 4), 31.5, 6.4, iconBackpack, () => S.lv.midye > 0); u.autoShow = true; UPG.midyeCap.sub = () => 'Taşıma ' + gCapShow(rMid, S.lv.midyeCap) + ' → ' + gCapShow(rMid, S.lv.midyeCap + 1);
+    u = extPad('midyeN', '+1 Eleman', geo(900, 2), 27.5, 6.6, iconHelper, () => S.lv.midye > 0); u.autoShow = true; UPG.midyeN.sub = () => 'Şu an ' + (1 + S.lv.midyeN) + ' midyeci'; EXTAPPLY.midyeN = i => roleSync(rMid, i); }
   { extPad('stars', 'Dükkan Yıldızları', geo(ECON.stars, 10), 15.0, 7.2, iconStar, () => S.lv.stars < 5 || S.lv.fener > 0);
     UPG.stars.sub = () => 'Tüm satışlar +%' + (starPct() + (S.lv.stars < 5 ? 20 : 10)); EXTAPPLY.stars = i => { if (!i) { starFx(); } updateStars(); }; priceMul = () => 1 + starPct() / 100; }
 }
@@ -3713,7 +3721,7 @@ function initBoats() {
   u = extPad('boatCap', 'Tekne Kapasitesi', geo(1100, 4), -19.5, 24.2, iconBackpack, vis); u.autoShow = true; UPG.boatCap.sub = () => 'Kasa ' + boatCap() + ' → ' + (boatCap() + 4);
   u = extPad('hamal', 'El Arabalı Hamal', [2800], -9.8, 19.8, iconCart, vis); u.autoShow = true; UPG.hamal.sub = () => 'Rıhtımdan tezgâha taşır'; EXTAPPLY.hamal = i => { if (!HAMALS.length) spawnHamal(0, i); };
   u = extPad('hamalN', '+1 Hamal', geo(4500, 2), -9.8, 24.2, iconCart, () => S.lv.hamal > 0); u.autoShow = true; UPG.hamalN.sub = () => 'Şu an ' + (1 + S.lv.hamalN) + ' hamal'; EXTAPPLY.hamalN = i => { while (HAMALS.length < 1 + (S.lv.hamalN || 0)) spawnHamal(HAMALS.length, i); };
-  u = extPad('hamalSpd', 'Hamal Hızı', geo(800, 4), -14.5, 24.2, iconBolt, () => S.lv.hamal > 0); u.autoShow = true; UPG.hamalSpd.sub = () => 'Daha hızlı yürür';
+  u = extPad('hamalSpd', 'Hamal Hızı', geo(800, 4), -14.5, 21.8, iconBolt, () => S.lv.hamal > 0); u.autoShow = true; UPG.hamalSpd.sub = () => 'Daha hızlı yürür';
   u = extPad('hamalCap', 'Arabası Kapasite', geo(1000, 4), -24.5, 24.2, iconBackpack, () => S.lv.hamal > 0); u.autoShow = true; UPG.hamalCap.sub = () => 'Araba ' + (6 + 3 * S.lv.hamalCap) + ' → ' + (9 + 3 * S.lv.hamalCap);
   initEast(); initSouth(); initHall(); initFinale();
   initSvc();
@@ -3835,12 +3843,23 @@ function initEast() {
   let u = extPad('gboatSpd', 'Izgara Hızı', geo(1500, 4), 35, 38.5, iconBolt, () => S.lv.gboat > 0); u.autoShow = true; UPG.gboatSpd.sub = () => 'Daha hızlı sandviç';
   u = extPad('gboatQ', 'Müşteri Kuyruğu', geo(2200, 4), 45, 38.5, iconStar, () => S.lv.gboat > 0); u.autoShow = true; UPG.gboatQ.sub = () => 'Daha çok müşteri';
 }
+/* işçi ayrımı: iki işçi üst üste duramaz (küçük karşılıklı itme; duvar/iskele çarpışması korunur) */
+function separateWorkers(dt) {
+  const l = []; if (typeof helper !== 'undefined' && helper) l.push(helper); if (cashier) l.push(cashier); if (carrier) l.push(carrier); for (const w of GARD) if (w !== helper) l.push(w); for (const w of SVCW) l.push(w);
+  for (let i = 0; i < l.length; i++) for (let j = i + 1; j < l.length; j++) {
+    const A = l[i].group.position, B = l[j].group.position; let dx = B.x - A.x, dz = B.z - A.z, d = Math.hypot(dx, dz); const MIN = 1.0;
+    if (d >= MIN) continue; if (d < 0.01) { const a = (i * 2.4 + j * 1.3); dx = Math.cos(a); dz = Math.sin(a); d = 1; }
+    const push = Math.min(MIN - d, 6 * dt) * 0.5; dx /= d; dz /= d; A.x -= dx * push; A.z -= dz * push; B.x += dx * push; B.z += dz * push;
+    collideWalker(A, 0.35); collideWalker(B, 0.35);
+  }
+}
 function updateEast(dt, t) {
   updateFinale(dt, t);
   updateHall(dt, t);
   updateSouth(dt, t);
   for (const E of EATS) updateEatery(E, dt, t);
   for (const w of SVCW) updateSvc(w, dt, t);
+  separateWorkers(dt);
   if (EATS.boat) { EATS.boat.position.y = WATER_Y + 0.55 + Math.sin(t * 1.3) * 0.05; EATS.boat.rotation.z = Math.sin(t * 1.1) * 0.025; EATS.boat.rotation.x = Math.cos(t * 0.9) * 0.015; }
 }
 /* =====================================================================
