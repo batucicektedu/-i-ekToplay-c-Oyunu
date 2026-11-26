@@ -14,6 +14,7 @@ await page.evaluate(([px,pz])=>{window.__resetting=true;__game.hideIntro();const
   for(const E of g.EATS){N('eat.'+E.id+'.input',L(E.input));N('eat.'+E.id+'.out',L(E.out));N('eat.'+E.id+'.pile',L(E.pile));N('eat.'+E.id+'.pileExtra',E.pile.extra||0);N('eat.'+E.id+'.queue',E.cs.length);N('eat.'+E.id+'.working',E.working?1:0)}
   for(const C of g.CAGES)N('cage.'+C.def.type+'.tray',L(C.tray));
   const H=g.HALL;N('hall.stock',L(H.stock));N('hall.pile',L(H.pile));N('hall.pileExtra',H.pile.extra||0);N('hall.state:'+H.state,1);
+  N('ship.dock',L(g.SHIP.dock));N('ship.pile',L(g.SHIP.pile));N('ship.pileExtra',g.SHIP.pile.extra||0);N('ship.load',g.SHIP.load);N('ship.state:'+g.SHIP.st,1);
   N('fin.pile',L(g.FIN.pile));N('fin.pileExtra',g.FIN.pile.extra||0);
   N('carry',g.P().stack.length);N('player.inZone',g.zones.filter(z=>z.inside&&z.group&&z.group.visible).length);
   N('gard.n',g.GARD.length);N('tractors',g.GARD.filter(w=>w.tr).length);
@@ -34,9 +35,11 @@ const CH=[ // [zincir, otomasyon rolu, uretim, satis/tuketim, toplanmamis nakit]
  ['Balik-Ekmek teknesi','Tezgahtar (+1 Eleman)',D.gr_gboat||0,D.ea_gboat||0,pile('eat.gboat')],
  ['Karides&Yengec kafes>Deniz Tabagi','Kafes Ciragi (+1 Eleman)',D.gr_cage||0,D.ea_cage||0,pile('eat.cage')],
  ['Balik Hali / Mezat','Mezat Hamali (+1 Eleman)',D.auctions||0,D.auctions||0,pile('hall')],
+ ['Ihracat Gemisi (v10)','Yukleyici (+1 Eleman)',D.shipCrates||0,D.shipTrips||0,pile('ship')],
  ['Fener Kafe','gelir otomatik, kasa otomatik toplanir (autoCollect)',1,1,Math.round(S_['fin.pileExtra'].last+S_['fin.pile'].last)]];
 console.log('\nZINCIR | ROL | URETIM | SATIS | TOPLANMAMIS PARA | DURUM');
 let bad=0;for(const [n,r,p,s2,u] of CH){const st=(p>0&&s2>0&&u<1000)?'OK':(u>=1000?'MANUAL (nakit toplanmiyor)':'MANUAL/STALLED');if(st!=='OK')bad++;console.log([n,r,Math.round(p||0),Math.round(s2||0),u,st].join(' | '))}
+{ const f=ser.map(x=>x.outputPile),full=f.filter(v=>v>=16).length/f.length,near=f.filter(v=>v>=14).length/f.length; console.log('ANA DUKKAN outputPile (kap 16): ort',(f.reduce((a,b)=>a+b,0)/f.length).toFixed(1),'| tam dolu (16) orani',full.toFixed(2),'| >=14 orani',near.toFixed(2),full>0.6?'-> BIRIKIYOR':'-> OK'); if(full>0.6)bad++; }
 console.log('stalls(watchdog):',D.stalls||0,'| gelir (20dk, otomatik toplanan):',Math.round(res.earned),'| oyuncu tasiyor:',res.carry);
 const dump=process.env.DUMP; if(dump) require('fs').writeFileSync(dump,JSON.stringify({res,sm,CH},null,1));
 await b.close();process.exit(bad||(D.stalls||0)?1:0);})();

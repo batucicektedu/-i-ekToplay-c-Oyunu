@@ -34,7 +34,7 @@ async function open(b, pre, arg) {
     ok(!sv.lv.helper || r.helper, 'yardımcı yok'); ok(!sv.lv.cashier || r.cashier, 'kasiyer yok'); ok(!sv.lv.carrier || r.carrier, 'taşıyıcı yok');
     ok(!sv.lv.sera || r.z2, 'sera kilitli'); ok(!sv.lv.van || r.z3, 'van bölgesi kilitli');
     ok(r.boats === (r.lv.boat > 0 ? 1 + (r.lv.boatN || 0) : 0), 'tekne sayısı ' + r.boats); ok(r.hamals === (r.lv.hamal > 0 ? 1 + (r.lv.hamalN || 0) : 0), 'hamal sayısı'); ok(!(r.lv.hall > 0) || r.hall, 'hal kilitli'); ok(!(r.lv.fener > 0) || (r.fin && r.bridge), 'fener adası kilitli'); ok(!(r.lv.gboat > 0) || r.eat >= 1, 'balık-ekmek kilitli');
-    { const w = k => (r.lv[k] > 0 ? 1 + (r.lv[k + 'N'] || 0) : 0); ok(r.svc === w('tez') + w('kcir') + w('mez'), 'servis çalışanı sayısı ' + r.svc); }
+    { const w = k => (r.lv[k] > 0 ? 1 + (r.lv[k + 'N'] || 0) : 0); ok(r.svc === w('tez') + w('kcir') + w('mez') + w('yuk'), 'servis çalışanı sayısı ' + r.svc); }
     if (sv.tier) { const t = await page.evaluate(() => JSON.parse(JSON.stringify(__game.S.tier))); for (const k in sv.tier) ok(t[k] >= sv.tier[k], 'tier ' + k); }
     await page.evaluate(() => __game.sim(60)); await page.waitForTimeout(100);
     const after = await page.evaluate(k => { const o = JSON.parse(localStorage.getItem(k)); return { money: o.money, ver: o.ver, lv: o.lv }; }, KEY);

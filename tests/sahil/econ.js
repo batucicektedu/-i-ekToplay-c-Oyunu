@@ -17,7 +17,7 @@ const SEC=+process.env.SEC||9000;let done=false;
 for(let i=0;i<SEC/10&&!done;i++){if(i%60==0){const q=await page.evaluate(()=>({t:Math.round(window.__t),m:Math.round(__game.S.money),l:window.__log.slice(-2)}));console.error(JSON.stringify(q))}
  done=await page.evaluate(()=>{window.__chunk(10);return __game.S.lv.gate>0});}
 const r=await page.evaluate(()=>({t:Math.round(window.__t),log:window.__log}));
-const KEYS=['sera','boat','gboat','cage','hall','bridge','fener','gate'];
+const KEYS=['sera','boat','gboat','cage','hall','ship','tbus','bridge','fener','gate'];
 require('fs').writeFileSync(process.env.OUT||'/tmp/econ_last.json',JSON.stringify(r.log));console.log('KEY purchases (min):',r.log.filter(e=>KEYS.includes(e[1].replace(/\d+$/,''))).map(e=>(e[0]/60).toFixed(1)+'m '+e[1]).join(' | '));
 let gap=0,gk='',prev=0;for(const e of r.log){if(e[0]-prev>gap){gap=e[0]-prev;gk=e[1]}prev=e[0]}
 console.log('ALL gaps >4min:');prev=0;for(const e of r.log){if(e[0]-prev>240)console.log('  '+(prev/60).toFixed(1)+'m -> '+(e[0]/60).toFixed(1)+'m ('+((e[0]-prev)/60).toFixed(1)+' min) next '+e[1]);prev=e[0]}

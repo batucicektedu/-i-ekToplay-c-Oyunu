@@ -230,9 +230,10 @@ const S = { money: 0, lv: { cap: 0, speed: 0, pack: 0, bed: 0, helper: 0, cashie
   cb: {}, cs: [], pt: { n: 0, cur: null }, fe: { n: 0, t: 420 }, q: { a: [], n: 0 }, bx: 0, ts: 0, op: 0, mv: 0, seen: {} };
 Object.assign(S.lv, { tez: 0, tezN: 0, kcir: 0, kcirN: 0, mez: 0, mezN: 0 }); // v9: servis çalışanları
 Object.assign(S.lv, { midye: 0, midyeN: 0, midyeCap: 0 }); // v10: Midyeci (midye toplayıp tabak tezgâhına taşır)
+Object.assign(S.lv, { tour: 0, bigO: 0, tbus: 0, ship: 0, shipCap: 0, shipBonus: 0, yuk: 0, yukN: 0 }); // v10: talep yükseltmeleri + İhracat Gemisi
 let saveDirty = false, saveTimer = 0;
 let introDone = false, curGoal = null, curGoalIdx = -1, lastGoalIdx = -2;
-const SAVE_VER = 10, BAK_KEY = SAVE_KEY + '_bak', TMP_KEY = SAVE_KEY + '_tmp';
+const SAVE_VER = 11, BAK_KEY = SAVE_KEY + '_bak', TMP_KEY = SAVE_KEY + '_tmp';
 let SAVE_BLOCKED = false; // okuma bozuk/başarısızsa eski kaydın üzerine yazma
 function readSaveKey(k) { try { const r = localStorage.getItem(k); if (r === null) return { none: true }; const o = JSON.parse(r); return o && typeof o === 'object' && !Array.isArray(o) ? { o, raw: r } : { bad: true, raw: r }; } catch (e) { return { bad: true }; } }
 const hasProgress = o => !!o && (+o.money > 0 || (o.lv && Object.keys(o.lv).some(k => +o.lv[k] > 0)) || +o.tut > 0);
@@ -261,6 +262,7 @@ function migrateSave(s) { // ver alanı yoksa 1 sayılır; sadece alan ekler, hi
   if (v < 8) migrateV8(s);
   if (v < 9) { /* v8 -> v9: servis çalışanları lv.tez/tezN/kcir/kcirN/mez/mezN eklendi (varsayılan 0) */ }
   if (v < 10) { /* v9 -> v10: Midyeci lv.midye/midyeN/midyeCap eklendi (varsayılan 0) */ }
+  if (v < 11) { /* v10 -> v11: lv.tour/bigO/tbus (talep), ship/shipCap/shipBonus/yuk/yukN (İhracat Gemisi) eklendi (varsayılan 0); x.sh (gemi yükü) ve x.ea.ship eksikse boş */ }
   if (v < 6) { /* v5 -> v6 (C6): +1 Eleman anahtarları eklendi (wedN, waitN, cityN, portN, beeN; varsayılan 0) */ }
   s.ver = SAVE_VER; return s;
 }
@@ -1946,7 +1948,7 @@ function buildStations() {
   }, CFG.moneyCap);
   moneyPile.extra = 0; moneyPile.jitter = 0.07;
   // counter shelf (tezgah rafı): upright products on the counter top
-  shelfB = new Stack(scene, (i, out) => { const r = i % 6; out.set(ct.x - 1.35 + (r % 3) * 0.62, 1.55, ct.z + (Math.floor(r / 3) - 0.5) * 0.62); }, 6); shelfB.pend = 0;
+  shelfB = new Stack(scene, (i, out) => { const r = i % 6; out.set(ct.x - 1.35 + (r % 3) * 0.62, 1.55 + Math.floor(i / 6) * 0.22, ct.z + (Math.floor(r / 3) - 0.5) * 0.62); }, 6); shelfB.pend = 0;
   shelfP = new Stack(scene, (i, out) => { const r = i % 6; out.set(ct.x + 0.55 + (r % 3) * 0.62, 1.55, ct.z + (Math.floor(r / 3) - 0.5) * 0.62); }, 6); shelfP.pend = 0;
   for (const [px, col] of [[ct.x - 0.75, 0x7fd3f0], [ct.x + 1.15, 0xffd6a0]]) { const pl = rbox(1.95, 0.05, 1.45, 0.02, mat(col)); pl.position.set(px, 1.24, ct.z); world.add(pl); }
 }
@@ -2039,7 +2041,7 @@ function buildSera() {
   // decor
   const dc = pivotGroup(33, 8); dc.visible = false; world.add(dc); zone2.groups.push([dc, 0.7]);
   const tree = (x, z, sc) => palm(dc, x, z, sc * 0.95);
-  tree(43.5, 9.5, 1.2); tree(24, 10, 1.1); tree(43.5, -10, 1.2); tree(36, 10.5, 1.0);
+  tree(27.5, 10.2, 1.2); tree(24, 10, 1.1); tree(46.8, -13.6, 1.2); tree(33.4, 14.2, 1.0);
   const lamp = (x, z) => { GLOWS.push([x, z, 3.4]); const g = new THREE.Group(); g.add(mk(G.cyl, mat(0x2d3a45), 0.09, 3.2, 0.09, 0, 1.6, 0)); g.add(mk(G.sph, LAMPM, 0.26, 0.3, 0.26, 0, 3.3, 0)); ad(dc, g, x, 0, z); };
   lamp(21.8, -1); lamp(21.8, 5.5);
 }
@@ -2538,7 +2540,7 @@ function potsPossible() { return zone2 && !zone2.locked && (potStock() > 0 || S.
 function stockOf(t) { if (t === 'pot') return lane(t).length + potStock(); if (t === 'bouquet') return lane(t).length + outputPile.length + P.stack.count('bouquet') + (carrier ? carrier.stack.count('bouquet') : 0); const o = srcOf(t); return lane(t).length + (o ? o.length : 0) + P.stack.count(t) + (carrier ? carrier.stack.count(t) : 0); }
 function prodOK(t) { if (t === 'bouquet') return true; if (t === 'pot') return potsPossible() && S.lv.sera > 0 && (stockOf('pot') > 0 || potM.working || potInput.length > 0 || Math.random() < 0.12); const z = PZ[t]; return !!(z && !z.locked && z.st && ((z.st.made > 0 || (z.hire && z.hire())) && (stockOf(t) > 0 || z.st.working || z.st.ins.some(q => q.stack.length > 0) || Math.random() < 0.12))); }
 function pickProduct() { const l = PROD_LIST.filter(prodOK); if (l.length === 1) return l[0]; const w = l.map((t, i) => t === 'bouquet' ? 3 : 1.5 + 1.2 * i); let r = Math.random() * w.reduce((a, b) => a + b, 0); for (let i = 0; i < l.length; i++) { r -= w[i]; if (r <= 0) return l[i]; } return l[0]; }
-const maxWant = t => t === 'bouquet' ? 6 : t === 'perfume' || t === 'bonsai' ? 2 : 3;
+const maxWant = t => t === 'bouquet' ? 6 + (S.lv.bigO || 0) : t === 'perfume' || t === 'bonsai' ? 2 : 3;
 function leaveSad(c) {
   const qi = queue.indexOf(c); if (qi >= 0) queue.splice(qi, 1);
   c.state = 'leaving'; setBubble(c, 'sad'); c.hideBubble = 1.4; c.path = [[12.4, -0.3], [12.4, 12.5], [10, 18], [10, 40]]; sfx('drop');
@@ -2564,7 +2566,7 @@ function spawnCustomer(z) {
     hairStyle: fem ? pick(['bob', 'long', 'ponytail', 'bun']) : pick(['short', 'spiky', 'short']), hat: !fem && Math.random() < 0.3 ? 'cap' : null, hatColor: pick([0xff5a6e, 0x4d96ff, 0xffd23f]), shoe: pick([0x3a2a22, 0xffffff, 0xd8412f]) });
   c.group.position.set(CFG.queueX + rand(-0.4, 0.4), 0, z); c.yaw = Math.PI; c.group.rotation.y = Math.PI;
   const r = Math.random(); c.want = r < 0.2 ? 2 : r < 0.45 ? 3 : r < 0.7 ? 4 : r < 0.88 ? 5 : 6;
-  c.vip = vip; c.prod = pickProduct(); c.wait = 0; c.lastGot = 0; c.want = Math.min(c.want, maxWant(c.prod)); c.got = 0; c.pending = 0; c.state = 'queue'; c.atSlot = false; c.bubble = null; c.held = null; c.path = null;
+  c.vip = vip; c.prod = pickProduct(); c.wait = 0; c.lastGot = 0; c.want = Math.min(c.want + (c.prod === 'bouquet' ? (S.lv.bigO || 0) : 0), maxWant(c.prod)); c.got = 0; c.pending = 0; c.state = 'queue'; c.atSlot = false; c.bubble = null; c.held = null; c.path = null;
   scene.add(c.group); customers.push(c); queue.push(c);
 }
 function pick(a) { return a[Math.floor(Math.random() * a.length)]; }
@@ -2578,7 +2580,7 @@ function finishCustomer(c) {
   const qi = queue.indexOf(c); if (qi >= 0) queue.splice(qi, 1);
   c.state = 'leaving'; setBubble(c, 'happy'); c.hideBubble = 1.2; stats.sold++; stats['s_' + c.prod] = (stats['s_' + c.prod] || 0) + c.want; sfx('happy');
   c.path = [[12.4, -0.3], [12.4, 12.5], [10, 18], [10, 40]];
-  const gp = c.group.position, total = Math.round(c.want * PRICE[c.prod] * (c.vip ? 3 : 1) * priceMul() * 1), n = clamp(Math.round(total / CFG.billValue), 1, 10), bv = total / n;
+  const gp = c.group.position, total = Math.round(c.want * PRICE[c.prod] * (c.vip ? 3 : 1) * priceMul() * (1 + 0.05 * (S.lv.bigO || 0))), n = clamp(Math.round(total / CFG.billValue), 1, 10), bv = total / n;
   hearts(gp.x, 3.4, gp.z, 5); coins(gp.x, 2.2, gp.z, 8); popText(gp.x, 4.2, gp.z, '+' + fmt(total), '#6dff6a'); vib(8);
   for (let k = 0; k < n; k++) later(0.15 + k * Math.min(0.16, 0.8 / n), () => spawnBill(c, bv));
   if (c.vip) { confetti(gp.x, 2.5, gp.z, 40); sparkles(gp.x, 2, gp.z, 12, 0xffe36a, 0.6); popText(gp.x, 5.0, gp.z, 'VIP x3!', '#ffd400'); ring(gp.x, gp.z, 0xffc21a, 5); sfx('up'); vib(20); }
@@ -2679,7 +2681,7 @@ const shelfFree = t => { const l = lane(t); return l.cap - l.length - l.pend; };
 function toShelf(it, who) {
   if (posable(it.mesh)) bouquetPose(it.mesh, true);
   const l = lane(it.type), idx = l.length + l.pend; l.pend++;
-  fly(it.mesh, out => { l.slotFn(Math.min(idx, 5), out); return 0; }, 0.22, 1.4, () => { l.pend--; l.add(it.mesh, it.type); sfx('drop'); });
+  fly(it.mesh, out => { l.slotFn(Math.min(idx, l.cap - 1), out); return 0; }, 0.22, 1.4, () => { l.pend--; l.add(it.mesh, it.type); sfx('drop'); });
   if (who === P) stats.delivered = (stats.delivered || 0) + 1;
 }
 function serveFromShelf(c) {
@@ -2727,7 +2729,12 @@ function updatePacking(dt, t) {
   w.body.position.y = wk * Math.abs(Math.sin(t * 10)) * 0.05;
 }
 
-function goalIndex() { for (let i = 0; i < GOALS.length; i++) if (S.lv[GOALS[i].key] < GOALS[i].lv) return i; return -1; }
+function goalIndex() { // kapı (sonraki bölüm) en sona kalır: diğer tüm hedefler (görünür pad'ler) bitmeden hedef olmaz
+  let gate = -1; for (let i = 0; i < GOALS.length; i++) { const g = GOALS[i]; if (S.lv[g.key] >= g.lv) continue; if (g.key === 'gate') { gate = i; continue; } if (g.x) { const u = upPads[g.key]; if (!u || (u.vis && !u.vis())) continue; } return i; } return gate; }
+function finalizeGoals() { // listede olmayan (sonradan eklenen) tüm pad seviyeleri bedel sırasıyla eklenir; kapı en sonda
+  const have = {}; for (const g of GOALS) have[g.key] = Math.max(have[g.key] || 0, g.lv); const gi = GOALS.findIndex(g => g.key === 'gate'), gate = gi >= 0 ? GOALS.splice(gi, 1)[0] : { key: 'gate', lv: 1 }, ex = [];
+  for (const k in upPads) { if (k === 'gate') continue; const mx = upPads[k].max(); for (let l = (have[k] || 0) + 1; l <= mx; l++) ex.push({ key: k, lv: l, x: 1, c: UPG[k].costs[l - 1] }); }
+  ex.sort((a, b) => a.c - b.c || a.lv - b.lv); for (const g of ex) GOALS.push(g); GOALS.push(gate); GOALS.forEach((g, i) => { if (GFIRST[g.key] === undefined) GFIRST[g.key] = i; }); }
 function padVisible(u) {
   if (u.vis && !u.vis()) return false;
   if (!u.shown && u.autoShow && u.vis && u.vis()) u.shown = true;
@@ -2745,13 +2752,13 @@ function updateGoalState() {
 }
 /* C4: aynı anda en çok ~4 pad: sıradaki hedef + para biriktirilen/yakında alınabilir olanlar */
 const HIREK = new Set(['wedW', 'helper', 'cashier', 'carrier', 'lavW', 'parfW', 'cafeW', 'sunW', 'cityW', 'beeW', 'bonW', 'portW', 'cafeG', 'bus']);
-const PADOK = new Set(), STORY = new Set(['boat', 'gboat', 'cage', 'hall', 'bridge', 'fener', 'gate']); let padOkT = 0;
+const PADOK = new Set(), STORY = new Set(['boat', 'gboat', 'cage', 'hall', 'ship', 'bridge', 'fener', 'gate']); let padOkT = 0;
 const PADNEAR = 26, PADMAX = 6; // alan başına en çok 6 yeni pad (oyuncuya en yakınlar); görünen pad satın alınana dek kalıcı
 function padOkRefresh(dt) {
   padOkT -= dt; if (padOkT > 0) return; padOkT = 0.25; const prev = new Set(PADOK); PADOK.clear();
   const list = []; for (const k in upPads) { const u = upPads[k]; if (u.done || !padVisible(u)) continue; list.push(u); }
   const gp = P.group.position, goalU = curGoal ? upPads[curGoal.key] : null, dist = u => Math.hypot(u.x - gp.x, u.z - gp.z);
-  const score = u => { if (u === goalU) return -3; if (u.paid > 0 || u.inside) return -2; if (STORY.has(u.key) && S.money + u.paid >= u.cost() * 0.4) return -2.1; return (S.money + u.paid >= u.cost() * 0.4 || HIREK.has(u.key)) ? 0 : 9; };
+  const score = u => { if (u === goalU) return -3; if (u.paid > 0 || u.inside) return -2; if (STORY.has(u.key) && (u.key !== 'gate' || (curGoal && curGoal.key === 'gate')) && S.money + u.paid >= u.cost() * 0.4) return -2.1; return (S.money + u.paid >= u.cost() * 0.4 || HIREK.has(u.key)) ? 0 : 9; };
   const ovl = u => { for (const q of PADOK) if (Math.abs(q.x - u.x) < (q.w + u.w) / 2 - 0.3 && Math.abs(q.z - u.z) < (q.d + u.d) / 2 - 0.3) return true; return false; };
   // 1) hedef / ödemesi başlamış / hikâye padleri her zaman; 2) önceden görünenler (satın alınana dek kalıcı); 3) yeni: oyuncuya yakın en çok PADMAX
   const pri = [], stick = [], fresh = [];
@@ -2797,7 +2804,7 @@ function applyUpgrade(key, instant) {
   else if (key === 'carrier') spawnCarrier(instant);
   else if (EXTAPPLY[key]) EXTAPPLY[key](instant);
 }
-const RIZA = { sera: 'Gelgit çekilince midyeler ortaya çıkar. Acele et!', boat: 'Tekneler denize açıldı! Kasaları rıhtımdan al ya da hamal tut.', gboat: 'Balık-ekmek en sevilen yemek. Buzlu kasaları tekneye getir!', cage: 'Kafeslerde karides ve yengeç var. Tabak yap, kalabalık yığılsın!', hall: 'Hal açıldı! Temiz balık kasalarını sarı alana bırak; Yarım dakikada bir zil çalar; tüccarlar normalin 2-3 katına alır, VIP alıcı bonus verir.', bridge: 'Eski fenere giden yol açıldı. Gün batımı orada daha güzel...', fener: 'Fener Kafe senin. Artık sahil seninle anılacak!', gate: 'Yeni ufuklar seni bekliyor, evlat. Çiftlikte görüşürüz!' };
+const RIZA = { sera: 'Gelgit çekilince midyeler ortaya çıkar. Acele et!', boat: 'Tekneler denize açıldı! Kasaları rıhtımdan al ya da hamal tut.', gboat: 'Balık-ekmek en sevilen yemek. Buzlu kasaları tekneye getir!', cage: 'Kafeslerde karides ve yengeç var. Tabak yap, kalabalık yığılsın!', hall: 'Hal açıldı! Temiz balık kasalarını sarı alana bırak; Yarım dakikada bir zil çalar; tüccarlar normalin 2-3 katına alır, VIP alıcı bonus verir.', bridge: 'Eski fenere giden yol açıldı. Gün batımı orada daha güzel...', fener: 'Fener Kafe senin. Artık sahil seninle anılacak!', ship: 'İhracat gemisi geliyor! Temiz balık sandıklarını iskeleye bırak; dolunca gemi toptan öder.', tbus: 'Tur otobüsü dakikada bir turist indirir. Raf dolu olsun!', gate: 'Yeni ufuklar seni bekliyor, evlat. Çiftlikte görüşürüz!' };
 function purchase(u) {
   const key = u.key; S.lv[key]++; u.paid = 0; stats.upgrades++; saveDirty = true; u.locked = true; u.pause = 0.3; u.off = false; u.hold = 0; u.pop = 0.6;
   sfx('up', true); confetti(u.x, 1.2, u.z, 44); sparkles(u.x, 0.8, u.z, 14, 0xfff2a0, 1.0); ring(u.x, u.z, 0xffc21a, 4.5);
@@ -3016,10 +3023,11 @@ function objective(out) {
     for (const e of EATS) if (e.active && e.pile.length + e.pile.extra >= 3) return set(e.monZone.x, 0.8, e.monZone.z, 'money');
     if (HALL.active && HALL.pile.length + HALL.pile.extra >= 3) return set(HALL.monZone.x, 0.8, HALL.monZone.z, 'money');
     if (S.lv.fener > 0 && FIN.pile.length + FIN.pile.extra >= 3) return set(FIN.monZone.x, 0.8, FIN.monZone.z, 'money');
+    if (SHIP.active && SHIP.pile.length + SHIP.pile.extra >= 3) return set(SHIP.monZone.x, 0.8, SHIP.monZone.z, 'money');
     if (E2 && E2.active && sc > 0 && E2.input.length + (E2.input.pend || 0) < 20) return set(E2.inZone.x, 0.4, E2.inZone.z, 'eat');
     if (CAGES.active && P.free() > 0 && sc < 8) { const C = CAGES.find(c => c.tray.length >= 3); if (C) return set(C.zone.x, 0.4, C.zone.z, 'cage'); }
     if (HALL.active && nB >= 3 && HALL.stock.length + (HALL.stock.pend || 0) < 3 && !HALL.zone.inside) return set(HALL.zone.x, 0.4, HALL.zone.z, 'hall'); // mezat başlamak için en az 3 kasa
-    if (nB >= 5) { if (E1 && E1.active && E1.input.length + (E1.input.pend || 0) < 16) return set(E1.inZone.x, 0.4, E1.inZone.z, 'eat'); if (HALL.active && HALL.stock.length + (HALL.stock.pend || 0) < 36) return set(HALL.zone.x, 0.4, HALL.zone.z, 'hall'); }
+    if (nB >= 5) { if (E1 && E1.active && E1.input.length + (E1.input.pend || 0) < 16) return set(E1.inZone.x, 0.4, E1.inZone.z, 'eat'); if (SHIP.active && SHIP.dock.length + (SHIP.dock.pend || 0) < 30) return set(SHIP.zone.x, 0.4, SHIP.zone.z, 'ship'); if (HALL.active && HALL.stock.length + (HALL.stock.pend || 0) < 36) return set(HALL.zone.x, 0.4, HALL.zone.z, 'hall'); }
   }
   if (PROD_LIST.some(t => hold(t) > 0 && canCounter(t))) return set(counterZone.x, 0.4, counterZone.z, 'counter');
   if (prodHeld) {
@@ -3220,7 +3228,7 @@ function update(dt) {
   // customers spawning
   spawnT -= dt;
   if (queue.length < 3 && spawnT > CFG.spawnShortEvery) spawnT = CFG.spawnShortEvery;
-  if (spawnT <= 0 && queue.length < CFG.queueMax) { spawnCustomer(26); spawnT = (queue.length < 3 ? CFG.spawnShortEvery : CFG.spawnEvery) * Math.pow(0.88, S.lv.cashSpd); }
+  if (spawnT <= 0 && queue.length < CFG.queueMax) { spawnCustomer(26); spawnT = (queue.length < 3 ? CFG.spawnShortEvery : CFG.spawnEvery) * Math.pow(0.88, S.lv.cashSpd) * Math.pow(0.8, S.lv.tour || 0); }
   updateCustomers(dt, T);
   P.stack.update(dt, T); inputPile.update(dt, T); outputPile.update(dt, T); moneyPile.update(dt, T); shelfB.update(dt, T); shelfP.update(dt, T); potInput.update(dt, T); potOutput.update(dt, T); vanLoad.update(dt, T); vanPile.update(dt, T);
   updateFlights(dt); updateLater(dt); updateParticles(dt); updatePopTexts(dt); updateCollectText(dt);
@@ -3260,7 +3268,7 @@ function snapshot() {
   const paid = {}, shown = {}; for (const k in upPads) { if (upPads[k].paid > 0) paid[k] = upPads[k].paid; if (upPads[k].shown) shown[k] = 1; }
   const x = { paid, shown, mp: pileVal(moneyPile), vp: pileVal(vanPile), sb: shelfB.length, sp: shelfP.length, pi: potInput.length, po: potOutput.length, ii: inputPile.length, oo: outputPile.length, pc: carriedCounts() };
   const away = VAN.state === 'away' || VAN.state === 'depart' || VAN.state === 'return';
-  x.ea = {}; for (const e of EATS) x.ea[e.id] = pileVal(e.pile); x.ea.hall = pileVal(HALL.pile); x.ea.fener = pileVal(FIN.pile);
+  x.ea = {}; for (const e of EATS) x.ea[e.id] = pileVal(e.pile); x.ea.hall = pileVal(HALL.pile); x.ea.fener = pileVal(FIN.pile); x.ea.ship = pileVal(SHIP.pile); x.sh = { load: SHIP.load + SHIP.fly, dock: SHIP.dock.length };
   x.van = { away, load: vanLoad.length + (VAN.state === 'loading' ? vanCap() - vanLoad.length : 0), sum: VAN.sum, until: away ? Date.now() + Math.max(0, 20 - VAN.trip) * 1000 : 0 };
   return x;
 }
@@ -3271,7 +3279,7 @@ function restoreExtras(x) {
   for (const k in (x.paid || {})) if (upPads[k]) { const pd = num(x.paid[k]), cap = Math.max(0, (upPads[k].cost() || 1) - 1); upPads[k].paid = Math.min(pd, cap); if (pd > cap) S.money += pd - cap; } // fiyat düştüyse pad'e yatırılan fazla para iade edilir (kayıp yok)
   for (const k in (x.shown || {})) if (upPads[k]) upPads[k].shown = true;
   const bills = (st, val) => { val = num(val); if (!val) return; const n = Math.min(st.cap, 14, Math.max(1, Math.round(val / CFG.billValue))), v = Math.floor(val / n); fillStack(st, n, () => { const b = makeBill(); b.userData.v = v; return b; }, 'bill'); st.extra = val - v * n; };
-  for (const e of EATS) if (x.ea && x.ea[e.id]) bills(e.pile, x.ea[e.id]); if (x.ea && x.ea.hall) bills(HALL.pile, x.ea.hall); if (x.ea && x.ea.fener) bills(FIN.pile, x.ea.fener);
+  for (const e of EATS) if (x.ea && x.ea[e.id]) bills(e.pile, x.ea[e.id]); if (x.ea && x.ea.hall) bills(HALL.pile, x.ea.hall); if (x.ea && x.ea.fener) bills(FIN.pile, x.ea.fener); if (x.ea && x.ea.ship) bills(SHIP.pile, x.ea.ship); if (x.sh && S.lv.ship > 0) fillStack(SHIP.dock, Math.min(36, num(x.sh.dock)), () => makeBouquetItem(undefined, true), 'bouquet');
   bills(moneyPile, x.mp); fillStack(shelfB, num(x.sb), () => makeBouquetItem(undefined, true), 'bouquet'); fillStack(shelfP, num(x.sp), () => makePotItem(true), 'pot');
   fillStack(inputPile, num(x.ii), () => makeFlowerItem(Math.floor(Math.random() * 4), 'tulip'), 'flower'); fillStack(outputPile, num(x.oo), () => makeBouquetItem(undefined, true), 'bouquet');
   if (zone2 && !zone2.locked) { fillStack(potInput, num(x.pi), () => makeFlowerItem(Math.floor(Math.random() * 4), 'orchid'), 'orchid'); fillStack(potOutput, num(x.po), () => makePotItem(true), 'pot'); }
@@ -3517,7 +3525,7 @@ function updateGardener(h, dt, t) {
     } else { tx = h.group.position.x; tz = h.group.position.z; const hm = r.home; if (h.idleT > 1 && Math.hypot(hm[0] - gp.x, hm[1] - gp.z) > 2) { tx = hm[0]; tz = hm[1]; } }
   } else {
     if (h.stack.length === 0 && h.incoming === 0) { h.state = 'seek'; h.ctype = null; h.helping = false; }
-    else { if (!h.ctype && h.stack.items.length && h.stack.items[0].type !== 'flower') h.ctype = h.stack.items[0].type; const d = gNeed(h.ctype || 'flower', 25) || gTargets(h.ctype).find(q => q.stack.length + (q.stack.pend || 0) < q.cap); if (d) { h.dest = d; tx = d.zone.x; tz = d.zone.z; } else h.dest = null; }
+    else { if (!h.ctype && h.stack.items.length) h.ctype = h.stack.items[0].type; const d = gNeed(h.ctype || 'flower', 25) || gTargets(h.ctype).find(q => q.stack.length + (q.stack.pend || 0) < q.cap); if (d) { h.dest = d; tx = d.zone.x; tz = d.zone.z; } else h.dest = null; }
   }
   let mv = 0, dx = 0, dz = 0;
   if (tx !== null) { dx = tx - gp.x; dz = tz - gp.z; const d = Math.hypot(dx, dz); if (d > Math.max(0.35, spd * dt * 1.5)) { const s2 = Math.min(d, spd * dt); gp.x += dx / d * s2; gp.z += dz / d * s2; h.vel.set(dx / d * spd, 0, dz / d * spd); mv = 1; } else h.vel.set(0, 0, 0); } else h.vel.set(0, 0, 0);
@@ -3608,8 +3616,12 @@ function buildLanes() { /* ch1 ürün şeritleri kaldırıldı */ }
 // Ekonomi (v9): her büyük açılışın arasında 2-4 gelir/hız yükseltmesi; bot ölçümünde (tests/sahil/econ.js) iki satın alma arası ~6 dk'yı geçmez.
 GOALS.push({ key: 'boat', lv: 1 }, { key: 'hamal', lv: 1 }, { key: 'boatCap', lv: 1 }, { key: 'boatN', lv: 1 }, { key: 'gboat', lv: 1 }, { key: 'gboatSpd', lv: 1 }, { key: 'gboatQ', lv: 1 }, { key: 'boatSpd', lv: 1 }, { key: 'stars', lv: 1 }, { key: 'hamalSpd', lv: 1 }, { key: 'cage', lv: 1 }, { key: 'cageSpd', lv: 1 }, { key: 'cageQ', lv: 1 }, { key: 'gboatSpd', lv: 2 }, { key: 'boatCap', lv: 2 }, { key: 'stars', lv: 2 }, { key: 'hamalCap', lv: 1 }, { key: 'hall', lv: 1 }, { key: 'hallBonus', lv: 1 }, { key: 'boatN', lv: 2 }, { key: 'hallSpd', lv: 1 }, { key: 'cageSpd', lv: 2 }, { key: 'gboatQ', lv: 2 }, { key: 'hallBonus', lv: 2 }, { key: 'stars', lv: 3 }, { key: 'hamalN', lv: 1 }, { key: 'hallSpd', lv: 2 }, { key: 'cageQ', lv: 2 }, { key: 'boatSpd', lv: 2 }, { key: 'bridge', lv: 1 }, { key: 'hallBonus', lv: 3 }, { key: 'gboatSpd', lv: 3 }, { key: 'cageSpd', lv: 3 }, { key: 'hamalSpd', lv: 2 }, { key: 'stars', lv: 4 }, { key: 'hallSpd', lv: 3 }, { key: 'cageQ', lv: 3 }, { key: 'fener', lv: 1 }, { key: 'fenerSpd', lv: 1 }, { key: 'fenerTip', lv: 1 }, { key: 'boatCap', lv: 3 }, { key: 'fenerSpd', lv: 2 }, { key: 'stars', lv: 5 }, { key: 'fenerTip', lv: 2 }, { key: 'hallBonus', lv: 4 }, { key: 'fenerSpd', lv: 3 }, { key: 'gboatQ', lv: 3 }, { key: 'fenerTip', lv: 3 }, { key: 'hallSpd', lv: 4 }, { key: 'fenerSpd', lv: 4 }, { key: 'cageSpd', lv: 4 }, { key: 'fenerTip', lv: 4 }, { key: 'stars', lv: 6 }, { key: 'hallBonus', lv: 5 }, { key: 'stars', lv: 7 }, { key: 'fenerSpd', lv: 5 }, { key: 'fenerTip', lv: 5 }, { key: 'stars', lv: 8 }, { key: 'gate', lv: 1 });
 { const ins = (aft, g) => { const i = GOALS.findIndex(q => q.key === aft.key && q.lv === aft.lv); if (i >= 0) GOALS.splice(i + 1, 0, g); }; ins({ key: 'gboatQ', lv: 1 }, { key: 'tez', lv: 1 }); ins({ key: 'cageQ', lv: 1 }, { key: 'kcir', lv: 1 }); ins({ key: 'hallSpd', lv: 1 }, { key: 'mez', lv: 1 }); }
+{ const ins = (aft, ...gs) => { const i = GOALS.findIndex(q => q.key === aft.key && q.lv === aft.lv); if (i >= 0) GOALS.splice(i + 1, 0, ...gs); }; // v10: talep + ihracat
+  ins({ key: 'tez', lv: 1 }, { key: 'tour', lv: 1 }); ins({ key: 'kcir', lv: 1 }, { key: 'bigO', lv: 1 }); ins({ key: 'hall', lv: 1 }, { key: 'tour', lv: 2 }); ins({ key: 'cageSpd', lv: 2 }, { key: 'tbus', lv: 1 });
+  ins({ key: 'hallBonus', lv: 2 }, { key: 'bigO', lv: 2 }); ins({ key: 'hallSpd', lv: 2 }, { key: 'ship', lv: 1 }, { key: 'yuk', lv: 1 }, { key: 'shipCap', lv: 1 }, { key: 'tour', lv: 3 });
+  ins({ key: 'stars', lv: 3 }, { key: 'bigO', lv: 3 }); ins({ key: 'shipCap', lv: 1 }, { key: 'yukN', lv: 1 }, { key: 'shipBonus', lv: 1 }); }
 GOALS.forEach((g, i) => { if (GFIRST[g.key] === undefined) GFIRST[g.key] = i; });
-Object.assign(MAIN_UNLOCKS, { boat: 1, gboat: 1, cage: 1, hall: 1, bridge: 1, fener: 1, stars: 1 });
+Object.assign(MAIN_UNLOCKS, { boat: 1, gboat: 1, cage: 1, hall: 1, bridge: 1, fener: 1, stars: 1, ship: 1, tbus: 1 });
 
 /* =====================================================================
    SAHİL v3: BALIKÇI TEKNELERİ (rıhtımdan denize açılır, kasalarla döner, temizleme girdisine boşaltır)
@@ -3750,6 +3762,7 @@ function initBoats() {
   u = extPad('hamalSpd', 'Hamal Hızı', geo(800, 4), -14.5, 21.8, iconBolt, () => S.lv.hamal > 0); u.autoShow = true; UPG.hamalSpd.sub = () => 'Daha hızlı yürür';
   u = extPad('hamalCap', 'Arabası Kapasite', geo(1000, 4), -24.5, 24.2, iconBackpack, () => S.lv.hamal > 0); u.autoShow = true; UPG.hamalCap.sub = () => 'Araba ' + (6 + 3 * S.lv.hamalCap) + ' → ' + (9 + 3 * S.lv.hamalCap);
   initEast(); initSouth(); initHall(); initFinale();
+  initShip(); initDemand();
   initSvc();
   if (upPads.helperT && !S.lv.helperT) upPads.helperT.vis = () => false; // balıkçı "tekne yap" evrimi artık gerçek tekneler
 }
@@ -3912,6 +3925,7 @@ function separateWorkers(dt) {
 function updateEast(dt, t) {
   updateFinale(dt, t);
   updateHall(dt, t);
+  updateShip(dt, t); updateBus(dt, t);
   updateSouth(dt, t);
   for (const E of EATS) updateEatery(E, dt, t);
   for (const w of SVCW) updateSvc(w, dt, t);
@@ -4145,6 +4159,153 @@ function updateFinale(dt, t) {
   }
 }
 /* =====================================================================
+   SAHİL v10: TALEP YÜKSELTMELERİ (Turist Akını, Büyük Sipariş, Tur Otobüsü) + İHRACAT GEMİSİ (toptan satış, taşan balığı emer)
+   ===================================================================== */
+const SHIP_X = 54.2, SHIP_Z = -1.0, SHIP_DX = 46.2; // gemi (su üstünde, x>48.1) ve rıhtım platformu (kara)
+const SHIP = { active: false, g: null, dock: null, pile: null, zone: null, monZone: null, spr: null, sig: '', st: 'away', t: 0, load: 0, fly: 0, cd: 0, x: SHIP_X, z: -95, yaw: -Math.PI / 2, cargo: [], trips: 0, ph: 0 };
+const shipCap = () => 40 + 10 * (S.lv.shipCap || 0);
+const shipCrate = () => 40 * (1 + 0.2 * (S.lv.shipBonus || 0)); // sandık başı sabit toptan fiyat (mezat çarpanlı değil, tahmin edilebilir)
+function iconShip(ctx, cx, cy, s) {
+  ctx.lineJoin = 'round'; ctx.lineWidth = s * 0.05; ctx.strokeStyle = '#0d3a5c';
+  ctx.fillStyle = '#c8362c'; ctx.beginPath(); ctx.moveTo(cx - s * 0.52, cy + s * 0.04); ctx.lineTo(cx + s * 0.52, cy + s * 0.04); ctx.lineTo(cx + s * 0.36, cy + s * 0.34); ctx.lineTo(cx - s * 0.46, cy + s * 0.34); ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#fff'; ctx.fillRect(cx - s * 0.46, cy - s * 0.2, s * 0.2, s * 0.24); ctx.strokeRect(cx - s * 0.46, cy - s * 0.2, s * 0.2, s * 0.24);
+  const cc = ['#2f7bff', '#ff8a1f', '#2fae4a']; cc.forEach((c, i) => { ctx.fillStyle = c; ctx.fillRect(cx - s * 0.18 + i * s * 0.2, cy - s * 0.2, s * 0.18, s * 0.24); ctx.strokeRect(cx - s * 0.18 + i * s * 0.2, cy - s * 0.2, s * 0.18, s * 0.24); });
+}
+function iconBus(ctx, cx, cy, s) {
+  ctx.lineJoin = 'round'; ctx.lineWidth = s * 0.05; ctx.strokeStyle = '#0d3a5c';
+  ctx.fillStyle = '#fdfcf6'; rrect(ctx, cx - s * 0.5, cy - s * 0.24, s, s * 0.46, s * 0.1); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#6ec6ff'; for (let i = 0; i < 3; i++) ctx.fillRect(cx - s * 0.4 + i * s * 0.27, cy - s * 0.16, s * 0.2, s * 0.16);
+  ctx.fillStyle = '#1d6fb8'; ctx.fillRect(cx - s * 0.46, cy + s * 0.06, s * 0.92, s * 0.08);
+  ctx.fillStyle = '#333'; for (const dx of [-0.3, 0.3]) { ctx.beginPath(); ctx.arc(cx + dx * s, cy + s * 0.24, s * 0.1, 0, TAU); ctx.fill(); }
+}
+function iconTourist(ctx, cx, cy, s) { // turist: hasır şapkalı yüz + fotoğraf makinesi
+  ctx.lineJoin = 'round'; ctx.lineWidth = s * 0.05; ctx.strokeStyle = '#6a3a10';
+  ctx.fillStyle = '#ffcfa0'; ctx.beginPath(); ctx.arc(cx, cy + s * 0.04, s * 0.3, 0, TAU); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#f0c060'; ctx.beginPath(); ctx.ellipse(cx, cy - s * 0.16, s * 0.5, s * 0.12, 0, 0, TAU); ctx.fill(); ctx.stroke(); ctx.beginPath(); ctx.arc(cx, cy - s * 0.2, s * 0.22, Math.PI, 0); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#333'; ctx.beginPath(); ctx.arc(cx - s * 0.1, cy + s * 0.02, s * 0.03, 0, TAU); ctx.arc(cx + s * 0.1, cy + s * 0.02, s * 0.03, 0, TAU); ctx.fill();
+  ctx.strokeStyle = '#6a3a10'; ctx.beginPath(); ctx.arc(cx, cy + s * 0.08, s * 0.1, 0.2, Math.PI - 0.2); ctx.stroke();
+  ctx.fillStyle = '#2f7bff'; rrect(ctx, cx + s * 0.18, cy + s * 0.22, s * 0.3, s * 0.2, s * 0.04); ctx.fill(); ctx.stroke();
+}
+function iconCrateBig(ctx, cx, cy, s) { // büyük sipariş: balık sandığı + artı
+  ctx.lineJoin = 'round'; ctx.lineWidth = s * 0.05; ctx.strokeStyle = '#4a2a10'; ctx.fillStyle = '#c99a5a'; rrect(ctx, cx - s * 0.4, cy - s * 0.12, s * 0.8, s * 0.46, s * 0.04); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#7fb8e8'; ctx.beginPath(); ctx.ellipse(cx, cy - s * 0.1, s * 0.3, s * 0.1, 0, 0, TAU); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#2fc43a'; ctx.strokeStyle = '#1e7a2c'; ctx.beginPath(); ctx.arc(cx + s * 0.3, cy - s * 0.3, s * 0.17, 0, TAU); ctx.fill(); ctx.stroke(); ctx.strokeStyle = '#fff'; ctx.lineWidth = s * 0.06; ctx.beginPath(); ctx.moveTo(cx + s * 0.3, cy - s * 0.38); ctx.lineTo(cx + s * 0.3, cy - s * 0.22); ctx.moveTo(cx + s * 0.22, cy - s * 0.3); ctx.lineTo(cx + s * 0.38, cy - s * 0.3); ctx.stroke();
+}
+function shipHullGeo() { // uzunluk +x (pruva), beyaz-kırmızı kargo gemisi
+  const W = 0xfdfcf6, R = 0xc8362c, D = 0x1d3b66, P_ = [
+    part(G.box, R, 0, 0.1, 0, 11.4, 1.6, 3.9), part(G.box, D, 0, -0.55, 0, 11.2, 0.4, 3.7), part(G.box, R, 5.7, 0.1, 0, 2.75, 1.6, 2.75, 0, Math.PI / 4, 0), part(G.box, D, 5.7, -0.55, 0, 2.6, 0.4, 2.6, 0, Math.PI / 4, 0),
+    part(G.box, W, 0, 0.98, 0, 11.5, 0.14, 4.0), part(G.box, W, 5.7, 0.98, 0, 2.85, 0.14, 2.85, 0, Math.PI / 4, 0), part(G.box, 0x7d8a98, 0.4, 1.06, 0, 10.8, 0.06, 3.4),
+    part(G.box, W, -4.4, 2.2, 0, 2.3, 2.4, 3.2), part(G.box, W, -4.4, 3.65, 0, 1.9, 0.5, 3.0), part(G.box, 0x6ec6ff, -3.22, 2.7, 0, 0.05, 0.55, 2.7), part(G.box, 0x6ec6ff, -3.0, 3.7, 0, 0.05, 0.42, 2.6),
+    part(G.cyl, R, -4.9, 4.45, 0, 0.62, 0.9, 0.62), part(G.cyl, W, -4.9, 4.55, 0, 0.66, 0.2, 0.66), part(G.cyl, D, -4.9, 4.95, 0, 0.64, 0.14, 0.64),
+    part(G.cyl, 0x8a98a8, -3.9, 5.0, 0, 0.05, 2.0, 0.05), part(G.box, 0xe8142e, -3.7, 5.8, 0, 0.5, 0.3, 0.04),
+    part(G.box, 0x3a4a5a, 0.4, 1.2, 0, 7.3, 0.3, 2.9), // ambar kenarı (yük bunun üstünde yükselir)
+    part(G.cyl, 0xe8d49a, 5.0, 1.15, 0, 0.3, 0.3, 0.3)
+  ];
+  return mergeParts(P_);
+}
+function buildShip() {
+  const g = new THREE.Group(); g.userData.dyn = true; g.visible = false; world.add(g); SHIP.g = g;
+  const hull = new THREE.Mesh(shipHullGeo(), vcMat); hull.castShadow = true; hull.userData.dyn = true; g.add(hull);
+  const cc = [0x2f7bff, 0xff8a1f, 0x2fae4a, 0xe8283a];
+  for (let i = 0; i < 4; i++) { const m = new THREE.Mesh(G.box, LM({ color: lc(cc[i]) })); m.userData.dyn = true; m.castShadow = true; m.scale.set(1.55, 0.01, 2.5); m.position.set(-2.2 + i * 1.85, 1.3, 0); m.visible = false; g.add(m); SHIP.cargo.push(m); }
+  // rıhtım platformu + vinç (kara tarafı)
+  const dg = new THREE.Group(); dg.userData.dyn = true; dg.visible = false; world.add(dg); SHIP.dg = dg;
+  const wc = [0xb08550, 0xa07848, 0xbf9560], P_ = [];
+  for (let i = 0; i < 13; i++) P_.push(part(G.box, wc[i % 3], SHIP_DX + 1.2, 0.18, -7.0 + i * 1.08, 6.4, 0.12, 1.04));
+  for (let i = 0; i < 7; i++) { P_.push(part(G.cyl, 0x5a3a1c, 50.2, 0.2, -6.6 + i * 2.0, 0.13, 0.6, 0.13), part(G.cyl, 0x2d3a45, 50.2, 0.5, -6.6 + i * 2.0, 0.14, 0.1, 0.14)); }
+  P_.push(part(G.box, 0xe8142e, 47.9, 1.4, 0.2, 0.9, 2.5, 0.9), part(G.box, 0xfdfcf6, 47.9, 2.75, 0.2, 1.0, 0.3, 1.0), part(G.box, 0xe8142e, 50.6, 3.8, 0.2, 6.2, 0.4, 0.5), part(G.box, 0x444c55, 53.6, 3.3, 0.2, 0.1, 1.0, 0.1), part(G.box, 0xffd23f, 53.6, 2.7, 0.2, 0.5, 0.2, 0.5));
+  for (const [x, zz] of [[44.8, -1.4], [44.8, 1.6]]) P_.push(part(G.box, 0xc99a5a, x, 0.45, zz, 0.9, 0.7, 0.9));
+  const dm = new THREE.Mesh(mergeParts(P_), vcMat); dm.castShadow = dm.receiveShadow = true; dm.userData.dyn = true; dg.add(dm);
+  const sg = makeBoard('İHRACAT İSKELESİ', 4.6, 0.9, 'wood'); sg.position.set(SHIP_DX + 0.2, 3.5, -7.8); sg.rotation.y = CFG.yaw * 0.2; sg.userData.dyn = true; sg.traverse(m => { m.userData.dyn = true; }); dg.add(sg);
+  addCollider(47.3, 48.5, -0.3, 0.7, () => S.lv.ship > 0);
+  SHIP.dock = new Stack(scene, (i, out) => { const r = i % 6, l = Math.floor(i / 6); out.set(SHIP_DX + 0.5 + ((r % 2) - 0.5) * 0.8, 0.4 + l * 0.27, 1.8 + (Math.floor(r / 2) - 1) * 0.5); }, 36); SHIP.dock.pend = 0; EXTSTACKS.push(SHIP.dock);
+  SHIP.pile = new Stack(scene, (i, out) => { const r = i % 6, l = Math.floor(i / 6); out.set(SHIP_DX + 0.7 + ((r % 2) - 0.5) * 0.9, 0.35 + l * 0.14, -3.3 + (Math.floor(r / 2) - 1) * 0.55); }, 36); SHIP.pile.extra = 0; SHIP.pile.jitter = 0.07; EXTSTACKS.push(SHIP.pile);
+  SHIP.zone = new Zone({ x: SHIP_DX, z: 4.6, w: 2.8, d: 2.4, color: '#1d9bf0', draw: drawZoneIcon(iconBouquet) }); SHIP.zone.group.visible = false;
+  SHIP.monZone = new Zone({ x: SHIP_DX, z: -5.6, w: 3.0, d: 2.2, color: '#1ed760', draw: null, labelSize: 0.01 }); SHIP.monZone.label.visible = false; SHIP.monZone.group.visible = false;
+  SHIP.spr = makeSprite(512, 192, () => {}, 5.4, 2.0, false); SHIP.spr.position.set(SHIP_DX + 0.4, 4.6, 2.6); SHIP.spr.visible = false; scene.add(SHIP.spr);
+}
+function shipSign(txt, col, sub) {
+  const sig = txt + col + (sub || ''); if (SHIP.sig === sig) return; SHIP.sig = sig;
+  redrawSprite(SHIP.spr, (ctx, w, h) => { ctx.fillStyle = 'rgba(22,28,64,.94)'; ctx.strokeStyle = col; ctx.lineWidth = 8; rrect(ctx, 6, 6, w - 12, h - 12, 34); ctx.fill(); ctx.stroke(); otext(ctx, txt, w / 2, h * 0.38, fitT(ctx, txt, 64, w - 50), '#fff', '#05071a'); if (sub) otext(ctx, sub, w / 2, h * 0.76, fitT(ctx, sub, 44, w - 50), col, '#05071a'); });
+}
+function shipArrive(instant) {
+  const H = SHIP; H.g.visible = true; H.st = instant ? 'load' : 'in'; H.t = 0; H.cd = 0;
+  H.x = SHIP_X; H.z = instant ? SHIP_Z : -95; H.yaw = -Math.PI / 2;
+  if (!instant) { H.g.position.set(H.x, WATER_Y + 0.62, H.z); }
+}
+function shipPay() {
+  const H = SHIP, n = H.load, total = Math.round(n * shipCrate() * priceMul()); H.trips++; stats.shipTrips = (stats.shipTrips || 0) + 1; stats.shipCrates = (stats.shipCrates || 0) + n; stats.shipSum = (stats.shipSum || 0) + total;
+  const nb = clamp(Math.round(total / CFG.billValue / 3), 3, 12), bv = total / nb;
+  popText(SHIP_X, 6.5, SHIP_Z, '+' + fmt(total) + ' İHRACAT', '#6dff6a'); confetti(SHIP_X, 4, SHIP_Z, 60); sfx('up'); vib(20); if (introDone) praise('İHRACAT! +' + fmt(total));
+  for (let i = 0; i < nb; i++) later(0.4 + i * 0.12, () => { const b = makeBill(); b.userData.v = bv; b.position.set(SHIP_X - 3, 3.0, SHIP_Z + rand(-2, 2)); scene.add(b); const idx = H.pile.length + (H.pile.pend || 0); H.pile.pend = (H.pile.pend || 0) + 1; fly(b, out => { H.pile.slotFn(Math.min(idx, 35), out); return 0; }, 0.7, 2.6, () => { H.pile.pend--; if (H.pile.length >= 36) { H.pile.extra += bv; rm(b); } else H.pile.add(b, 'bill'); sfx('cash'); }); });
+}
+function updateShip(dt, t) {
+  const H = SHIP; if (!H.active) return;
+  H.zone.group.visible = H.monZone.group.visible = H.spr.visible = true; H.dock.update(dt, t); H.pile.update(dt, t);
+  if (H.zone.inside && P.stack.count('bouquet') > 0 && H.dock.length + (H.dock.pend || 0) < 36) { H.tick = (H.tick || 0) - dt; if (H.tick <= 0) { dropTo(H.dock, P, 'bouquet'); H.tick = CFG.transferEvery; } }
+  if (H.monZone.inside && (H.pile.length > 0 || H.pile.extra > 0)) { H.mt = (H.mt || 0) - dt; if (H.mt <= 0) { collectMoney(H.pile); H.mt = 0.03; } }
+  const cap = shipCap(), g = H.g, spd = 12;
+  if (H.st === 'in') { H.z += spd * dt * Math.min(1, 0.25 + (SHIP_Z - H.z) / 14); if (H.z >= SHIP_Z - 0.05) { H.z = SHIP_Z; H.st = 'load'; H.t = 0; sfx('up'); } }
+  else if (H.st === 'load') {
+    H.t += dt; H.cd -= dt;
+    if (H.cd <= 0 && H.dock.length > 0 && H.load + H.fly < cap) { const it = H.dock.takeLast(); if (it) { H.fly++; H.cd = 0.4; fly(it.mesh, out => { out.set(SHIP_X - 1.0 + rand(-1.4, 1.4) * 0.02, 2.6, SHIP_Z + (H.load % 3 - 1) * 0.5); return 0; }, 0.5, 3.0, () => { rm(it.mesh); H.fly--; H.load++; H.bump = 0.25; sfx('pick'); }); } }
+    if (H.load >= cap && H.fly === 0) { shipPay(); H.st = 'out'; H.t = 0; }
+  } else if (H.st === 'out') { H.t += dt; if (H.t > 1.5) { H.z += spd * dt * Math.min(1, 0.3 + (H.t - 1.5) / 3); if (H.z > 98) { H.st = 'away'; H.t = 0; H.load = 0; g.visible = false; } } }
+  else if (H.st === 'away') { H.t += dt; if (H.t >= 8) shipArrive(false); }
+  if (g.visible) {
+    const mv = H.st === 'in' || (H.st === 'out' && H.t > 1.5); g.position.set(H.x, WATER_Y + 0.62 + Math.sin(t * 1.4 + 1) * 0.04, H.z); g.rotation.y = H.yaw; g.rotation.x = Math.sin(t * 1.1) * 0.012 + (mv ? -0.02 : 0); g.rotation.z = Math.cos(t * 1.2) * 0.015;
+    if (H.bump > 0) H.bump = Math.max(0, H.bump - dt);
+    const k = H.load / cap; for (let i = 0; i < H.cargo.length; i++) { const f = clamp(k * H.cargo.length - i, 0, 1), m = H.cargo[i]; m.visible = f > 0.02; m.scale.y = Math.max(0.01, 2.4 * f); m.position.y = 1.06 + 1.2 * f; }
+    if (mv && Math.random() < dt * 16) emit({ x: H.x + rand(-1, 1), y: 0.1, z: H.z - 5, vx: rand(-0.4, 0.4), vy: rand(0.3, 0.8), vz: rand(-0.4, 0.4), life: 0.7, size: 0.4, c: 0xe6fbff, grav: 0, a: 0.8 });
+  }
+  const n = H.load + H.fly;
+  if (H.st === 'load') shipSign('İhracat ' + n + '/' + cap, '#6dff6a', H.dock.length > 0 ? 'Yükleniyor' : 'Temiz balık getir'); else if (H.st === 'in') shipSign('İhracat 0/' + cap, '#ffd23f', 'Gemi yaklaşıyor'); else if (H.st === 'out') shipSign('İhracat ' + cap + '/' + cap, '#ff8a1f', 'Yola çıktı!'); else shipSign('İhracat 0/' + cap, '#ffd23f', 'Gemi ' + Math.max(0, Math.ceil(8 - H.t)) + ' sn');
+}
+function initShip() {
+  buildShip();
+  const u = extPad('ship', 'İhracat Gemisi', [16000], 42.3, 8.8, iconShip, () => S.lv.hall > 0); u.autoShow = true; UPG.ship.sub = () => 'Toptan sat: sandık başı ' + fmt(shipCrate()) + ' · taşan balığı emer';
+  EXTAPPLY.ship = i => { SHIP.active = true; SHIP.dg.visible = true; if (i) { const x = LOADED_X && LOADED_X.sh; SHIP.load = x ? clamp(Math.floor(+x.load) || 0, 0, shipCap() - 1) : 0; shipArrive(true); } else { SHIP.st = 'away'; SHIP.t = 12; panReq('z_ship', 50, 0, 'İHRACAT GEMİSİ!'); confetti(SHIP_DX, 2, 0, 60); ring(SHIP_DX, 0, 0x4dc3ff, 8); } };
+  let v = extPad('shipCap', 'Gemi Kapasitesi', geo(5000, 3), 31.0, 4.2, iconBackpack, () => S.lv.ship > 0); v.autoShow = true; UPG.shipCap.sub = () => 'Yük ' + shipCap() + ' → ' + (shipCap() + 10);
+  v = extPad('shipBonus', 'İhracat Fiyatı', geo(7000, 4), 37.2, 9.2, iconStar, () => S.lv.ship > 0); v.autoShow = true; UPG.shipBonus.sub = () => 'Sandık ' + fmt(shipCrate()) + ' → ' + fmt(40 * (1 + 0.2 * ((S.lv.shipBonus || 0) + 1)));
+}
+/* ---- Turist Akını / Büyük Sipariş / Tur Otobüsü ---- */
+const BUS = { g: null, st: 'away', t: 0, x: 10.7, z: 33.5, n: 0, tour: 0 }, BUS_STOP = 24.6, BUS_GAP = 60;
+function busGeo() {
+  const W = 0xfdfcf6, B = 0x1d6fb8, P_ = [
+    part(G.box, W, 0, 1.05, 0, 5.4, 1.7, 2.1), part(G.box, B, 0, 0.5, 0, 5.44, 0.45, 2.14), part(G.box, 0xe8142e, 0, 1.98, 0, 1.4, 0.22, 0.9),
+    part(G.box, 0x6ec6ff, -0.2, 1.5, 1.07, 4.4, 0.62, 0.04), part(G.box, 0x6ec6ff, -0.2, 1.5, -1.07, 4.4, 0.62, 0.04), part(G.box, 0x6ec6ff, 2.71, 1.45, 0, 0.04, 0.75, 1.7), part(G.box, 0x2d3a45, 2.71, 0.5, 0, 0.1, 0.3, 1.9),
+    part(G.box, 0xffd23f, 2.72, 0.9, 0.75, 0.06, 0.2, 0.3), part(G.box, 0xffd23f, 2.72, 0.9, -0.75, 0.06, 0.2, 0.3), part(G.box, 0xe8142e, -2.72, 0.9, 0.75, 0.06, 0.2, 0.3), part(G.box, 0xe8142e, -2.72, 0.9, -0.75, 0.06, 0.2, 0.3),
+    part(G.box, B, 0, 2.2, 0, 1.0, 0.3, 0.04)
+  ];
+  for (const x of [-1.6, 1.7]) for (const sz of [-1, 1]) P_.push(part(G.cyl, 0x2d3a45, x, 0.4, sz * 1.0, 0.42, 0.26, 0.42, Math.PI / 2, 0, 0));
+  return mergeParts(P_);
+}
+function buildBus() { const g = new THREE.Group(); g.userData.dyn = true; g.visible = false; const m = new THREE.Mesh(busGeo(), vcMat); m.castShadow = true; m.userData.dyn = true; g.add(m); world.add(g); BUS.g = g; }
+const _bv = new THREE.Vector3();
+function offscreenXZ(x, z) { camera.updateMatrixWorld(); _bv.set(x, 1.5, z).project(camera); return _bv.z > 1 || Math.abs(_bv.x) > 1.25 || Math.abs(_bv.y) > 1.25; }
+function updateBus(dt, t) {
+  const B = BUS; if (!(S.lv.tbus > 0) || !B.g) return;
+  const g = B.g;
+  if (B.st === 'away') {
+    B.t += dt;
+    if (B.t >= BUS_GAP && queue.length <= 7 && offscreenXZ(B.x, 33.5)) { B.st = 'in'; B.z = 33.5; B.v = 6; B.t = 0; B.n = 6 + Math.floor(Math.random() * 3); g.visible = true; g.rotation.y = Math.PI / 2; }
+  } else if (B.st === 'in') {
+    const d = B.z - BUS_STOP; B.v = Math.max(1.2, Math.min(7.5, d * 2.2 + 0.8)); B.z -= Math.min(d, B.v * dt);
+    if (B.z <= BUS_STOP + 0.02) { B.z = BUS_STOP; B.st = 'stop'; B.t = 0; B.k = 0; sfx('up'); popText(B.x, 4.2, B.z, 'TUR OTOBÜSÜ!', '#ffd400'); ring(B.x, B.z, 0x4dc3ff, 5); }
+  } else if (B.st === 'stop') {
+    B.t += dt; while (B.k < B.n && B.t > 0.9 + B.k * 0.35 && queue.length < 14) { B.k++; spawnCustomer(33); const c = customers[customers.length - 1]; c.group.position.set(9.0 + rand(-0.2, 0.2), 0, B.z + rand(-1.9, 1.9)); stats.busPax = (stats.busPax || 0) + 1; }
+    if (B.t > 0.9 + B.n * 0.35 + 1.2 || (queue.length >= 14 && B.t > 3)) { B.st = 'out'; B.t = 0; B.v = 0; }
+  } else if (B.st === 'out') { B.v = Math.min(8, B.v + 5 * dt); B.z += B.v * dt; if (B.z > 31 && (offscreenXZ(B.x, B.z) || B.z > 40)) { B.st = 'away'; B.t = 0; g.visible = false; } }
+  if (g.visible) g.position.set(B.x, Math.sin(t * 9) * 0.01 * (B.st === 'stop' ? 0.3 : 1), B.z);
+}
+function initDemand() {
+  buildBus();
+  let u = extPad('tour', 'Turist Akını', geo(2800, 5), 18.4, 11.8, iconTourist, () => S.lv.boat > 0); u.autoShow = true; UPG.tour.sub = () => 'Müşteri sıklığı ×' + (1 / Math.pow(0.8, S.lv.tour + 1)).toFixed(2);
+  u = extPad('bigO', 'Büyük Sipariş', geo(3500, 4), 4.8, 13.4, iconCrateBig, () => S.lv.gboat > 0); u.autoShow = true; UPG.bigO.sub = () => 'Müşteri +' + (S.lv.bigO + 1) + ' balık alır · raf ' + (6 + 2 * (S.lv.bigO + 1)); EXTAPPLY.bigO = () => { shelfB.cap = 6 + 2 * S.lv.bigO; };
+  u = extPad('tbus', 'Tur Otobüsü', [9000], 27.4, 21.0, iconBus, () => S.lv.cage > 0); u.autoShow = true; UPG.tbus.sub = () => 'Dakikada bir 6-8 turist indirir';
+  EXTAPPLY.tbus = i => { BUS.st = 'away'; BUS.t = i ? 30 : 40; if (!i) panReq('z_tbus', 10, 24, 'TUR OTOBÜSÜ!'); };
+}
+/* =====================================================================
    SAHİL v9: SERVİS ÇALIŞANLARI – Tezgâhtar (Balık-Ekmek), Kafes Çırağı (Deniz Tabağı), Mezat Hamalı (Hal)
    Her biri kendi zincirini taşır (yalnızca kaynakta yeterli stok varsa) ve kendi para yığınını toplar; oyuncu elle de taşıyabilir.
    ===================================================================== */
@@ -4167,9 +4328,9 @@ const svcBusy = h => h.state === 'toSrc' || h.state === 'pick';
 function svcWork(h, r) { // r rolünde h için iş var mı? (yan etkisiz) -> { best, cashDue }
   const rts = r.routes(), cs = r.cash(), pool = SVCW.filter(o => o.role === r); let best = null, ba = 0;
   rts.forEach((rt, i) => {
-    let planned = 0; for (const o of pool) if (o !== h && o.route === i) planned += svcBusy(o) ? o.plan : (o.state === 'toDst' || o.state === 'drop' ? o.stack.length + o.incoming : 0);
-    const avail = rt.src.length - rt.keep - planned, room = rt.dcap - rt.dst.length - (rt.dst.pend || 0) - planned;
-    if (rt.src.length >= rt.start && avail > 0 && room > 0 && avail > ba) { ba = avail; best = { i, n: Math.min(r.cap, avail, room), sc: avail }; }
+    let pk = 0, pd = 0; for (const o of pool) if (o !== h && o.route === i) { if (svcBusy(o)) { if (!rt.noRes) pk += Math.max(0, o.plan - o.stack.length - o.incoming); pd += o.plan; } else if (o.state === 'toDst' || o.state === 'drop') pd += o.stack.length + o.incoming; } // kaynaktan: henüz alınmamış planlar; hedefte: alınmış+planlanmış (taşıdıkları kaynakta zaten yok)
+    const avail = rt.src.length - rt.keep - pk, room = rt.dcap - rt.dst.length - (rt.dst.pend || 0) - pd;
+    if (rt.src.length >= rt.start && avail >= (rt.minN || 1) && room > 0 && avail > ba) { ba = avail; best = { i, n: Math.min(r.cap, avail, room), sc: avail }; }
   });
   const cashDue = !!(cs && (cs.pile.length >= 6 || cs.pile.extra > 0 || (!best && cs.pile.length > 0)) && !pool.some(o => o !== h && (o.state === 'toCash' || o.state === 'cash')));
   return { best, cashDue, cs };
@@ -4190,7 +4351,7 @@ function svcHelpCheck(h) {
   if (best) { h.role = best; h.helping = true; h.helpT = 0; h.idleT = 0; h.route = -1; h.cd = 0; noteHelpSwitch(h); }
 }
 function updateSvc(h, dt, t) {
-  workerPop(h, dt); const r = h.role, gp = h.group.position, spd = 4.6; let tx = null, tz = null; h.cd -= dt; h.rt -= dt; if (h.helpChk > 0) h.helpChk -= dt; if (h.helping) h.helpT = (h.helpT || 0) + dt;
+  workerPop(h, dt); const r = h.role, gp = h.group.position, spd = r.spd || 4.6; let tx = null, tz = null; h.cd -= dt; h.rt -= dt; if (h.helpChk > 0) h.helpChk -= dt; if (h.helping) h.helpT = (h.helpT || 0) + dt;
   const goTo = (x, z) => { if (h.rt <= 0 || h.gx !== x || h.gz !== z) { h.rt = 1.0; h.gx = x; h.gz = z; h.path = findPath(gp.x, gp.z, x, z); h.pi = 1; } while (h.path && h.pi < h.path.length - 1 && Math.hypot(h.path[h.pi][0] - gp.x, h.path[h.pi][1] - gp.z) < 0.45) h.pi++; const w = h.path && h.path[Math.min(h.pi, h.path.length - 1)]; if (w) { tx = w[0]; tz = w[1]; } };
   const rts = r.routes(), rt = rts[h.route], load = h.stack.length + h.incoming;
   if (h.state === 'idle') {
@@ -4201,7 +4362,7 @@ function updateSvc(h, dt, t) {
   else if (h.state === 'pick') {
     if (!rt) h.state = 'idle';
     else if (h.cd <= 0 && load < h.plan && rt.src.length > 0) { const it = rt.src.takeLast(rt.types.find(ty => rt.src.count(ty) > 0)); if (it) { it.mesh.getWorldPosition(_w); scene.add(it.mesh); it.mesh.position.copy(_w); if (posable(it.mesh)) bouquetPose(it.mesh, false); sendToBack(h, it.mesh, it.type, 1.4); h.cd = 0.12; h.wait = 0; } }
-    else if (h.incoming === 0) { h.wait += dt; if (load >= h.plan || h.wait > 1.5) h.state = h.stack.length > 0 ? 'toDst' : 'idle'; }
+    else if (h.incoming === 0) { h.wait += dt; if (load >= h.plan || h.wait > (rt.pw || 1.5)) h.state = h.stack.length > 0 ? 'toDst' : 'idle'; }
   } else if (h.state === 'toDst') { if (!rt) h.state = 'idle'; else if (h.stack.length === 0 && h.incoming === 0) h.state = 'idle'; else if (Math.hypot(rt.dx - gp.x, rt.dz - gp.z) < 0.7) { h.state = 'drop'; h.cd = 0.1; } else goTo(rt.dx, rt.dz); }
   else if (h.state === 'drop') {
     if (!rt) h.state = 'idle';
@@ -4220,7 +4381,7 @@ function initSvc() {
   const mk_ = (r, vis, pads) => {
     EXTAPPLY[r.hire] = i => svcSync(r, i); EXTAPPLY[r.cnt] = i => svcSync(r, i); HIREK.add(r.hire);
     let u = extPad(r.hire, r.name, [r.price], pads[0][0], pads[0][1], r.icon, vis); u.autoShow = true; UPG[r.hire].sub = () => r.sub;
-    u = extPad(r.cnt, '+1 Eleman', geo(r.price2, 2), pads[1][0], pads[1][1], iconHelper, () => S.lv[r.hire] > 0); u.autoShow = true; UPG[r.cnt].sub = () => 'Şu an ' + (1 + S.lv[r.cnt]) + ' ' + r.name.toLowerCase();
+    u = extPad(r.cnt, '+1 Eleman', geo(r.price2, r.nLv || 2), pads[1][0], pads[1][1], iconHelper, () => S.lv[r.hire] > 0); u.autoShow = true; UPG[r.cnt].sub = () => 'Şu an ' + (1 + S.lv[r.cnt]) + ' ' + r.name.toLowerCase();
   };
   const rT = svcRole({ id: 'tez', name: 'Tezgâhtar', hire: 'tez', cnt: 'tezN', shirt: 0xff8a1f, hat: 0xff8a1f, home: [37.5, 24], price: 3500, price2: 4500, icon: iconSand, sub: 'Temiz balığı tekneye taşır, parayı toplar',
     routes: () => [{ src: outputPile, sx: POS.outPad.x, sz: POS.outPad.z + 0.3, start: 8, keep: 4, dst: E1.input, dx: E1.o.inZone[0], dz: E1.o.inZone[1], dcap: 24, types: ['bouquet'] }], cash: eatCash(E1) });
@@ -4231,6 +4392,9 @@ function initSvc() {
   const rM = svcRole({ id: 'mez', name: 'Mezat Hamalı', hire: 'mez', cnt: 'mezN', shirt: 0x1d6fb8, hat: 0xffd23f, home: [-11, 31.5], price: 5000, price2: 7000, icon: iconHall, sub: 'Temiz balığı hale taşır, mezat parasını toplar',
     routes: () => HALL.active ? [{ src: outputPile, sx: POS.outPad.x, sz: POS.outPad.z + 0.3, start: 8, keep: 4, dst: HALL.stock, dx: HALL.zone.x, dz: HALL.zone.z, dcap: 10, types: ['bouquet'] }] : [], cash: () => ({ pile: HALL.pile, x: HALL.monZone.x, z: HALL.monZone.z }) });
   mk_(rM, () => S.lv.hall > 0, [[-2.5, 40.5], [-7.5, 24.5]]);
+  const rY = svcRole({ id: 'yuk', name: 'Yükleyici', hire: 'yuk', cnt: 'yukN', shirt: 0xc8362c, hat: 0xffd23f, home: [44.6, 4.0], price: 6000, price2: 8000, nLv: 3, spd: 6.2, icon: iconCrateBig, cap: 16, sub: 'Temiz balığı gemiye taşır, ihracat parasını toplar',
+    routes: () => SHIP.active ? [{ src: outputPile, sx: POS.outPad.x, sz: POS.outPad.z + 0.3, start: 10, keep: 2, minN: 8, noRes: 1, pw: 4, dst: SHIP.dock, dx: SHIP.zone.x, dz: SHIP.zone.z, dcap: 36, types: ['bouquet'] }] : [], cash: () => ({ pile: SHIP.pile, x: SHIP.monZone.x, z: SHIP.monZone.z }) });
+  mk_(rY, () => S.lv.ship > 0, [[30.5, 16.0], [27.6, 4.2]]);
 }
 /* =====================================================================
    15. INIT
@@ -4341,7 +4505,7 @@ buildPolishIsland();
 for (const [x, z, s] of [[-24, -14.5, 1.6]]) buildTree(x, z, s);
 for (let i = 0; i < 3; i++) buildBed(i);
 buildStations(); buildDecor(); buildSera(); buildVan(); buildZones(); buildPlayer(); LANES.bouquet = shelfB; LANES.pot = shelfP; buildExpansion(); buildLanes(); initBoats(); finalizeWorld();
-initGatePad();
+initGatePad(); finalizeGoals();
 /* ---- C6: pad alt yazıları (etkisi belli olmayan her pad) ---- */
 { const L = k => S.lv[k] || 0, T = x => () => x, N = (k, w) => () => 'Şu an ' + (1 + L(k)) + ' ' + w, PC = (k, v) => () => '%' + v * (L(k) + 1);
   const PADSUB = { sera: T('Midye tabağı yapar'), van: T('Sipariş teslim eder'), cashier: T('Satışı yapar'), carrier: T('Ürün taşır'), cashSpd: T('Daha hızlı satış'), carSpd: T('Daha hızlı taşır'), carCap: () => 'Taşıma ' + (6 + 4 * L('carCap')) + ' → ' + (10 + 4 * L('carCap')),
@@ -4460,7 +4624,7 @@ window.__game = {
   get info() { return { geo: renderer.info.memory.geometries, tex: renderer.info.memory.textures, prog: renderer.info.programs ? renderer.info.programs.length : 0 }; },
   measure() { renderer.info.reset(); ibPre(); if (composer) composer.render(0); else renderer.render(scene, camera); scene.autoUpdate = true; return { calls: renderer.info.render.calls, tris: renderer.info.render.triangles }; },
   path(tx, tz) { return findPath(P.group.position.x, P.group.position.z, tx, tz); }, colliders,
-  EXTZ, STN, GARD, GROLES, roleEvolve, EATS, VAN, CAGES, HALL, FIN, westWalk, GATES, chapGo: c => chapGo(c), chapConfirm2, CHAPS, tide: () => TIDE, BOATS, HAMALS: () => HAMALS, DOCK, deckY: (x, z) => deckY(x, z), tractor: () => tractor, give(type, n) { n = Math.min(n, Math.max(0, P.free())); for (let i = 0; i < n; i++) P.stack.add(['orchid', 'lav', 'sun', 'rosep', 'flower'].includes(type) ? makeFlowerItem(0, type === 'flower' ? 'tulip' : type) : makeItemOf(type), type); },
+  SHIP, BUS, EXTZ, STN, GARD, GROLES, roleEvolve, EATS, VAN, CAGES, HALL, FIN, westWalk, GATES, chapGo: c => chapGo(c), chapConfirm2, CHAPS, tide: () => TIDE, BOATS, HAMALS: () => HAMALS, DOCK, deckY: (x, z) => deckY(x, z), tractor: () => tractor, give(type, n) { n = Math.min(n, Math.max(0, P.free())); for (let i = 0; i < n; i++) P.stack.add(['orchid', 'lav', 'sun', 'rosep', 'flower'].includes(type) ? makeFlowerItem(0, type === 'flower' ? 'tulip' : type) : makeItemOf(type), type); },
   hintOK: { canCounter, makeItemOf, lane, shelfFree },
   bot(x, z) { BOT = (x || z) ? { x, z } : null; if (BOT) hideIntro(); }, hideIntro, objective() { objective(_obj); return Object.assign({}, _obj); }, get goal() { return curGoal; }, GOALS, UPG,
   S, stats, P: () => P, queue, beds, machine, inputPile, outputPile, moneyPile, get shelf() { return shelfB; }, get shelfP() { return shelfP; }, get potInput() { return potInput; }, get potOutput() { return potOutput; }, get zone2() { return zone2; }, get zone3() { return zone3; }, VAN, get vanLoad() { return vanLoad; }, get vanPile() { return vanPile; }, get cashier() { return cashier; }, get carrier() { return carrier; }, upPads, zones, customers, CFG, POS,
